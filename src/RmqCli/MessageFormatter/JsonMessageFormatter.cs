@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using RabbitMQ.Client;
+using RmqCli.MessageFormatter.Json;
 using RmqCli.Models;
 
 namespace RmqCli.MessageFormatter;
@@ -9,17 +10,24 @@ public class JsonMessageFormatter : IMessageFormatter
 {
     public string FormatMessage(RabbitMessage message)
     {
-        var messageDto = CreateMessageDto(message);
-        return JsonSerializer.Serialize(messageDto, JsonSerializationContext.Default.MessageDto);
+        var messageJson = CreateMessageJson(message);
+        // var ctx = new JsonSerializationContext(new JsonSerializerOptions
+        // {
+        //     Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        //     WriteIndented = true,
+        //     TypeInfoResolver = JsonSerializationContext.Default
+        // });
+        // return JsonSerializer.Serialize(messageDto, ctx.MessageDto);
+        return JsonSerializer.Serialize(messageJson, JsonSerializationContext.RelaxedEscapingOptions.GetTypeInfo(typeof(MessageJson)));
     }
 
     public string FormatMessages(IEnumerable<RabbitMessage> messages)
     {
-        var messageDtos = messages.Select(CreateMessageDto).ToArray();
-        return JsonSerializer.Serialize(messageDtos, JsonSerializationContext.Default.MessageDtoArray);
+        var messageJsonArray = messages.Select(CreateMessageJson).ToArray();
+        return JsonSerializer.Serialize(messageJsonArray, JsonSerializationContext.RelaxedEscapingOptions.GetTypeInfo(typeof(MessageJsonArray)));
     }
 
-    private MessageDto CreateMessageDto(RabbitMessage message)
+    private MessageJson CreateMessageJson(RabbitMessage message)
     {
         Dictionary<string, object>? properties = null;
         if (message.Props != null)
@@ -31,7 +39,7 @@ public class JsonMessageFormatter : IMessageFormatter
             }
         }
 
-        return new MessageDto(
+        return new MessageJson(
             message.DeliveryTag,
             message.Redelivered,
             message.Body,
@@ -68,7 +76,7 @@ public class JsonMessageFormatter : IMessageFormatter
         if (props.IsTimestampPresent())
         {
             var timestamp = DateTimeOffset.FromUnixTimeSeconds(props.Timestamp.UnixTime);
-            properties["timestamp"] = timestamp.ToString("yyyy-MM-dd HH:mm:ss zzz");
+            properties["timestamp"] = timestamp.ToString("yyyy-MM-dd HH:mm:ss");
         }
 
         if (props.IsHeadersPresent() && props.Headers != null)
@@ -121,6 +129,7 @@ public class JsonMessageFormatter : IMessageFormatter
             {
                 return $"<binary data: {bytes.Length} bytes>";
             }
+
             return strValue;
         }
         catch
