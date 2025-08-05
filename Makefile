@@ -5,4 +5,4 @@ release:
 	dotnet publish src/RmqCli/RmqCli.csproj -c Release -r osx-arm64 -o release
 
 clean:
-	rm -rf release/*
+	rm -rf release
