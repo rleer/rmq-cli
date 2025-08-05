@@ -23,8 +23,8 @@ public class JsonMessageFormatter : IMessageFormatter
 
     public string FormatMessages(IEnumerable<RabbitMessage> messages)
     {
-        var messageJsonArray = messages.Select(CreateMessageJson).ToArray();
-        return JsonSerializer.Serialize(messageJsonArray, JsonSerializationContext.RelaxedEscapingOptions.GetTypeInfo(typeof(MessageJsonArray)));
+        var messageArr = messages.Select(CreateMessageJson).ToArray();
+        return JsonSerializer.Serialize(messageArr, JsonSerializationContext.RelaxedEscapingOptions.GetTypeInfo(typeof(MessageJsonArray)));
     }
 
     private MessageJson CreateMessageJson(RabbitMessage message)
@@ -47,10 +47,17 @@ public class JsonMessageFormatter : IMessageFormatter
         );
     }
 
+    /// <summary>
+    /// Directly serializing IReadOnlyBasicProperties works great but strings will be base64 encoded...
+    /// Thus, we roll our own serialization to avoid that.
+    /// </summary>
+    /// <param name="props"></param>
+    /// <returns></returns>
     private Dictionary<string, object> CreatePropertiesObject(IReadOnlyBasicProperties props)
     {
         var properties = new Dictionary<string, object>();
 
+        // TODO: Make choice of properties configurable.
         if (props.IsTypePresent())
             properties["type"] = props.Type ?? string.Empty;
         if (props.IsMessageIdPresent())
