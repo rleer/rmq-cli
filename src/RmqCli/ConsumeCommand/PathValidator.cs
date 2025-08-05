@@ -1,4 +1,4 @@
-namespace RmqCli.Utilities;
+namespace RmqCli.ConsumeCommand;
 
 public static class PathValidator
 {

@@ -1,11 +1,11 @@
 using System.CommandLine;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using RmqCli.Commands;
+using RmqCli.CommandHandler;
 
-namespace RmqCli;
+namespace RmqCli.Commandhandler;
 
-public class CommandLineBuilder
+public class RootCommandHandler
 {
     private readonly IHost _host;
     private readonly RootCommand _rootCommand;
@@ -16,7 +16,7 @@ public class CommandLineBuilder
                                          o(")(")
                                        """;
 
-    public CommandLineBuilder(IHost host)
+    public RootCommandHandler(IHost host)
     {
         _host = host;
         _rootCommand = new RootCommand($"{RabbitAscii}\nDeveloper focused utility tool for common RabbitMQ tasks");

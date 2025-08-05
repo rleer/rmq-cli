@@ -1,8 +1,7 @@
 using System.Text;
 using RabbitMQ.Client;
-using RmqCli.Models;
 
-namespace RmqCli.MessageFormatter;
+namespace RmqCli.ConsumeCommand.MessageFormatter;
 
 public class TextMessageFormatter : IMessageFormatter
 {

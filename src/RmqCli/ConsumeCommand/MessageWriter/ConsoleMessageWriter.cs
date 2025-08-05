@@ -1,9 +1,9 @@
 using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
-using RmqCli.MessageFormatter;
-using RmqCli.Models;
+using RmqCli.Common;
+using RmqCli.ConsumeCommand.MessageFormatter;
 
-namespace RmqCli.MessageWriter;
+namespace RmqCli.ConsumeCommand.MessageWriter;
 
 public class ConsoleMessageWriter : IMessageWriter
 {

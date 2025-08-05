@@ -1,4 +1,4 @@
-namespace RmqCli.Models;
+namespace RmqCli.Common;
 
 /// <summary>
 /// Represents a destination for messages in a message broker system.

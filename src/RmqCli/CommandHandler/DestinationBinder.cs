@@ -1,7 +1,8 @@
 using System.CommandLine;
 using System.CommandLine.Binding;
+using RmqCli.Common;
 
-namespace RmqCli.Models;
+namespace RmqCli.CommandHandler;
 
 public class DestinationBinder : BinderBase<Destination>
 {

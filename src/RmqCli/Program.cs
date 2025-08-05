@@ -3,11 +3,14 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using RmqCli;
-using RmqCli.Commands;
+using RmqCli.Commandhandler;
+using RmqCli.CommandHandler;
+using RmqCli.Common;
 using RmqCli.Configuration;
-using RmqCli.MessageFormatter;
-using RmqCli.MessageWriter;
+using RmqCli.ConsumeCommand;
+using RmqCli.ConsumeCommand.MessageFormatter;
+using RmqCli.ConsumeCommand.MessageWriter;
+using RmqCli.PublishCommand;
 using RmqCli.Services;
 using Spectre.Console;
 
@@ -79,7 +82,7 @@ builder.Services.AddSingleton(cliConfig);
 builder.Services.AddSingleton<IRabbitChannelFactory, RabbitChannelFactory>();
 builder.Services.AddSingleton<IPublishService, PublishService>();
 builder.Services.AddSingleton<IConsumeService, ConsumeService>();
-builder.Services.AddSingleton<ICliOutputService, CliOutputService>();
+builder.Services.AddSingleton<IStatusOutputService, StatusOutputService>();
 
 // Register message formatters
 builder.Services.AddSingleton<IMessageFormatter, TextMessageFormatter>();
@@ -105,7 +108,7 @@ var logger = host.Services.GetRequiredService<ILogger<Program>>();
 try
 {
     // Configure commands with the properly configured host
-    var commandLineBuilder = new CommandLineBuilder(host);
+    var commandLineBuilder = new RootCommandHandler(host);
     commandLineBuilder.ConfigureCommands();
 
     // Run the command line application

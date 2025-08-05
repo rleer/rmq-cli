@@ -3,11 +3,11 @@ using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Exceptions;
+using RmqCli.Common;
 using RmqCli.Configuration;
-using RmqCli.Models;
-using RmqCli.Utilities;
+using RmqCli.Services;
 
-namespace RmqCli.Services;
+namespace RmqCli.PublishCommand;
 
 public interface IPublishService
 {
@@ -21,9 +21,9 @@ public partial class PublishService : IPublishService
     private readonly IRabbitChannelFactory _rabbitChannelFactory;
     private readonly ILogger<PublishService> _logger;
     private readonly FileConfig _fileConfig;
-    private readonly ICliOutputService _output;
+    private readonly IStatusOutputService _output;
 
-    public PublishService(IRabbitChannelFactory rabbitChannelFactory, ILogger<PublishService> logger, FileConfig fileConfig, ICliOutputService outputService)
+    public PublishService(IRabbitChannelFactory rabbitChannelFactory, ILogger<PublishService> logger, FileConfig fileConfig, IStatusOutputService outputService)
     {
         _rabbitChannelFactory = rabbitChannelFactory;
         _logger = logger;

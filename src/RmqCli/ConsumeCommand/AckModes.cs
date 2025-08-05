@@ -1,4 +1,4 @@
-namespace RmqCli.Models;
+namespace RmqCli.ConsumeCommand;
 
 public enum AckModes
 {

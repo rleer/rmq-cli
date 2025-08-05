@@ -1,7 +1,7 @@
 using System.Threading.Channels;
-using RmqCli.Models;
+using RmqCli.Common;
 
-namespace RmqCli.MessageWriter;
+namespace RmqCli.ConsumeCommand.MessageWriter;
 
 public interface IMessageWriter
 {

@@ -1,9 +1,9 @@
 using System.CommandLine;
 using Microsoft.Extensions.Logging;
-using RmqCli.Models;
-using RmqCli.Services;
+using RmqCli.Common;
+using RmqCli.PublishCommand;
 
-namespace RmqCli.Commands;
+namespace RmqCli.CommandHandler;
 
 public class PublishCommandHandler : ICommandHandler
 {

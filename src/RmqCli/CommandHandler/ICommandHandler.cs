@@ -1,6 +1,6 @@
 using System.CommandLine;
 
-namespace RmqCli.Commands;
+namespace RmqCli.CommandHandler;
 
 /// <summary>
 /// Interface for command handlers

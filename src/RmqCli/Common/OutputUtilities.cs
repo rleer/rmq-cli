@@ -1,4 +1,4 @@
-namespace RmqCli.Utilities;
+namespace RmqCli.Common;
 
 public static class OutputUtilities
 {

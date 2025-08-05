@@ -1,10 +1,10 @@
 using RmqCli.Configuration;
-using RmqCli.Models;
+using RmqCli.PublishCommand;
 using Spectre.Console;
 
-namespace RmqCli.Services;
+namespace RmqCli.Common;
 
-public interface ICliOutputService
+public interface IStatusOutputService
 {
     // void ShowProgress(string message, int current, int total);
     void ShowStatus(string message);
@@ -20,7 +20,7 @@ public interface ICliOutputService
 // ILogger -> stderr (technical diagnostics, enable with --verbose)
 // AnsiConsole -> stderr (user-friendly output)
 // (Json)Console -> stdout for results(structured output for automation)
-public class CliOutputService : ICliOutputService
+public class StatusOutputService : IStatusOutputService
 {
     private const string SuccessSymbol = "\u2714"; // ✓
     private const string WarningSymbol = "\u26A0"; // ⚠
@@ -29,7 +29,7 @@ public class CliOutputService : ICliOutputService
 
     private readonly CliConfig _cliConfig;
 
-    public CliOutputService(CliConfig cliConfig)
+    public StatusOutputService(CliConfig cliConfig)
     {
         _cliConfig = cliConfig;
     }

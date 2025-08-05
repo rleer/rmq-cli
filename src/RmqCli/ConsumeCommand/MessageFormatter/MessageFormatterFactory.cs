@@ -1,6 +1,6 @@
-using RmqCli.Models;
+using RmqCli.Common;
 
-namespace RmqCli.MessageFormatter;
+namespace RmqCli.ConsumeCommand.MessageFormatter;
 
 public interface IMessageFormatterFactory
 {
