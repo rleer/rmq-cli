@@ -24,7 +24,7 @@ public class PublishCommandHandler : ICommandHandler
                                    Publish messages to a queue or via exchange and routing-key.
 
                                    Messages can be specified 
-                                     - directly via the --message option
+                                     - directly via the --body option
                                      - read from a file using the --from-file option
                                      - piped from standard input (STDIN)
                                    
@@ -38,11 +38,11 @@ public class PublishCommandHandler : ICommandHandler
                                                   (UTC because RabbitMQ uses Unix timestamp in seconds as the underlying format)
 
                                    Example usage:
-                                     rmq publish --queue my-queue --message "Hello, World!"
-                                     rmq publish --exchange my-exchange --routing-key my-routing-key --message "Hello, World!"
+                                     rmq publish --queue my-queue --body "Hello, World!"
+                                     rmq publish --exchange my-exchange --routing-key my-routing-key --body "Hello, World!"
                                      rmq publish --from-file message.txt
                                      echo "Hello, World!" | rmq publish --queue my-queue
-                                     rmq publish --queue my-queue --burst 10 --message "Burst message" > output.txt
+                                     rmq publish --queue my-queue --burst 10 --body "Burst message" > output.txt
 
                                    Note that messages are sent with the mandatory flag set to true, meaning that if the message 
                                    cannot be routed to any queue, it will be returned to the sender.
@@ -59,8 +59,13 @@ public class PublishCommandHandler : ICommandHandler
         var routingKeyOption = new Option<string>("--routing-key", "Routing key to send message to.");
         routingKeyOption.AddAlias("-r");
 
-        var messageOption = new Option<string>("--message", "Message body to send.");
+        var messageOption = new Option<string>("--body", "Message body to send.");
         messageOption.AddAlias("-m");
+        
+        var outputFormatOption = new Option<OutputFormat>("--output", "Output format.");
+        outputFormatOption.AddAlias("-o");
+        outputFormatOption.SetDefaultValue(OutputFormat.Plain);
+        outputFormatOption.FromAmong("plain", "table", "json");
 
         var fromFileOption = new Option<string>("--from-file", "Path to a file that contains one or more message bodies to send.");
 
@@ -72,6 +77,7 @@ public class PublishCommandHandler : ICommandHandler
         publishCommand.AddOption(exchangeOption);
         publishCommand.AddOption(routingKeyOption);
         publishCommand.AddOption(messageOption);
+        publishCommand.AddOption(outputFormatOption);
         publishCommand.AddOption(fromFileOption);
         publishCommand.AddOption(burstOption);
 
@@ -100,7 +106,7 @@ public class PublishCommandHandler : ICommandHandler
 
             if (result.GetValueForOption(messageOption) is null && result.GetValueForOption(fromFileOption) is null && !Console.IsInputRedirected)
             {
-                result.ErrorMessage = "You must specify a message using --message, --from-file, or pipe input to STDIN.";
+                result.ErrorMessage = "You must specify a message using --body, --from-file, or pipe/redirect messages via STDIN.";
             }
 
             if (result.GetValueForOption(fromFileOption) is not null && result.GetValueForOption(messageOption) is not null)
@@ -119,13 +125,14 @@ public class PublishCommandHandler : ICommandHandler
             new DestinationBinder(queueOption, exchangeOption, routingKeyOption),
             messageOption,
             fromFileOption,
-            burstOption
+            burstOption,
+            outputFormatOption
         );
 
         rootCommand.AddCommand(publishCommand);
     }
 
-    private async Task<int> Handle(Destination dest, string message, string filePath, int burstCount)
+    private async Task<int> Handle(Destination dest, string message, string filePath, int burstCount, OutputFormat format)
     {
         _logger.LogDebug("Running handler for publish command");
 
