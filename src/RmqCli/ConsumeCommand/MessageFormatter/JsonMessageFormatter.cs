@@ -1,10 +1,9 @@
 using System.Text;
 using System.Text.Json;
 using RabbitMQ.Client;
-using RmqCli.MessageFormatter.Json;
-using RmqCli.Models;
+using RmqCli.ConsumeCommand.MessageFormatter.Json;
 
-namespace RmqCli.MessageFormatter;
+namespace RmqCli.ConsumeCommand.MessageFormatter;
 
 public class JsonMessageFormatter : IMessageFormatter
 {

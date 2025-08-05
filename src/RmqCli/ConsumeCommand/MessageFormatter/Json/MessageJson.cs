@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace RmqCli.MessageFormatter.Json;
+namespace RmqCli.ConsumeCommand.MessageFormatter.Json;
 
 public record MessageJson(
     ulong DeliveryTag,

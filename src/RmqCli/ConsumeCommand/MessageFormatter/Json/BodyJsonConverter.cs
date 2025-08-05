@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace RmqCli.MessageFormatter.Json;
+namespace RmqCli.ConsumeCommand.MessageFormatter.Json;
 
 /// <summary>
 /// Converts the message body string so that valid JSON is emitted as raw JSON and

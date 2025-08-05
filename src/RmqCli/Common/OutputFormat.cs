@@ -1,4 +1,4 @@
-namespace RmqCli.Models;
+namespace RmqCli.Common;
 
 public enum OutputFormat
 {

@@ -2,7 +2,7 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace RmqCli.MessageFormatter.Json;
+namespace RmqCli.ConsumeCommand.MessageFormatter.Json;
 
 [JsonSerializable(typeof(MessageJson))]
 [JsonSerializable(typeof(MessageJson[]), TypeInfoPropertyName = "ArrayOfMessageJson")]

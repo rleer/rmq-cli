@@ -1,10 +1,9 @@
 using System.CommandLine;
 using Microsoft.Extensions.Logging;
-using RmqCli.Models;
-using RmqCli.Services;
-using RmqCli.Utilities;
+using RmqCli.Common;
+using RmqCli.ConsumeCommand;
 
-namespace RmqCli.Commands;
+namespace RmqCli.CommandHandler;
 
 public class ConsumeCommandHandler : ICommandHandler
 {

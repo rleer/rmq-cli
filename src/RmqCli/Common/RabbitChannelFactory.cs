@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using RabbitMQ.Client.Exceptions;
+using RmqCli.Common;
 using RmqCli.Configuration;
 
 namespace RmqCli.Services;
@@ -18,11 +19,11 @@ public class RabbitChannelFactory : IRabbitChannelFactory
     private readonly RabbitMqConfig _config;
     private readonly ILogger<RabbitChannelFactory> _logger;
     private readonly ConnectionFactory _connectionFactory;
-    private readonly ICliOutputService _output;
+    private readonly IStatusOutputService _output;
     
     private IConnection? _connection;
 
-    public RabbitChannelFactory(RabbitMqConfig rabbitMqConfig, ILogger<RabbitChannelFactory> logger, ICliOutputService output)
+    public RabbitChannelFactory(RabbitMqConfig rabbitMqConfig, ILogger<RabbitChannelFactory> logger, IStatusOutputService output)
     {
         _config = rabbitMqConfig;
         _logger = logger;

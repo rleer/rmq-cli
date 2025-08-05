@@ -1,8 +1,7 @@
-using Microsoft.Extensions.Options;
+using RmqCli.Common;
 using RmqCli.Configuration;
-using RmqCli.Models;
 
-namespace RmqCli.MessageWriter;
+namespace RmqCli.ConsumeCommand.MessageWriter;
 
 public interface IMessageWriterFactory
 {

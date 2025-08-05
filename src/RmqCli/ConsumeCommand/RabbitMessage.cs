@@ -1,6 +1,6 @@
 using RabbitMQ.Client;
 
-namespace RmqCli.Models;
+namespace RmqCli.ConsumeCommand;
 
 public record RabbitMessage(
     string Body,

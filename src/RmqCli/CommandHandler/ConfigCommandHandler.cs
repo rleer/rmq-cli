@@ -1,7 +1,8 @@
 using System.CommandLine;
+using RmqCli.CommandHandler;
 using RmqCli.Configuration;
 
-namespace RmqCli.Commands;
+namespace RmqCli.Commandhandler;
 
 public class ConfigCommandHandler : ICommandHandler
 {

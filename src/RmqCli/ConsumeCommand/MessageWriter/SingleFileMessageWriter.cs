@@ -1,11 +1,10 @@
 using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+using RmqCli.Common;
 using RmqCli.Configuration;
-using RmqCli.MessageFormatter;
-using RmqCli.Models;
+using RmqCli.ConsumeCommand.MessageFormatter;
 
-namespace RmqCli.MessageWriter;
+namespace RmqCli.ConsumeCommand.MessageWriter;
 
 public class SingleFileMessageWriter : IMessageWriter
 {

@@ -1,7 +1,7 @@
 using RabbitMQ.Client;
-using RmqCli.Utilities;
+using RmqCli.Common;
 
-namespace RmqCli.Services;
+namespace RmqCli.PublishCommand;
 
 public record PublishResult(
     string MessageId,

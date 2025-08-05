@@ -2,14 +2,21 @@ using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
-using RmqCli.MessageWriter;
-using RmqCli.Models;
+using RmqCli.Common;
+using RmqCli.ConsumeCommand.MessageWriter;
+using RmqCli.Services;
 
-namespace RmqCli.Services;
+namespace RmqCli.ConsumeCommand;
 
 public interface IConsumeService
 {
-    Task ConsumeMessages(string queue, AckModes ackMode, FileInfo? outputFileInfo = null, int messageCount = -1, OutputFormat outputFormat = OutputFormat.Plain, CancellationToken cancellationToken = default);
+    Task ConsumeMessages(
+        string queue,
+        AckModes ackMode,
+        FileInfo? outputFileInfo = null,
+        int messageCount = -1,
+        OutputFormat outputFormat = OutputFormat.Plain,
+        CancellationToken cancellationToken = default);
 }
 
 public class ConsumeService : IConsumeService
