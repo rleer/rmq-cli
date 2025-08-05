@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 namespace RmqCli.MessageFormatter.Json;
 
 [JsonSerializable(typeof(MessageJson))]
-[JsonSerializable(typeof(MessageJson[]))]
+[JsonSerializable(typeof(MessageJson[]), TypeInfoPropertyName = "ArrayOfMessageJson")]
 [JsonSerializable(typeof(MessageJsonArray))]
 [JsonSerializable(typeof(Dictionary<string, object>))]
 [JsonSerializable(typeof(string))]
@@ -25,6 +25,7 @@ namespace RmqCli.MessageFormatter.Json;
 )]
 public partial class JsonSerializationContext : JsonSerializerContext
 {
+    // TODO: Make indentation configurable.
     // Declare new JsonSerializerOptions with relaxed escaping for JSON serialization.
     public static JsonSerializerOptions RelaxedEscapingOptions => new()
     {
