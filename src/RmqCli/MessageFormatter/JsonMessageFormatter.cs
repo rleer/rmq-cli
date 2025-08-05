@@ -112,7 +112,7 @@ public class JsonMessageFormatter : IMessageFormatter
         {
             null => "null",
             byte[] bytes => ConvertByteArray(bytes),
-            AmqpTimestamp timestamp => DateTimeOffset.FromUnixTimeSeconds(timestamp.UnixTime).ToString("yyyy-MM-dd HH:mm:ss zzz"),
+            AmqpTimestamp timestamp => DateTimeOffset.FromUnixTimeSeconds(timestamp.UnixTime).ToString("yyyy-MM-dd HH:mm:ss"),
             IEnumerable<object> enumerable when value is not string => enumerable.Select(ConvertValue).ToArray(),
             IDictionary<string, object> dict => dict.ToDictionary(pair => pair.Key, pair => ConvertValue(pair.Value)),
             _ => value

@@ -53,7 +53,7 @@ public class TextMessageFormatter : IMessageFormatter
         if (messageProps.IsTimestampPresent())
         {
             var timestamp = DateTimeOffset.FromUnixTimeSeconds(messageProps.Timestamp.UnixTime);
-            sb.AppendLine($"Timestamp: {timestamp:yyyy-MM-dd HH:mm:ss zzz}");
+            sb.AppendLine($"Timestamp: {timestamp:yyyy-MM-dd HH:mm:ss}");
         }
 
         // Format headers if present
@@ -103,7 +103,7 @@ public class TextMessageFormatter : IMessageFormatter
             case AmqpTimestamp timestamp:
             {
                 var dateTime = DateTimeOffset.FromUnixTimeSeconds(timestamp.UnixTime);
-                return $"{dateTime:yyyy-MM-dd HH:mm:ss zzz}";
+                return $"{dateTime:yyyy-MM-dd HH:mm:ss}";
             }
             case IEnumerable<object> enumerable when value is not string:
             {
