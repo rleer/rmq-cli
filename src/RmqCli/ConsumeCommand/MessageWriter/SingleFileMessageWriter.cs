@@ -51,11 +51,6 @@ public class SingleFileMessageWriter : IMessageWriter
             await using var fileStream = _outputFileInfo.OpenWrite();
             await using var writer = new StreamWriter(fileStream);
 
-            if (_outputFormat is OutputFormat.Json)
-            {
-                await writer.WriteLineAsync("[");
-            }
-
             var isFirstMessage = true;
 
             await foreach (var message in messageChannel.Reader.ReadAllAsync())
@@ -64,11 +59,7 @@ public class SingleFileMessageWriter : IMessageWriter
 
                 if (!isFirstMessage)
                 {
-                    if (_outputFormat is OutputFormat.Json)
-                    {
-                        await writer.WriteLineAsync(","); // Add comma for JSON formatting
-                    }
-                    else if (_outputFormat is OutputFormat.Plain)
+                    if (_outputFormat is OutputFormat.Plain)
                     {
                         await writer.WriteLineAsync(_fileConfig.MessageDelimiter); // Add delimiter for text format
                     }
@@ -79,12 +70,7 @@ public class SingleFileMessageWriter : IMessageWriter
                 await writer.WriteLineAsync(formattedMessage);
 
                 await ackChannel.Writer.WriteAsync((message.DeliveryTag, ackMode));
-                _logger.LogDebug("[*] Message #{DeliveryTag} processed successfully", message.DeliveryTag);
-            }
-
-            if (_outputFormat is OutputFormat.Json)
-            {
-                await writer.WriteLineAsync("]");
+                _logger.LogTrace("Message #{DeliveryTag} processed successfully", message.DeliveryTag);
             }
 
             await writer.FlushAsync();
