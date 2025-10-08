@@ -1,6 +1,8 @@
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using RmqCli.Common;
+using RmqCli.PublishCommand;
 
 namespace RmqCli.ConsumeCommand.MessageFormatter.Json;
 
@@ -12,6 +14,7 @@ namespace RmqCli.ConsumeCommand.MessageFormatter.Json;
 [JsonSerializable(typeof(string[]))]
 [JsonSerializable(typeof(int))]
 [JsonSerializable(typeof(long))]
+[JsonSerializable(typeof(double))]
 [JsonSerializable(typeof(ulong))]
 [JsonSerializable(typeof(byte))]
 [JsonSerializable(typeof(byte[]))]
@@ -19,6 +22,11 @@ namespace RmqCli.ConsumeCommand.MessageFormatter.Json;
 [JsonSerializable(typeof(object))]
 [JsonSerializable(typeof(object[]))]
 [JsonSerializable(typeof(RabbitMQ.Client.DeliveryModes))]
+[JsonSerializable(typeof(Response))]
+[JsonSerializable(typeof(PublishResponse))]
+[JsonSerializable(typeof(PublishResult))]
+[JsonSerializable(typeof(ErrorInfo))]
+[JsonSerializable(typeof(List<string>))]
 [JsonSourceGenerationOptions(
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
     NumberHandling = JsonNumberHandling.AllowReadingFromString

@@ -18,7 +18,7 @@ public class PublishCommandHandler : ICommandHandler
 
     public void Configure(RootCommand rootCommand)
     {
-            _logger.LogDebug("Configuring publish command");
+        _logger.LogDebug("Configuring publish command");
 
         const string description = """
                                    Publish messages to a queue or via exchange and routing-key.
@@ -27,7 +27,7 @@ public class PublishCommandHandler : ICommandHandler
                                      - directly via the --body option
                                      - read from a file using the --from-file option
                                      - piped from standard input (STDIN)
-                                   
+
                                    Multiple messages can be sent from a file or STDIN. Messages will be separated by the configured 
                                    message delimiter (see config). Default delimiter is the OS specific newline character.
 
@@ -47,7 +47,7 @@ public class PublishCommandHandler : ICommandHandler
                                    Note that messages are sent with the mandatory flag set to true, meaning that if the message 
                                    cannot be routed to any queue, it will be returned to the sender.
                                    """;
-        
+
         var publishCommand = new Command("publish", description);
 
         var queueOption = new Option<string>("--queue", "Queue name to send message to.");
@@ -61,7 +61,7 @@ public class PublishCommandHandler : ICommandHandler
 
         var messageOption = new Option<string>("--body", "Message body to send.");
         messageOption.AddAlias("-m");
-        
+
         var outputFormatOption = new Option<OutputFormat>("--output", "Output format.");
         outputFormatOption.AddAlias("-o");
         outputFormatOption.SetDefaultValue(OutputFormat.Plain);
@@ -132,7 +132,7 @@ public class PublishCommandHandler : ICommandHandler
         rootCommand.AddCommand(publishCommand);
     }
 
-    private async Task<int> Handle(Destination dest, string message, string filePath, int burstCount, OutputFormat format)
+    private async Task<int> Handle(DestinationInfo dest, string message, string filePath, int burstCount, OutputFormat format)
     {
         _logger.LogDebug("Running handler for publish command");
 
@@ -148,6 +148,7 @@ public class PublishCommandHandler : ICommandHandler
             if (!string.IsNullOrWhiteSpace(filePath))
             {
                 var fileInfo = new FileInfo(Path.GetFullPath(filePath, Environment.CurrentDirectory));
+
                 return await _publishService.PublishMessageFromFile(dest, fileInfo, burstCount, cts.Token);
             }
 
