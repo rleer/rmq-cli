@@ -1,7 +1,5 @@
-﻿using System.CommandLine;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using RmqCli.Commandhandler;
 using RmqCli.CommandHandler;
@@ -11,108 +9,96 @@ using RmqCli.ConsumeCommand;
 using RmqCli.ConsumeCommand.MessageFormatter;
 using RmqCli.ConsumeCommand.MessageWriter;
 using RmqCli.PublishCommand;
-using RmqCli.Services;
 using Spectre.Console;
+using AnsiConsoleFactory = RmqCli.Common.AnsiConsoleFactory;
 
 // Create a minimal root command to parse global options first
-var tempRootCommand = new RootCommand();
-var configOption = new Option<string>("--config", "Path to the configuration file (TOML format)");
-var verboseOption = new Option<bool>("--verbose", () => false, "Enable verbose logging");
-var quietOption = new Option<bool>("--quiet", () => false, "Minimal output (errors only)");
-var jsonOption = new Option<bool>("--json", () => false, "Structured JSON output to stdout");
-var noColorOption = new Option<bool>("--no-color", () => false, "Disable colored output for dumb terminals");
+var rootCommandHandler = new RootCommandHandler();
 
-tempRootCommand.AddGlobalOption(configOption);
-tempRootCommand.AddGlobalOption(verboseOption);
-tempRootCommand.AddGlobalOption(quietOption);
-tempRootCommand.AddGlobalOption(jsonOption);
-tempRootCommand.AddGlobalOption(noColorOption);
+var (cliConfig, configPath) = rootCommandHandler.ParseGlobalOptions(args);
 
-// Parse arguments to extract global option values
-var parseResult = tempRootCommand.Parse(args);
-var customConfigPath = parseResult.GetValueForOption(configOption);
-var verboseLogging = parseResult.GetValueForOption(verboseOption);
-var quietLogging = parseResult.GetValueForOption(quietOption);
-var jsonOutput = parseResult.GetValueForOption(jsonOption);
-var noColor = parseResult.GetValueForOption(noColorOption);
+// Build custom configuration
+var configuration = new ConfigurationBuilder()
+    .AddRmqConfig(configPath)
+    .Build();
 
-// TODO: Replace with manual DI container and configuration setup to avoid potential overhead of using Host
-var builder = Host.CreateApplicationBuilder();
+// Create service collection for manual DI
+var services = new ServiceCollection();
 
-// Clear default configuration sources and build custom configuration
-builder.Configuration.Sources.Clear();
-
-// Add custom configuration sources in priority order
-builder.Configuration.AddRmqConfig(customConfigPath);
-
-builder.Logging.ClearProviders();
-
-var logLevel = verboseLogging ? LogLevel.Debug : LogLevel.None;
-builder.Logging.AddConsole(options => { options.LogToStandardErrorThreshold = LogLevel.Trace; })
-    .AddFilter("Microsoft", LogLevel.Warning)
-    .AddFilter("System", LogLevel.Warning)
-    .SetMinimumLevel(logLevel);
-
-builder.Logging.AddSimpleConsole(options =>
+// Add logging only if verbose mode is enabled
+if (cliConfig.Verbose)
 {
-    options.SingleLine = true;
-    options.TimestampFormat = "HH:mm:ss ";
-    options.IncludeScopes = false;
-});
+    services.AddLogging(builder =>
+    {
+        builder.AddConsole(options => { options.LogToStandardErrorThreshold = LogLevel.Trace; })
+            .AddFilter("Microsoft", LogLevel.Warning)
+            .AddFilter("System", LogLevel.Warning)
+            .SetMinimumLevel(LogLevel.Debug);
 
-// Register configuration settings - avoid using IOptions to keep it simple
+        builder.AddSimpleConsole(options =>
+        {
+            options.SingleLine = true;
+            options.TimestampFormat = "HH:mm:ss ";
+            options.IncludeScopes = false;
+        });
+    });
+}
+else
+{
+    // Add minimal logging infrastructure even when not verbose
+    services.AddLogging(builder => builder.SetMinimumLevel(LogLevel.None));
+}
+
+// Register configuration as singleton
+services.AddSingleton<IConfiguration>(configuration);
+
+// Bind and register configuration settings
 var rabbitMqConfig = new RabbitMqConfig();
-builder.Configuration.GetSection(RabbitMqConfig.RabbitMqConfigName).Bind(rabbitMqConfig);
-builder.Services.AddSingleton(rabbitMqConfig);
+configuration.GetSection(RabbitMqConfig.RabbitMqConfigName).Bind(rabbitMqConfig);
+services.AddSingleton(rabbitMqConfig);
 
 var fileConfig = new FileConfig();
-builder.Configuration.GetSection(nameof(FileConfig)).Bind(fileConfig);
-builder.Services.AddSingleton(fileConfig);
+configuration.GetSection(nameof(FileConfig)).Bind(fileConfig);
+services.AddSingleton(fileConfig);
 
-var cliConfig = new CliConfig
-{
-    JsonOutput = jsonOutput,
-    Quiet = quietLogging,
-    Verbose = verboseLogging,
-    NoColor = noColor
-};
-builder.Services.AddSingleton(cliConfig);
+services.AddSingleton(cliConfig);
 
 // Register services in the DI container
-builder.Services.AddSingleton<IRabbitChannelFactory, RabbitChannelFactory>();
-builder.Services.AddSingleton<IPublishService, PublishService>();
-builder.Services.AddSingleton<IConsumeService, ConsumeService>();
-builder.Services.AddSingleton<IStatusOutputService, StatusOutputService>();
+services.AddSingleton<IRabbitChannelFactory, RabbitChannelFactory>();
+services.AddSingleton<IPublishService, PublishService>();
+services.AddSingleton<IConsumeService, ConsumeService>();
+services.AddSingleton<IStatusOutputService, StatusOutputService>();
+services.AddSingleton<IPublishOutputService, PublishOutputService>();
+services.AddSingleton<IAnsiConsoleFactory, AnsiConsoleFactory>();
 
 // Register message formatters
-builder.Services.AddSingleton<IMessageFormatter, TextMessageFormatter>();
-builder.Services.AddSingleton<IMessageFormatter, JsonMessageFormatter>();
-builder.Services.AddSingleton<IMessageFormatterFactory, MessageFormatterFactory>();
+services.AddSingleton<IMessageFormatter, TextMessageFormatter>();
+services.AddSingleton<IMessageFormatter, JsonMessageFormatter>();
+services.AddSingleton<IMessageFormatterFactory, MessageFormatterFactory>();
 
 // Register message writers
-builder.Services.AddSingleton<IMessageWriter, ConsoleMessageWriter>();
-builder.Services.AddSingleton<IMessageWriter, SingleFileMessageWriter>();
-builder.Services.AddSingleton<IMessageWriter, RotatingFileMessageWriter>();
-builder.Services.AddSingleton<IMessageWriterFactory, MessageWriterFactory>();
+services.AddSingleton<IMessageWriter, ConsoleMessageWriter>();
+services.AddSingleton<IMessageWriter, SingleFileMessageWriter>();
+services.AddSingleton<IMessageWriter, RotatingFileMessageWriter>();
+services.AddSingleton<IMessageWriterFactory, MessageWriterFactory>();
 
 // Register command handlers
-builder.Services.AddSingleton<ICommandHandler, PublishCommandHandler>();
-builder.Services.AddSingleton<ICommandHandler, ConsumeCommandHandler>();
-builder.Services.AddSingleton<ICommandHandler, ConfigCommandHandler>();
+services.AddSingleton<ICommandHandler, PublishCommandHandler>();
+services.AddSingleton<ICommandHandler, ConsumeCommandHandler>();
+services.AddSingleton<ICommandHandler, ConfigCommandHandler>();
 
-// Build host to create service provider and configuration
-var host = builder.Build();
+// Build service provider
+var serviceProvider = services.BuildServiceProvider();
 
-var logger = host.Services.GetRequiredService<ILogger<Program>>();
+var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
 
 try
 {
-    // Configure commands with the properly configured host
-    var commandLineBuilder = new RootCommandHandler(host);
-    commandLineBuilder.ConfigureCommands();
+    // Configure the root command with all command handlers
+    rootCommandHandler.ConfigureCommands(serviceProvider);
 
     // Run the command line application
-    var exitCode = await commandLineBuilder.RunAsync(args);
+    var exitCode = rootCommandHandler.RunAsync(args);
 
     return exitCode;
 }
