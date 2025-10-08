@@ -1,3 +1,6 @@
+using System.Diagnostics;
+using System.Text;
+
 namespace RmqCli.Common;
 
 public static class OutputUtilities
@@ -38,5 +41,20 @@ public static class OutputUtilities
         if (number < 1_000_000_000) return 9;
 
         return 10;
-    } 
+    }
+
+    public static string GetElapsedTimeString(TimeSpan elapsed)
+    {
+        var sb = new StringBuilder();
+        if (elapsed.Days > 0)
+            sb.Append($"{elapsed.Days}d ");
+        if (elapsed.Hours > 0)
+            sb.Append($"{elapsed.Hours}h ");
+        if (elapsed.Minutes > 0)
+            sb.Append($"{elapsed.Minutes}m ");
+        if (elapsed.Seconds > 0)
+            sb.Append($"{elapsed.Seconds}s ");
+        sb.Append($"{elapsed.Milliseconds}ms");
+        return sb.ToString().Trim();
+    }
 }
