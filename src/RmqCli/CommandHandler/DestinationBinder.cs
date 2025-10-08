@@ -4,7 +4,7 @@ using RmqCli.Common;
 
 namespace RmqCli.CommandHandler;
 
-public class DestinationBinder : BinderBase<Destination>
+public class DestinationBinder : BinderBase<DestinationInfo>
 {
     private readonly Option<string> _queueOption;
     private readonly Option<string> _exchangeOption;
@@ -17,13 +17,20 @@ public class DestinationBinder : BinderBase<Destination>
         _routingKeyOption = routingKeyOption;
     }
     
-    protected override Destination GetBoundValue(BindingContext bindingContext)
+    protected override DestinationInfo GetBoundValue(BindingContext bindingContext)
     {
-        return new Destination
+        var queue = bindingContext.ParseResult.GetValueForOption(_queueOption);
+        var exchange = bindingContext.ParseResult.GetValueForOption(_exchangeOption);
+        var routingKey = bindingContext.ParseResult.GetValueForOption(_routingKeyOption);
+        
+        var type = string.IsNullOrWhiteSpace(queue) ? "exchange" : "queue";
+        
+        return new DestinationInfo
         {
-            Queue = bindingContext.ParseResult.GetValueForOption(_queueOption),
-            Exchange = bindingContext.ParseResult.GetValueForOption(_exchangeOption)!,
-            RoutingKey = bindingContext.ParseResult.GetValueForOption(_routingKeyOption)
+            Queue = queue,
+            Exchange = exchange,
+            RoutingKey = routingKey,
+            Type = type
         };
     }
 }
