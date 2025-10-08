@@ -215,8 +215,6 @@ public class PublishService : IPublishService
             var messageIdSuffix = GetMessageIdSuffix(m, messages.Count);
             for (var i = 0; i < burstCount; i++)
             {
-                // TODO: remove delay
-                // await Task.Delay(2000);
                 var burstSuffix = burstCount > 1 ? GetMessageIdSuffix(i, burstCount) : string.Empty;
                 var messageId = $"{messageBaseId}{messageIdSuffix}{burstSuffix}";
                 var props = new BasicProperties
@@ -252,7 +250,7 @@ public class PublishService : IPublishService
         return $"{countString} message{pluralSuffix}";
     }
 
-    private (List<string> messags, string delimiterDisplay) SplitMessages(string messageBlob)
+    private (List<string> messages, string delimiterDisplay) SplitMessages(string messageBlob)
     {
         var messages = messageBlob
             .Split(_fileConfig.MessageDelimiter)
