@@ -66,7 +66,7 @@ public class RootCommandHandler
             Format = format,
             Quiet = quietLogging,
             Verbose = verboseLogging,
-            UseColor = !noColor
+            NoColor = noColor
         };
 
         return (cliConfig, customConfigPath ?? string.Empty);

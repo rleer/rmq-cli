@@ -37,7 +37,7 @@ public class StatusOutputService : IStatusOutputService
         _console = ansiConsoleFactory.CreateStderrConsole();
     }
 
-    public bool NoColor => _cliConfig.UseColor;
+    public bool NoColor => _cliConfig.NoColor;
 
     /// <summary>
     /// Prints a status message to STDERR console.
