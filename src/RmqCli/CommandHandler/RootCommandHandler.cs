@@ -1,5 +1,4 @@
 using System.CommandLine;
-using System.CommandLine.Parsing;
 using Microsoft.Extensions.DependencyInjection;
 using RmqCli.CommandHandler;
 using RmqCli.Common;
@@ -24,42 +23,63 @@ public class RootCommandHandler
 
     public (CliConfig cliConfg, string configPath) ParseGlobalOptions(string[] args)
     {
-        var verboseOption = new Option<bool>("--verbose", "Enable verbose logging");
-        verboseOption.SetDefaultValue(false);
-        _rootCommand.AddGlobalOption(verboseOption);
-
-        var quietOption = new Option<bool>("--quiet", "Minimal output (errors only)");
-        quietOption.SetDefaultValue(false);
-        _rootCommand.AddGlobalOption(quietOption);
-
-        var outputFormatOption = new Option<OutputFormat>("--output", "Output format. One of: plain, table or json.");
-        outputFormatOption.AddAlias("-o");
-        outputFormatOption.SetDefaultValue(OutputFormat.Plain);
-        _rootCommand.AddGlobalOption(outputFormatOption);
-
-        var noColorOption = new Option<bool>("--no-color", "Disable colored output for dumb terminals");
-        noColorOption.SetDefaultValue(false);
-        _rootCommand.AddGlobalOption(noColorOption);
-
-        var configFileOption = new Option<string>("--config", "Path to the configuration file (TOML format)");
-        _rootCommand.AddGlobalOption(configFileOption);
-        
-        _rootCommand.AddValidator(result =>
+        var verboseOption = new Option<bool>("--verbose")
         {
-            if (result.GetValueForOption(verboseOption) && result.GetValueForOption(quietOption))
+            Description = "Enable verbose logging",
+            DefaultValueFactory = _ => false,
+            Recursive = true
+        };
+        _rootCommand.Options.Add(verboseOption);
+
+        var quietOption = new Option<bool>("--quiet")
+        {
+            Description = "Minimal output (errors only)",
+            DefaultValueFactory = _ => false,
+            Recursive = true
+        };
+        _rootCommand.Options.Add(quietOption);
+
+        var outputFormatOption = new Option<OutputFormat>("--output")
+        {
+            Description = "Output format",
+            Aliases = { "-o" },
+            DefaultValueFactory = _ => OutputFormat.Plain,
+            Recursive = true
+        };
+        outputFormatOption.AcceptOnlyFromAmong("plain", "table", "json");
+        _rootCommand.Options.Add(outputFormatOption);
+
+        var noColorOption = new Option<bool>("--no-color")
+        {
+            Description = "Disable colored output for dumb terminals",
+            DefaultValueFactory = _ => false,
+            Recursive = true
+        };
+        _rootCommand.Options.Add(noColorOption);
+
+        var configFileOption = new Option<string>("--config")
+        {
+            Description = "Path to configuration file (TOML format). If not specified, the default config file path will be used.",
+            Recursive = true
+        };
+        _rootCommand.Add(configFileOption);
+        
+        _rootCommand.Validators.Add(result =>
+        {
+            if (result.GetValue(verboseOption) && result.GetValue(quietOption))
             {
-                result.ErrorMessage = "You cannot use both --verbose and --quiet options together.";
+                result.AddError("You cannot use both --verbose and --quiet options together.");
             }
         });
         
         // Parse the global options first to set up the environment
         var parseResult = _rootCommand.Parse(args);
 
-        var verboseLogging = parseResult.GetValueForOption(verboseOption);
-        var quietLogging = parseResult.GetValueForOption(quietOption);
-        var format = parseResult.GetValueForOption(outputFormatOption);
-        var noColor = parseResult.GetValueForOption(noColorOption);
-        var customConfigPath = parseResult.GetValueForOption(configFileOption);
+        var verboseLogging = parseResult.GetValue(verboseOption);
+        var quietLogging = parseResult.GetValue(quietOption);
+        var format = parseResult.GetValue(outputFormatOption);
+        var noColor = parseResult.GetValue(noColorOption);
+        var customConfigPath = parseResult.GetValue(configFileOption);
         
         var cliConfig = new CliConfig
         {
@@ -83,6 +103,7 @@ public class RootCommandHandler
 
     public int RunAsync(string[] args)
     {
-        return _rootCommand.Invoke(args);
+        var parseResult = _rootCommand.Parse(args);
+        return parseResult.Invoke();
     }
 }

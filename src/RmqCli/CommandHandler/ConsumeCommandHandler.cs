@@ -22,52 +22,65 @@ public class ConsumeCommandHandler : ICommandHandler
 
         var consumeCommand = new Command("consume", "Consume messages from a queue. Warning: getting messages from a queue is a destructive action!");
 
-        var queueOption = new Option<string>("--queue", "Queue name to consume messages from");
-        queueOption.AddAlias("-q");
-        queueOption.IsRequired = true;
-
-        var ackModeOption = new Option<AckModes>("--ack-mode", "Acknowledgment mode");
-        ackModeOption.AddAlias("-a");
-        ackModeOption.SetDefaultValue(AckModes.Ack);
-
-        var countOption = new Option<int>("--count", "Number of messages to consume (default: continuous consumption until interrupted)");
-        countOption.AddAlias("-c");
-        countOption.SetDefaultValue(-1);
-
-        var outputFileOption = new Option<string>("--to-file", "Output file to write messages to. Or just pipe/redirect output to a file.");
-
-        var outputFormatOption = new Option<OutputFormat>("--output", "Output format. One of: plain, table or json.");
-        outputFormatOption.AddAlias("-o");
-        outputFormatOption.SetDefaultValue(OutputFormat.Plain);
-        
-        consumeCommand.AddOption(queueOption);
-        consumeCommand.AddOption(ackModeOption);
-        consumeCommand.AddOption(countOption);
-        consumeCommand.AddOption(outputFileOption);
-        consumeCommand.AddOption(outputFormatOption);
-
-        consumeCommand.AddValidator(result =>
+        var queueOption = new Option<string>("--queue")
         {
-            if (result.GetValueForOption(queueOption) is null)
+            Description = "Queue name to consume messages from.",
+            Aliases = { "-q" },
+            Required = true
+        };
+
+        var ackModeOption = new Option<AckModes>("--ack-mode")
+        {
+            Description = "Message acknowledgment mode.",
+            Aliases = { "-a" },
+            DefaultValueFactory = _ => AckModes.Ack
+        };
+
+        var countOption = new Option<int>("--count")
+        {
+            Description = "Number of messages to consume. Default is -1 (continuous consumption).",
+            Aliases = { "-c" },
+            DefaultValueFactory = _ => -1
+        };
+
+        var outputFileOption = new Option<string>("--to-file")
+        {
+            Description = "Path to output file to save consumed messages. If not specified, messages will be printed to standard output (STDOUT).",
+        };
+        
+        consumeCommand.Options.Add(queueOption);
+        consumeCommand.Options.Add(ackModeOption);
+        consumeCommand.Options.Add(countOption);
+        consumeCommand.Options.Add(outputFileOption);
+
+        consumeCommand.Validators.Add(result =>
+        {
+            if (result.GetValue(queueOption) is null)
             {
-                result.ErrorMessage = "You must specify a queue to consume messages from.";
+                result.AddError("You must specify a queue to consume messages from.");
             }
 
-            if (result.GetValueForOption(outputFileOption) is { } filePath && !PathValidator.IsValidFilePath(filePath))
+            if (result.GetValue(outputFileOption) is { } filePath && !PathValidator.IsValidFilePath(filePath))
             {
-                result.ErrorMessage = $"The specified output file '{filePath}' is not valid.";
+                result.AddError($"The specified output file '{filePath}' is not valid.");
             }
         });
 
-        consumeCommand.SetHandler(Handle, queueOption, ackModeOption, countOption, outputFileOption, outputFormatOption);
+        consumeCommand.SetAction(Handle);
 
-        rootCommand.AddCommand(consumeCommand);
+        rootCommand.Subcommands.Add(consumeCommand);
     }
 
-    private async Task Handle(string queue, AckModes ackMode, int messageCount, string outputFilePath, OutputFormat outputFormat)
+    private async Task Handle(ParseResult parseResult, CancellationToken cancellationToken)
     {
         _logger.LogDebug("Running handler for consume command");
         
+        var queue = parseResult.GetRequiredValue<string>("--queue");
+        var ackMode = parseResult.GetValue<AckModes>("--ack-mode");
+        var messageCount = parseResult.GetValue<int>("--count");
+        var outputFilePath = parseResult.GetValue<string>("--to-file");
+        var outputFormat = parseResult.GetValue<OutputFormat>("--output");
+ 
         var cts = new CancellationTokenSource();
         Console.CancelKeyPress += (_, e) =>
         {
