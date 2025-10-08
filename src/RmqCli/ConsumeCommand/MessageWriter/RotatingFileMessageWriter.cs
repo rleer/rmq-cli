@@ -35,17 +35,17 @@ public class RotatingFileMessageWriter : IMessageWriter
         Channel<(ulong deliveryTag, AckModes ackMode)> ackChannel,
         AckModes ackMode)
     {
-        _logger.LogDebug("[*] Starting message processing...");
+        _logger.LogDebug("Starting rotating file message writer");
 
         if (_outputFileInfo == null)
         {
-            _logger.LogError("[x] Output file info is null. Cannot write messages.");
+            _logger.LogError("Output file info is null. Cannot write messages.");
             throw new InvalidOperationException("Output file info must be set before writing messages.");
         }
 
         if (_formatter == null)
         {
-            _logger.LogError("[x] Message formatter not set. Cannot write messages.");
+            _logger.LogError("Message formatter not set. Cannot write messages.");
             throw new InvalidOperationException("Message formatter not set. Cannot write messages.");
         }
 
@@ -90,13 +90,13 @@ public class RotatingFileMessageWriter : IMessageWriter
                 messagesInCurrentFile++;
 
                 await ackChannel.Writer.WriteAsync((message.DeliveryTag, ackMode));
-                _logger.LogDebug("[*] Message #{DeliveryTag} processed successfully", message.DeliveryTag);
+                _logger.LogTrace("Message #{DeliveryTag} processed successfully", message.DeliveryTag);
             }
         }
         // TODO: handle specific exceptions like IOException, UnauthorizedAccessException, etc.
-        catch (Exception)
+        catch (Exception ex)
         {
-            _logger.LogError("[x] Failed to write messages to file '{FileName}'", fileStream?.Name);
+            _logger.LogError(ex, "Failed to write messages to file '{FileName}'", fileStream?.Name);
             throw;
         }
         finally
@@ -109,14 +109,14 @@ public class RotatingFileMessageWriter : IMessageWriter
                 await fileStream!.DisposeAsync();
             }
 
-            _logger.LogDebug("[*] Done!");
+            _logger.LogDebug("Rotating file message writer done finished");
         }
     }
 
     private (FileStream fileStream, StreamWriter writer) CreateNewFile(string baseFileName, string fileExtension, int fileIndex)
     {
         var currentFileName = $"{baseFileName}.{fileIndex}{fileExtension}";
-        _logger.LogDebug("[*] Creating new file: {FileName}", currentFileName);
+        _logger.LogDebug("Creating new file: {FileName}", currentFileName);
 
         var fileStream = new FileStream(currentFileName, FileMode.Create, FileAccess.Write);
         var writer = new StreamWriter(fileStream);

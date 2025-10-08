@@ -32,11 +32,11 @@ public class SingleFileMessageWriter : IMessageWriter
 
     public async Task WriteMessageAsync(Channel<RabbitMessage> messageChannel, Channel<(ulong deliveryTag, AckModes ackMode)> ackChannel, AckModes ackMode)
     {
-        _logger.LogDebug("[*] Starting message processing...");
+        _logger.LogDebug("Starting single file message writer");
 
         if (_outputFileInfo == null)
         {
-            _logger.LogError("[x] Output file info is null. Cannot write messages.");
+            _logger.LogError("Output file info is null. Cannot write messages.");
             throw new InvalidOperationException("Output file info must be set before writing messages.");
         }
 
@@ -55,8 +55,6 @@ public class SingleFileMessageWriter : IMessageWriter
 
             await foreach (var message in messageChannel.Reader.ReadAllAsync())
             {
-                _logger.LogDebug("[*] Start processing message #{DeliveryTag}...", message.DeliveryTag);
-
                 if (!isFirstMessage)
                 {
                     if (_outputFormat is OutputFormat.Plain)
@@ -75,14 +73,14 @@ public class SingleFileMessageWriter : IMessageWriter
 
             await writer.FlushAsync();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            _logger.LogError("[x] Failed to write messages to file '{FileName}'", _outputFileInfo.FullName);
+            _logger.LogError(ex, "Failed to write messages to file '{FileName}'", _outputFileInfo.FullName);
         }
         finally
         {
             ackChannel.Writer.TryComplete();
-            _logger.LogDebug("[*] Done!");
+            _logger.LogDebug("Single file message writer done");
         }
     }
 }

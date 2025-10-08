@@ -39,10 +39,10 @@ public class ConsumeService : IConsumeService
         OutputFormat outputFormat = OutputFormat.Plain,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("[*] Starting consuming from '{Queue}' queue in '{AckMode}' {StoppingCondition}",
-            queue, ackMode, messageCount == -1 ? "until stopped" : $"until {messageCount.ToString()} messages are consumed");
+        _logger.LogDebug("Initiating consume operation: queue={Queue}, mode={AckMode}, count={messageCount}",
+            queue, ackMode, messageCount);
 
-        // Create a local cancellation token source to allow stopping the consumption
+        // Create a local cancellation token source to allow stopping the consumer
         var localCts = new CancellationTokenSource();
         var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, localCts.Token);
 
@@ -54,7 +54,7 @@ public class ConsumeService : IConsumeService
         // Hook up callback that completes the receive-channel when message count is reached or cancellation is requested by user/applicaiton
         linkedCts.Token.Register(() =>
         {
-            _logger.LogDebug("[x] Completing receive channel (host: {ParentCt}, local: {LocalCt})",
+            _logger.LogDebug("Completing receive channel (cancellation token status: application={ParentCt}, local={LocalCt})",
                 cancellationToken.IsCancellationRequested, localCts.IsCancellationRequested);
             receiveChan.Writer.TryComplete();
         });
@@ -64,13 +64,13 @@ public class ConsumeService : IConsumeService
         var consumer = new AsyncEventingBasicConsumer(channel);
         consumer.ReceivedAsync += async (_, ea) =>
         {
-            // Skip messages if cancellation is requested. Skipped and unack'd messages will be automatically requeued by RabbitMQ once the channel closes.
+            // Skip messages if cancellation is requested. Skipped and unack'd messages will be automatically re-queued by RabbitMQ once the channel closes.
             if (linkedCts.Token.IsCancellationRequested)
             {
                 return;
             }
 
-            _logger.LogDebug("[*] Received message #{DeliveryTag}", ea.DeliveryTag);
+            _logger.LogTrace("Received message #{DeliveryTag}", ea.DeliveryTag);
             var message = new RabbitMessage(
                 System.Text.Encoding.UTF8.GetString(ea.Body.ToArray()),
                 ea.DeliveryTag,
@@ -79,17 +79,17 @@ public class ConsumeService : IConsumeService
             );
 
             await receiveChan.Writer.WriteAsync(message, linkedCts.Token);
-            _logger.LogDebug("[*] Message #{DeliveryTag} written to receive channel", ea.DeliveryTag);
+            _logger.LogTrace("Message #{DeliveryTag} written to receive channel", ea.DeliveryTag);
 
             // Check if we reached the message count limit
-            if (messageCount != -1 && Interlocked.Increment(ref receivedCount) == messageCount)
+            if (messageCount > 0 && Interlocked.Increment(ref receivedCount) == messageCount)
             {
-                _logger.LogDebug("[*] Message limit reached ({MessageCount}) - initiating cancellation!", messageCount);
+                _logger.LogDebug("Message limit {MessageCount} reached - initiating cancellation!", messageCount);
                 await localCts.CancelAsync();
             }
         };
 
-        _logger.LogDebug("[*] Starting RabbitMQ consumer for queue '{Queue}'", queue);
+        _logger.LogDebug("Starting RabbitMQ consumer for queue '{Queue}'", queue);
 
         // Start consuming messages from the specified queue
         _ = channel.BasicConsumeAsync(queue: queue, autoAck: false, consumer: consumer);
@@ -104,33 +104,32 @@ public class ConsumeService : IConsumeService
 
         await Task.WhenAll(writerTask, ackDispatcher);
 
-        _logger.LogDebug("[x] Continuous consumption stopped. Waiting for RabbitMQ channel to close...");
+        _logger.LogDebug("Consumption stopped. Waiting for RabbitMQ channel to close");
         await channel.CloseAsync();
     }
 
     private async Task HandleAcks(Channel<(ulong deliveryTag, AckModes ackMode)> ackChan, IChannel rmqChannel)
     {
-        // TODO: handle multiple acks in a single call
-        _logger.LogDebug("[*] Starting acknowledgment dispatcher...");
+        _logger.LogDebug("Starting acknowledgment dispatcher");
         await foreach (var (deliveryTag, ackModeValue) in ackChan.Reader.ReadAllAsync())
         {
             switch (ackModeValue)
             {
                 case AckModes.Ack:
-                    _logger.LogDebug("[*] Acknowledging message #{DeliveryTag}", deliveryTag);
+                    _logger.LogTrace("Acknowledging message #{DeliveryTag}", deliveryTag);
                     await rmqChannel.BasicAckAsync(deliveryTag, multiple: false);
                     break;
                 case AckModes.Reject:
-                    _logger.LogDebug("[*] Rejecting message #{DeliveryTag} without requeue", deliveryTag);
+                    _logger.LogTrace("Rejecting message #{DeliveryTag} without requeue", deliveryTag);
                     await rmqChannel.BasicNackAsync(deliveryTag, multiple: false, requeue: false);
                     break;
                 case AckModes.Requeue:
-                    _logger.LogDebug("[*] Requeue message #{DeliveryTag}", deliveryTag);
+                    _logger.LogTrace("Requeue message #{DeliveryTag}", deliveryTag);
                     await rmqChannel.BasicNackAsync(deliveryTag, multiple: false, requeue: true);
                     break;
             }
         }
 
-        _logger.LogDebug("[x] Acknowledgement dispatcher done!");
+        _logger.LogDebug("Acknowledgement dispatcher finished");
     }
 }
