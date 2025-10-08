@@ -60,7 +60,7 @@ public class PublishService : IPublishService
         await using var channel = await _rabbitChannelFactory.GetChannelWithPublisherConfirmsAsync();
 
         var totalMessageCount = messages.Count * burstCount;
-        var messageCountString = GetMessageCountString(totalMessageCount, _statusOutput.NoColor);
+        var messageCountString = OutputUtilities.GetMessageCountString(totalMessageCount, _statusOutput.NoColor);
 
         // Prepare the list to collect publish results
         var publishResults = new List<PublishOperationDto>();
@@ -149,7 +149,7 @@ public class PublishService : IPublishService
             if (successCount > 0)
             {
                 _statusOutput.ShowSuccess(
-                    $"Published {GetMessageCountString(successCount, _statusOutput.NoColor)} successfully before cancelled ({OutputUtilities.GetElapsedTimeString(elapsedTime)})");
+                    $"Published {OutputUtilities.GetMessageCountString(successCount, _statusOutput.NoColor)} successfully before cancelled ({OutputUtilities.GetElapsedTimeString(elapsedTime)})");
 
                 var partialResult = PublishResponseFactory.Partial(dest, publishResults, failCount, elapsedTime);
                 _resultOutput.WritePublishResult(partialResult);
@@ -241,13 +241,6 @@ public class PublishService : IPublishService
         }
 
         return results;
-    }
-
-    private static string GetMessageCountString(int count, bool noColor = true)
-    {
-        var countString = noColor ? count.ToString() : $"[orange1]{count}[/]";
-        var pluralSuffix = count == 1 ? string.Empty : "s";
-        return $"{countString} message{pluralSuffix}";
     }
 
     private (List<string> messages, string delimiterDisplay) SplitMessages(string messageBlob)
