@@ -75,22 +75,11 @@ public class RotatingFileMessageWriter : IMessageWriter
 
                     (fileStream, writer) = CreateNewFile(baseFileName, fileExtension, fileIndex++);
                     messagesInCurrentFile = 0;
-                    
-                    if (_outputFormat is OutputFormat.Json)
-                    {
-                        await writer.WriteLineAsync("[");
-                    }
                 }
-
-                _logger.LogDebug("[*] Start processing message #{DeliveryTag}...", message.DeliveryTag);
 
                 if (messagesInCurrentFile != 0)
                 {
-                    if (_outputFormat is OutputFormat.Json)
-                    {
-                        await writer.WriteLineAsync(","); // Add comma for JSON formatting
-                    }
-                    else if (_outputFormat is OutputFormat.Plain)
+                    if (_outputFormat is OutputFormat.Plain)
                     {
                         await writer.WriteLineAsync(_fileConfig.MessageDelimiter); // Add delimiter for text format
                     }
