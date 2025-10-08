@@ -58,6 +58,7 @@ public class ConsumeCommandHandler : ICommandHandler
                 result.ErrorMessage = $"The specified output file '{filePath}' is not valid.";
             }
 
+            // TODO: remove
             if (result.GetValueForOption(countOption) is 0)
             {
                 result.ErrorMessage = "If you don't want to consume any message, don't bother to run this command.";
@@ -74,7 +75,7 @@ public class ConsumeCommandHandler : ICommandHandler
         _logger.LogDebug("[*] Running handler for consume command...");
         
         var cts = new CancellationTokenSource();
-        Console.CancelKeyPress += (sender, e) =>
+        Console.CancelKeyPress += (_, e) =>
         {
             e.Cancel = true; // Prevent the process from terminating immediately
             cts.Cancel();    // Signal cancellation

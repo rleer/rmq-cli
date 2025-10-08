@@ -4,7 +4,6 @@ using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using RmqCli.Common;
 using RmqCli.ConsumeCommand.MessageWriter;
-using RmqCli.Services;
 
 namespace RmqCli.ConsumeCommand;
 
