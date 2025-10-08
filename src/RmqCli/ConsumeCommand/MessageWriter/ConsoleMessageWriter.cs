@@ -25,7 +25,7 @@ public class ConsoleMessageWriter : IMessageWriter
 
     public async Task WriteMessageAsync(Channel<RabbitMessage> messageChannel, Channel<(ulong deliveryTag, AckModes ackMode)> ackChannel, AckModes ackMode)
     {
-        _logger.LogDebug("[*] Starting message processing...");
+        _logger.LogDebug("Starting console message writer");
         
         if (_formatter == null)
         {
@@ -38,16 +38,16 @@ public class ConsoleMessageWriter : IMessageWriter
             {
                 Console.Out.WriteLine(_formatter.FormatMessage(message));
                 await ackChannel.Writer.WriteAsync((message.DeliveryTag, ackMode));
-                _logger.LogDebug("[*] Message #{DeliveryTag} processed successfully", message.DeliveryTag);
+                _logger.LogTrace("Message #{DeliveryTag} processed successfully", message.DeliveryTag);
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                _logger.LogWarning("[*] Message #{DeliveryTag} failed to process: {Message}", message.DeliveryTag, e.Message);
+                _logger.LogError(ex, "Message #{DeliveryTag} failed to process: {Message}", message.DeliveryTag, ex.Message);
                 await ackChannel.Writer.WriteAsync((message.DeliveryTag, AckModes.Requeue));
             }
         }
 
         ackChannel.Writer.TryComplete();
-        _logger.LogDebug("[*] Done!");
+        _logger.LogDebug("Console message writer completed");
     }
 }

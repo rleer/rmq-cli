@@ -18,7 +18,7 @@ public class ConsumeCommandHandler : ICommandHandler
 
     public void Configure(RootCommand rootCommand)
     {
-        _logger.LogDebug("Configuring consume command...");
+        _logger.LogDebug("Configuring consume command");
 
         var consumeCommand = new Command("consume", "Consume messages from a queue. Warning: getting messages from a queue is a destructive action!");
 
@@ -30,7 +30,7 @@ public class ConsumeCommandHandler : ICommandHandler
         ackModeOption.AddAlias("-a");
         ackModeOption.SetDefaultValue(AckModes.Ack);
 
-        var countOption = new Option<int>("--count", "Number of messages to consume (-1 for all messages)");
+        var countOption = new Option<int>("--count", "Number of messages to consume (default: continuous consumption until interrupted)");
         countOption.AddAlias("-c");
         countOption.SetDefaultValue(-1);
 
@@ -57,12 +57,6 @@ public class ConsumeCommandHandler : ICommandHandler
             {
                 result.ErrorMessage = $"The specified output file '{filePath}' is not valid.";
             }
-
-            // TODO: remove
-            if (result.GetValueForOption(countOption) is 0)
-            {
-                result.ErrorMessage = "If you don't want to consume any message, don't bother to run this command.";
-            }
         });
 
         consumeCommand.SetHandler(Handle, queueOption, ackModeOption, countOption, outputFileOption, outputFormatOption);
@@ -72,7 +66,7 @@ public class ConsumeCommandHandler : ICommandHandler
 
     private async Task Handle(string queue, AckModes ackMode, int messageCount, string outputFilePath, OutputFormat outputFormat)
     {
-        _logger.LogDebug("[*] Running handler for consume command...");
+        _logger.LogDebug("Running handler for consume command");
         
         var cts = new CancellationTokenSource();
         Console.CancelKeyPress += (_, e) =>
@@ -80,7 +74,6 @@ public class ConsumeCommandHandler : ICommandHandler
             e.Cancel = true; // Prevent the process from terminating immediately
             cts.Cancel();    // Signal cancellation
         };
-        _logger.LogInformation("[*] Press Ctrl+C to stop consuming messages...");
 
         FileInfo? outputFileInfo = null;
         if (!string.IsNullOrWhiteSpace(outputFilePath))
@@ -90,6 +83,6 @@ public class ConsumeCommandHandler : ICommandHandler
 
         await _consumeService.ConsumeMessages(queue, ackMode, outputFileInfo, messageCount, outputFormat, cts.Token); 
 
-        _logger.LogDebug("[x] Message consumer is done (cts: {CancellationToken}). Stopping application...", cts.IsCancellationRequested);
+        _logger.LogDebug("Message consumer is done. Stopping application.");
     }
 }
