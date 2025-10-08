@@ -23,12 +23,14 @@ public class ConsumeService : IConsumeService
     private readonly ILogger<ConsumeService> _logger;
     private readonly IRabbitChannelFactory _rabbitChannelFactory;
     private readonly IMessageWriterFactory _messageWriterFactory;
+    private readonly IStatusOutputService _statusOutput;
 
-    public ConsumeService(ILogger<ConsumeService> logger, IRabbitChannelFactory rabbitChannelFactory, IMessageWriterFactory messageWriterFactory)
+    public ConsumeService(ILogger<ConsumeService> logger, IRabbitChannelFactory rabbitChannelFactory, IMessageWriterFactory messageWriterFactory, IStatusOutputService statusOutput)
     {
         _logger = logger;
         _rabbitChannelFactory = rabbitChannelFactory;
         _messageWriterFactory = messageWriterFactory;
+        _statusOutput = statusOutput;
     }
 
     public async Task ConsumeMessages(
@@ -56,6 +58,10 @@ public class ConsumeService : IConsumeService
         {
             _logger.LogDebug("Completing receive channel (cancellation token status: application={ParentCt}, local={LocalCt})",
                 cancellationToken.IsCancellationRequested, localCts.IsCancellationRequested);
+            if (cancellationToken.IsCancellationRequested)
+            {
+                _statusOutput.ShowWarning("Consumption cancelled by user", addNewLine: true);
+            }
             receiveChan.Writer.TryComplete();
         });
 
@@ -82,7 +88,7 @@ public class ConsumeService : IConsumeService
             _logger.LogTrace("Message #{DeliveryTag} written to receive channel", ea.DeliveryTag);
 
             // Check if we reached the message count limit
-            if (messageCount > 0 && Interlocked.Increment(ref receivedCount) == messageCount)
+            if (Interlocked.Increment(ref receivedCount) == messageCount)
             {
                 _logger.LogDebug("Message limit {MessageCount} reached - initiating cancellation!", messageCount);
                 await localCts.CancelAsync();
@@ -90,6 +96,13 @@ public class ConsumeService : IConsumeService
         };
 
         _logger.LogDebug("Starting RabbitMQ consumer for queue '{Queue}'", queue);
+
+        
+        var formatedQueueName = _statusOutput.NoColor ? queue : $"[orange1]{queue}[/]";
+        var statusMessage = messageCount > 0
+            ? $"Consuming up to {OutputUtilities.GetMessageCountString(messageCount, _statusOutput.NoColor)} from queue '{formatedQueueName}' (Ctrl+C to stop)"
+            : $"Consuming messages from queue '{formatedQueueName}' (Ctrl+C to stop)";
+        _statusOutput.ShowStatus(statusMessage);
 
         // Start consuming messages from the specified queue
         _ = channel.BasicConsumeAsync(queue: queue, autoAck: false, consumer: consumer);
@@ -103,7 +116,8 @@ public class ConsumeService : IConsumeService
         var ackDispatcher = Task.Run(() => HandleAcks(ackChan, channel));
 
         await Task.WhenAll(writerTask, ackDispatcher);
-
+        
+        _statusOutput.ShowSuccess($"Consumed {OutputUtilities.GetMessageCountString(receivedCount, _statusOutput.NoColor)}");
         _logger.LogDebug("Consumption stopped. Waiting for RabbitMQ channel to close");
         await channel.CloseAsync();
     }
