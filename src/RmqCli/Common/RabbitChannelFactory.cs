@@ -2,10 +2,9 @@ using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using RabbitMQ.Client.Exceptions;
-using RmqCli.Common;
 using RmqCli.Configuration;
 
-namespace RmqCli.Services;
+namespace RmqCli.Common;
 
 public interface IRabbitChannelFactory
 {
@@ -20,7 +19,7 @@ public class RabbitChannelFactory : IRabbitChannelFactory
     private readonly ILogger<RabbitChannelFactory> _logger;
     private readonly ConnectionFactory _connectionFactory;
     private readonly IStatusOutputService _output;
-    
+
     private IConnection? _connection;
 
     public RabbitChannelFactory(RabbitMqConfig rabbitMqConfig, ILogger<RabbitChannelFactory> logger, IStatusOutputService output)
@@ -110,6 +109,7 @@ public class RabbitChannelFactory : IRabbitChannelFactory
                 _logger.LogInformation("RabbitMQ connection shut down: {Reason} ({ReasonCode})", args.ReplyText, args.ReplyCode);
                 return Task.CompletedTask;
             }
+
             _logger.LogWarning("RabbitMQ connection shut down due to a failure: {Reason} ({ReasonCode})", args.ReplyText, args.ReplyCode);
             return Task.CompletedTask;
         };
@@ -121,49 +121,61 @@ public class RabbitChannelFactory : IRabbitChannelFactory
     {
         // Check the entire exception chain to find the most specific error
         var specificException = GetMostSpecificException(ex);
-        
+
         switch (specificException)
         {
-            case OperationInterruptedException opEx when opEx.ShutdownReason?.ReplyCode == 530:
-                var errorText = opEx.ShutdownReason.ReplyText;
-                
-                if (errorText.Contains("not found"))
-                {
-                    _logger.LogError("RabbitMQ connection failed: Virtual host '{VirtualHost}' not found", _config.VirtualHost);
-                    _output.ShowError($"Connection failed: Virtual host '{_config.VirtualHost}' not found");
-                }
-                else if (errorText.Contains("refused") || errorText.Contains("access") && errorText.Contains("denied"))
-                {
-                    _logger.LogError("RabbitMQ connection failed: Access denied for user '{User}' to virtual host '{VirtualHost}'", _config.User, _config.VirtualHost);
-                    _output.ShowError($"Connection failed: Access denied for user '{_config.User}' to virtual host '{_config.VirtualHost}'");
-                }
-                else
-                {
-                    // Fallback for other 530 errors - use the cleaned error message
-                    _logger.LogError("RabbitMQ connection failed: {Reason} ({Code})", errorText, opEx.ShutdownReason.ReplyCode);
-                    _output.ShowError("Connection failed", errorText);
-                }
-                break;
-            case AuthenticationFailureException:
-                _logger.LogError("RabbitMQ connection failed: Authentication failed for user '{User}'", _config.User);
-                _output.ShowError($"Connection failed: Authentication failed for user '{_config.User}'");
-                break;
-            case ConnectFailureException:
-                _logger.LogError("RabbitMQ connection failed: Could not connect to {Host}:{Port}", _config.Host, _config.Port);
-                _output.ShowError($"Connection failed: Could not connect to {_config.Host}:{_config.Port}");
-                break;
-            case BrokerUnreachableException:
-                _logger.LogError("RabbitMQ connection failed: Broker unreachable at {Host}:{Port}", _config.Host, _config.Port);
-                _output.ShowError($"Connection failed: RabbitMQ broker unreachable at {_config.Host}:{_config.Port}");
-                break;
             case OperationInterruptedException opEx:
-                _logger.LogError("RabbitMQ operation interrupted: {ReplyText} (Code: {ReplyCode})", 
-                    opEx.ShutdownReason?.ReplyText ?? "Unknown", opEx.ShutdownReason?.ReplyCode ?? 0);
-                _output.ShowError("RabbitMQ operation interrupted",opEx.ShutdownReason?.ReplyText ?? ex.Message);
+                var errorCode = opEx.ShutdownReason?.ReplyCode ?? 0;
+                var errorText = opEx.ShutdownReason?.ReplyText ?? "Unknown reason";
+
+                _logger.LogError(opEx, "{Reason} (code:{Code})", errorText, errorCode == 0 ? "unknown" : errorCode);
+
+                if (errorCode == 530)
+                {
+                    if (errorText.Contains("not found"))
+                    {
+                        var virtualHostNotFound = RabbitErrorInfoFactory.VirtualHostNotFound(_config.VirtualHost);
+                        _output.ShowError("Connection failed", virtualHostNotFound);
+                    }
+                    else if (errorText.Contains("refused") || errorText.Contains("access") && errorText.Contains("denied"))
+                    {
+                        var accessDeniedError = RabbitErrorInfoFactory.AccessDenied(_config.User, _config.VirtualHost);
+                        _output.ShowError("Connection failed", accessDeniedError);
+                    }
+                }
+
+                var operationInterruptedError = RabbitErrorInfoFactory.OperationInterrupted(
+                    errorText,
+                    errorCode.ToString());
+                _output.ShowError("RabbitMQ operation interrupted", operationInterruptedError);
+                break;
+            case AuthenticationFailureException authEx:
+                _logger.LogError(authEx, "Authentication failed for user '{User}'", _config.User);
+                
+                var authenticationError = RabbitErrorInfoFactory.AuthenticationFailed(_config.User);
+                _output.ShowError("Connection failed", authenticationError);
+                break;
+            case ConnectFailureException connectEx:
+                _logger.LogError(connectEx, "Could not connect to {Host}:{Port}", _config.Host, _config.Port);
+                
+                var connectionError = RabbitErrorInfoFactory.ConnectionFailed(_config.Host, _config.Port);
+                _output.ShowError("Connection failed", connectionError);
+                break;
+            case BrokerUnreachableException brokerEx:
+                _logger.LogError(brokerEx, "RabbitMQ connection failed: Broker unreachable at {Host}:{Port}", _config.Host, _config.Port);
+                
+                var brokerUnreachableError = RabbitErrorInfoFactory.BrokerUnreachable(_config.Host, _config.Port);
+                _output.ShowError("Connection failed", brokerUnreachableError);
                 break;
             default:
-                _logger.LogError("Unexpected RabbitMQ connection error"); // exception will be logged in service
-                _output.ShowError("Connection failed", ex.Message);
+                var genericError = ErrorInfoFactory.GenericErrorInfo(
+                    "Unexpected connection error",
+                    "RABBITMQ_CONNECTION_ERROR",
+                    "Check RabbitMQ server status and configuration",
+                    "connection",
+                    specificException);
+                _logger.LogError(specificException, "Unexpected RabbitMQ connection error");
+                _output.ShowError("Connection failed", genericError);
                 break;
         }
     }
@@ -176,7 +188,7 @@ public class RabbitChannelFactory : IRabbitChannelFactory
     {
         var current = ex;
         Exception? mostSpecific = null;
-        
+
         // Define exception priority order (most specific first)
         var priorityOrder = new[]
         {
@@ -185,7 +197,7 @@ public class RabbitChannelFactory : IRabbitChannelFactory
             typeof(ConnectFailureException),
             typeof(BrokerUnreachableException)
         };
-        
+
         // Traverse the exception chain
         while (current != null)
         {
@@ -199,10 +211,10 @@ public class RabbitChannelFactory : IRabbitChannelFactory
                     mostSpecific = current;
                 }
             }
-            
+
             current = current.InnerException;
         }
-        
+
         // Return the most specific exception found, or the original if none matched our priority list
         return mostSpecific ?? ex;
     }
