@@ -43,6 +43,13 @@ public static class OutputUtilities
         return 10;
     }
 
+    public static string GetMessageCountString(long count, bool noColor = true)
+    {
+        var countString = noColor ? count.ToString() : $"[orange1]{count}[/]";
+        var pluralSuffix = count == 1 ? string.Empty : "s";
+        return $"{countString} message{pluralSuffix}";
+    }
+ 
     public static string GetElapsedTimeString(TimeSpan elapsed)
     {
         var sb = new StringBuilder();
