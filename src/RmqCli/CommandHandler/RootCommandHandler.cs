@@ -1,13 +1,14 @@
 using System.CommandLine;
+using System.CommandLine.Parsing;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using RmqCli.CommandHandler;
+using RmqCli.Common;
+using RmqCli.Configuration;
 
 namespace RmqCli.Commandhandler;
 
 public class RootCommandHandler
 {
-    private readonly IHost _host;
     private readonly RootCommand _rootCommand;
 
     private const string RabbitAscii = """
@@ -16,27 +17,13 @@ public class RootCommandHandler
                                          o(")(")
                                        """;
 
-    public RootCommandHandler(IHost host)
+    public RootCommandHandler()
     {
-        _host = host;
         _rootCommand = new RootCommand($"{RabbitAscii}\nDeveloper focused utility tool for common RabbitMQ tasks");
     }
 
-    public void ConfigureCommands()
+    public (CliConfig cliConfg, string configPath) ParseGlobalOptions(string[] args)
     {
-        ConfigureGlobalOptions();
-
-        var commands = _host.Services.GetServices<ICommandHandler>();
-        foreach (var command in commands)
-        {
-            command.Configure(_rootCommand);
-        }
-    }
-
-    private void ConfigureGlobalOptions()
-    {
-        // Global options are parsed first in Program.cs to set up the environment and also need to be specified here
-        // for help text and property validation.
         var verboseOption = new Option<bool>("--verbose", "Enable verbose logging");
         verboseOption.SetDefaultValue(false);
         _rootCommand.AddGlobalOption(verboseOption);
@@ -45,9 +32,10 @@ public class RootCommandHandler
         quietOption.SetDefaultValue(false);
         _rootCommand.AddGlobalOption(quietOption);
 
-        var jsonOption = new Option<bool>("--json", "Structured JSON output to stdout");
-        jsonOption.SetDefaultValue(false);
-        _rootCommand.AddGlobalOption(jsonOption);
+        var outputFormatOption = new Option<OutputFormat>("--output", "Output format. One of: plain, table or json.");
+        outputFormatOption.AddAlias("-o");
+        outputFormatOption.SetDefaultValue(OutputFormat.Plain);
+        _rootCommand.AddGlobalOption(outputFormatOption);
 
         var noColorOption = new Option<bool>("--no-color", "Disable colored output for dumb terminals");
         noColorOption.SetDefaultValue(false);
@@ -63,10 +51,38 @@ public class RootCommandHandler
                 result.ErrorMessage = "You cannot use both --verbose and --quiet options together.";
             }
         });
+        
+        // Parse the global options first to set up the environment
+        var parseResult = _rootCommand.Parse(args);
+
+        var verboseLogging = parseResult.GetValueForOption(verboseOption);
+        var quietLogging = parseResult.GetValueForOption(quietOption);
+        var format = parseResult.GetValueForOption(outputFormatOption);
+        var noColor = parseResult.GetValueForOption(noColorOption);
+        var customConfigPath = parseResult.GetValueForOption(configFileOption);
+        
+        var cliConfig = new CliConfig
+        {
+            Format = format,
+            Quiet = quietLogging,
+            Verbose = verboseLogging,
+            UseColor = !noColor
+        };
+
+        return (cliConfig, customConfigPath ?? string.Empty);
     }
 
-    public async Task<int> RunAsync(string[] args)
+    public void ConfigureCommands(IServiceProvider serviceProvider)
     {
-        return await _rootCommand.InvokeAsync(args);
+        var commands = serviceProvider.GetServices<ICommandHandler>();
+        foreach (var command in commands)
+        {
+            command.Configure(_rootCommand);
+        }
+    }
+
+    public int RunAsync(string[] args)
+    {
+        return _rootCommand.Invoke(args);
     }
 }
