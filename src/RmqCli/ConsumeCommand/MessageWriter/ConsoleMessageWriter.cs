@@ -36,7 +36,7 @@ public class ConsoleMessageWriter : IMessageWriter
         {
             try
             {
-                _logger.LogInformation("{Message}", _formatter.FormatMessage(message));
+                Console.Out.WriteLine(_formatter.FormatMessage(message));
                 await ackChannel.Writer.WriteAsync((message.DeliveryTag, ackMode));
                 _logger.LogDebug("[*] Message #{DeliveryTag} processed successfully", message.DeliveryTag);
             }
