@@ -14,7 +14,7 @@ public interface IStatusOutputService
     void ShowSuccess(string message);
     void ShowWarning(string message, bool addNewLine = false);
     void ShowError(string message, ErrorInfo? errorInfo = null);
-    Task<T> ExecuteWithProgress<T>(string description, int maxValue, Func<IProgress<int>, Task<T>> workload);
+    Task ExecuteWithProgress(string description, int maxValue, Func<IProgress<int>, Task> workload);
     bool NoColor { get; }
 }
 
@@ -31,10 +31,10 @@ public class StatusOutputService : IStatusOutputService
     private readonly CliConfig _cliConfig;
     private readonly IAnsiConsole _console;
 
-    public StatusOutputService(CliConfig cliConfig, IAnsiConsoleFactory ansiConsoleFactory)
+    public StatusOutputService(CliConfig cliConfig)
     {
         _cliConfig = cliConfig;
-        _console = ansiConsoleFactory.CreateStderrConsole();
+        _console = AnsiConsoleFactory.CreateStderrConsole();
     }
 
     public bool NoColor => _cliConfig.NoColor;
@@ -132,16 +132,16 @@ public class StatusOutputService : IStatusOutputService
         }
     }
 
-    public async Task<T> ExecuteWithProgress<T>(string description, int maxValue, Func<IProgress<int>, Task<T>> workload)
+    public async Task ExecuteWithProgress(string description, int maxValue, Func<IProgress<int>, Task> workload)
     {
         // TODO: Make progress bar threshold configurable
         if ((_cliConfig.Quiet || _cliConfig.Format is OutputFormat.Json) && maxValue < 3000)
         {
             // For quiet mode or JSON output and low number of messages to publish, provide a no-op progress reporter
-            return await workload(new Progress<int>());
+            await workload(new Progress<int>());
         }
 
-        return await AnsiConsole.Progress()
+        await AnsiConsole.Progress()
             .AutoClear(true)
             .HideCompleted(true)
             .Columns(
@@ -158,7 +158,7 @@ public class StatusOutputService : IStatusOutputService
                     progressTask.Value = value;
                 });
 
-                return await workload(progress);
+                await workload(progress);
             });
     }
 

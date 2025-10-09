@@ -1,5 +1,4 @@
 using System.CommandLine;
-using Microsoft.Extensions.Logging;
 using RmqCli.Common;
 using RmqCli.ConsumeCommand;
 
@@ -7,13 +6,11 @@ namespace RmqCli.CommandHandler;
 
 public class ConsumeCommandHandler : ICommandHandler
 {
-    private readonly ILogger<ConsumeCommandHandler> _logger;
-    private readonly IConsumeService _consumeService;
+    private readonly ServiceFactory _serviceFactory;
 
-    public ConsumeCommandHandler(ILogger<ConsumeCommandHandler> logger, IConsumeService consumeService)
+    public ConsumeCommandHandler(ServiceFactory serviceFactory)
     {
-        _logger = logger;
-        _consumeService = consumeService;
+        _serviceFactory = serviceFactory;
     }
 
     public void Configure(RootCommand rootCommand)
@@ -85,7 +82,7 @@ public class ConsumeCommandHandler : ICommandHandler
 
     private async Task Handle(ParseResult parseResult, CancellationToken cancellationToken)
     {
-        _logger.LogDebug("Running handler for consume command");
+        var consumeService = _serviceFactory.CreateConsumeService(parseResult);
         
         var queue = parseResult.GetRequiredValue<string>("--queue");
         var ackMode = parseResult.GetValue<AckModes>("--ack-mode");
@@ -106,8 +103,6 @@ public class ConsumeCommandHandler : ICommandHandler
             outputFileInfo = new FileInfo(Path.GetFullPath(outputFilePath, Environment.CurrentDirectory));
         }
 
-        await _consumeService.ConsumeMessages(queue, ackMode, outputFileInfo, messageCount, outputFormat, cts.Token); 
-
-        _logger.LogDebug("Message consumer is done. Stopping application.");
+        await consumeService.ConsumeMessages(queue, ackMode, outputFileInfo, messageCount, outputFormat, cts.Token); 
     }
 }

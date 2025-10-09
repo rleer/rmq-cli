@@ -1,25 +1,19 @@
 using System.CommandLine;
-using Microsoft.Extensions.Logging;
 using RmqCli.Common;
-using RmqCli.PublishCommand;
 
 namespace RmqCli.CommandHandler;
 
 public class PublishCommandHandler : ICommandHandler
 {
-    private readonly IPublishService _publishService;
-    private readonly ILogger<PublishCommandHandler> _logger;
+    private readonly ServiceFactory _serviceFactory;
 
-    public PublishCommandHandler(IPublishService publishService, ILogger<PublishCommandHandler> logger)
+    public PublishCommandHandler(ServiceFactory serviceFactory)
     {
-        _publishService = publishService;
-        _logger = logger;
+        _serviceFactory = serviceFactory;
     }
 
     public void Configure(RootCommand rootCommand)
     {
-        _logger.LogDebug("Configuring publish command");
-
         const string description = """
                                    Publish messages to a queue or via exchange and routing-key.
 
@@ -139,14 +133,15 @@ public class PublishCommandHandler : ICommandHandler
 
     private async Task<int> Handle(ParseResult parseResult, CancellationToken cancellationToken)
     {
-        _logger.LogDebug("Running handler for publish command");
+        var publishService = _serviceFactory.CreatePublishService(parseResult);
+
         var filePath = parseResult.GetValue<string>("--from-file");
         var exchangeName = parseResult.GetValue<string>("--exchange");
         var queueName = parseResult.GetValue<string>("--queue");
         var routingKey = parseResult.GetValue<string>("--routing-key");
         var message = parseResult.GetValue<string>("--body") ?? string.Empty;
         var burstCount = parseResult.GetValue<int>("--burst");
-        
+
         var dest = new DestinationInfo
         {
             Exchange = exchangeName,
@@ -168,24 +163,23 @@ public class PublishCommandHandler : ICommandHandler
             {
                 var fileInfo = new FileInfo(Path.GetFullPath(filePath, Environment.CurrentDirectory));
 
-                return await _publishService.PublishMessageFromFile(dest, fileInfo, burstCount, cts.Token);
+                return await publishService.PublishMessageFromFile(dest, fileInfo, burstCount, cts.Token);
             }
 
             if (Console.IsInputRedirected)
             {
-                return await _publishService.PublishMessageFromStdin(dest, burstCount, cts.Token);
+                return await publishService.PublishMessageFromStdin(dest, burstCount, cts.Token);
             }
 
-            return await _publishService.PublishMessage(dest, [message], burstCount, cts.Token);
+            return await publishService.PublishMessage(dest, [message], burstCount, cts.Token);
         }
         catch (OperationCanceledException)
         {
             // Cancellation already handled
             return 0;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            _logger.LogError(ex, "Failed to publish message");
             return 1;
         }
     }
