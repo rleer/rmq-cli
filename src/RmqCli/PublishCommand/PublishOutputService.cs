@@ -1,9 +1,9 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using RmqCli.Common;
 using RmqCli.Configuration;
 using Spectre.Console;
 using RmqCli.ConsumeCommand.MessageFormatter.Json;
+using AnsiConsoleFactory = RmqCli.Common.AnsiConsoleFactory;
 
 namespace RmqCli.PublishCommand;
 
@@ -17,10 +17,10 @@ public class PublishOutputService : IPublishOutputService
     private readonly CliConfig _cliConfig;
     private readonly IAnsiConsole _console;
 
-    public PublishOutputService(CliConfig cliConfig, IAnsiConsoleFactory ansiConsoleFactory)
+    public PublishOutputService(CliConfig cliConfig)
     {
         _cliConfig = cliConfig;
-        _console = ansiConsoleFactory.CreateStdoutConsole();
+        _console = AnsiConsoleFactory.CreateStdoutConsole();
     }
 
     public void WritePublishResult(PublishResponse response)

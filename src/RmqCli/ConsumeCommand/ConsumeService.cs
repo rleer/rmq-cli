@@ -25,7 +25,11 @@ public class ConsumeService : IConsumeService
     private readonly IMessageWriterFactory _messageWriterFactory;
     private readonly IStatusOutputService _statusOutput;
 
-    public ConsumeService(ILogger<ConsumeService> logger, IRabbitChannelFactory rabbitChannelFactory, IMessageWriterFactory messageWriterFactory, IStatusOutputService statusOutput)
+    public ConsumeService(
+        ILogger<ConsumeService> logger,
+        IRabbitChannelFactory rabbitChannelFactory,
+        IMessageWriterFactory messageWriterFactory,
+        IStatusOutputService statusOutput)
     {
         _logger = logger;
         _rabbitChannelFactory = rabbitChannelFactory;
@@ -62,6 +66,7 @@ public class ConsumeService : IConsumeService
             {
                 _statusOutput.ShowWarning("Consumption cancelled by user", addNewLine: true);
             }
+
             receiveChan.Writer.TryComplete();
         });
 
@@ -97,7 +102,6 @@ public class ConsumeService : IConsumeService
 
         _logger.LogDebug("Starting RabbitMQ consumer for queue '{Queue}'", queue);
 
-        
         var formatedQueueName = _statusOutput.NoColor ? queue : $"[orange1]{queue}[/]";
         var statusMessage = messageCount > 0
             ? $"Consuming up to {OutputUtilities.GetMessageCountString(messageCount, _statusOutput.NoColor)} from queue '{formatedQueueName}' (Ctrl+C to stop)"
@@ -116,7 +120,7 @@ public class ConsumeService : IConsumeService
         var ackDispatcher = Task.Run(() => HandleAcks(ackChan, channel));
 
         await Task.WhenAll(writerTask, ackDispatcher);
-        
+
         _statusOutput.ShowSuccess($"Consumed {OutputUtilities.GetMessageCountString(receivedCount, _statusOutput.NoColor)}");
         _logger.LogDebug("Consumption stopped. Waiting for RabbitMQ channel to close");
         await channel.CloseAsync();

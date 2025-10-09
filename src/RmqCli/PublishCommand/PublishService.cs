@@ -69,11 +69,11 @@ public class PublishService : IPublishService
         {
             _statusOutput.ShowStatus($"Publishing {messageCountString} to {GetDestinationString(dest)}...");
 
-            publishResults = await _statusOutput.ExecuteWithProgress(
+            await _statusOutput.ExecuteWithProgress(
                 description: "Publishing messages",
                 maxValue: totalMessageCount,
                 workload: progress =>
-                    PublishCore(messages, channel, dest, progress, burstCount, cancellationToken));
+                    PublishCore(messages, channel, dest, publishResults, progress, burstCount, cancellationToken));
 
             var endTime = Stopwatch.GetTimestamp();
             var elapsedTime = Stopwatch.GetElapsedTime(startTime, endTime);
@@ -197,16 +197,16 @@ public class PublishService : IPublishService
         return await PublishMessage(dest, messages, burstCount, cancellationToken);
     }
 
-    private async Task<List<PublishOperationDto>> PublishCore(
+    private async Task PublishCore(
         List<string> messages,
         IChannel channel,
         DestinationInfo dest,
+        List<PublishOperationDto> results,
         IProgress<int>? progress = null,
         int burstCount = 1,
         CancellationToken cancellationToken = default)
     {
         var messageBaseId = GetMessageId();
-        var results = new List<PublishOperationDto>();
         var currentProgress = 0;
 
         for (var m = 0; m < messages.Count; m++)
@@ -223,6 +223,8 @@ public class PublishService : IPublishService
                     Timestamp = new AmqpTimestamp(DateTimeOffset.UtcNow.ToUnixTimeSeconds())
                 };
 
+                await Task.Delay(TimeSpan.FromSeconds(1));
+                
                 await channel.BasicPublishAsync(
                     exchange: dest.Exchange ?? string.Empty,
                     routingKey: dest.Queue ?? dest.RoutingKey ?? string.Empty,
@@ -239,8 +241,6 @@ public class PublishService : IPublishService
                 progress?.Report(currentProgress);
             }
         }
-
-        return results;
     }
 
     private (List<string> messages, string delimiterDisplay) SplitMessages(string messageBlob)

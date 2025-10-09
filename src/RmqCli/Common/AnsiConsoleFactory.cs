@@ -2,15 +2,9 @@ using Spectre.Console;
 
 namespace RmqCli.Common;
 
-public interface IAnsiConsoleFactory
+public static class AnsiConsoleFactory
 {
-    IAnsiConsole CreateStderrConsole();
-    IAnsiConsole CreateStdoutConsole();
-}
-
-public class AnsiConsoleFactory : IAnsiConsoleFactory
-{
-    public IAnsiConsole CreateStderrConsole()
+    public static IAnsiConsole CreateStderrConsole()
     {
         return AnsiConsole.Create(new AnsiConsoleSettings
         {
@@ -21,7 +15,7 @@ public class AnsiConsoleFactory : IAnsiConsoleFactory
         });
     }
 
-    public IAnsiConsole CreateStdoutConsole()
+    public static IAnsiConsole CreateStdoutConsole()
     {
         return AnsiConsole.Create(new AnsiConsoleSettings
         {

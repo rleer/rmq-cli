@@ -1,14 +1,14 @@
 using System.CommandLine;
-using Microsoft.Extensions.DependencyInjection;
 using RmqCli.CommandHandler;
 using RmqCli.Common;
-using RmqCli.Configuration;
 
 namespace RmqCli.Commandhandler;
 
 public class RootCommandHandler
 {
+    private readonly ServiceFactory _serviceFactory;
     private readonly RootCommand _rootCommand;
+    private readonly List<ICommandHandler> _commandHandlers = [];
 
     private const string RabbitAscii = """
                                          (\(\
@@ -16,12 +16,19 @@ public class RootCommandHandler
                                          o(")(")
                                        """;
 
-    public RootCommandHandler()
+    public RootCommandHandler(ServiceFactory serviceFactory)
     {
+        _serviceFactory = serviceFactory;
         _rootCommand = new RootCommand($"{RabbitAscii}\nDeveloper focused utility tool for common RabbitMQ tasks");
+        
+        // Setup global options
+        SetupGlobalOptions();
+        
+        // Setup command handlers
+        SetupCommands();
     }
-
-    public (CliConfig cliConfg, string configPath) ParseGlobalOptions(string[] args)
+    
+    private void SetupGlobalOptions()
     {
         var verboseOption = new Option<bool>("--verbose")
         {
@@ -71,39 +78,23 @@ public class RootCommandHandler
                 result.AddError("You cannot use both --verbose and --quiet options together.");
             }
         });
-        
-        // Parse the global options first to set up the environment
-        var parseResult = _rootCommand.Parse(args);
-
-        var verboseLogging = parseResult.GetValue(verboseOption);
-        var quietLogging = parseResult.GetValue(quietOption);
-        var format = parseResult.GetValue(outputFormatOption);
-        var noColor = parseResult.GetValue(noColorOption);
-        var customConfigPath = parseResult.GetValue(configFileOption);
-        
-        var cliConfig = new CliConfig
-        {
-            Format = format,
-            Quiet = quietLogging,
-            Verbose = verboseLogging,
-            NoColor = noColor
-        };
-
-        return (cliConfig, customConfigPath ?? string.Empty);
     }
 
-    public void ConfigureCommands(IServiceProvider serviceProvider)
+    private void SetupCommands()
     {
-        var commands = serviceProvider.GetServices<ICommandHandler>();
-        foreach (var command in commands)
+        _commandHandlers.Add(new ConfigCommandHandler());
+        _commandHandlers.Add(new ConsumeCommandHandler(_serviceFactory));
+        _commandHandlers.Add(new PublishCommandHandler(_serviceFactory));
+        
+        foreach (var handler in _commandHandlers)
         {
-            command.Configure(_rootCommand);
+            handler.Configure(_rootCommand);
         }
     }
 
-    public int RunAsync(string[] args)
+    public async Task<int> RunAsync(string[] args)
     {
         var parseResult = _rootCommand.Parse(args);
-        return parseResult.Invoke();
+        return await parseResult.InvokeAsync();
     }
 }
