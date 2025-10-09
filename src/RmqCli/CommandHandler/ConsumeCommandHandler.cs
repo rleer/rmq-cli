@@ -18,9 +18,21 @@ public class ConsumeCommandHandler : ICommandHandler
 
     public void Configure(RootCommand rootCommand)
     {
-        _logger.LogDebug("Configuring consume command");
+        var description = """
+                           Consume messages from a queue. Warning: getting messages from a queue is a destructive action!
 
-        var consumeCommand = new Command("consume", "Consume messages from a queue. Warning: getting messages from a queue is a destructive action!");
+                           By default, messages are acknowledged after they are consumed. You can change the acknowledgment mode using the --ack-mode option.
+
+                           Consumed messages can be printed to standard output (STDOUT) or saved to a file using the --to-file option.
+
+                           Example usage:
+                             rmq consume --queue my-queue
+                             rmq consume --queue my-queue --ack-mode requeue
+                             rmq consume --queue my-queue --count 10
+                             rmq consume --queue my-queue --to-file output.txt
+                           """;
+        
+        var consumeCommand = new Command("consume", description);
 
         var queueOption = new Option<string>("--queue")
         {
