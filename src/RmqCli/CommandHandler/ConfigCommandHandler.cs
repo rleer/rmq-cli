@@ -28,33 +28,33 @@ public class ConfigCommandHandler : ICommandHandler
 
         // config show - shows the current configuration file path and contents
         var showCommand = new Command("show", "Show current configuration");
-        showCommand.SetHandler(ShowConfig);
-        configCommand.AddCommand(showCommand);
+        showCommand.SetAction(ShowConfig);
+        configCommand.Subcommands.Add(showCommand);
 
         // config init - initializes a default configuration file
         var initCommand = new Command("init", "Initialize a default configuration file");
-        initCommand.SetHandler(InitConfig);
-        configCommand.AddCommand(initCommand);
+        initCommand.SetAction(InitConfig);
+        configCommand.Subcommands.Add(initCommand);
 
         // config path - shows the path to the current configuration file
         var pathCommand = new Command("path", "Show the path to the current configuration file");
-        pathCommand.SetHandler(ShowConfigPath);
-        configCommand.AddCommand(pathCommand);
+        pathCommand.SetAction(ShowConfigPath);
+        configCommand.Subcommands.Add(pathCommand);
 
         // config edit - opens the configuration file in the default editor
         var editCommand = new Command("edit", "Edit the configuration file in the default editor");
-        editCommand.SetHandler(EditConfig);
-        configCommand.AddCommand(editCommand);
+        editCommand.SetAction(EditConfig);
+        configCommand.Subcommands.Add(editCommand);
 
         // config reset - resets the configuration file to default
         var resetCommand = new Command("reset", "Reset the configuration file to default");
-        resetCommand.SetHandler(ResetConfig);
-        configCommand.AddCommand(resetCommand);
+        resetCommand.SetAction(ResetConfig);
+        configCommand.Subcommands.Add(resetCommand);
 
-        rootCommand.AddCommand(configCommand);
+        rootCommand.Subcommands.Add(configCommand);
     }
 
-    private static void ShowConfig()
+    private static void ShowConfig(ParseResult parseResult)
     {
         var userConfigPath = TomlConfigurationHelper.GetUserConfigFilePath();
         var systemConfigPath = TomlConfigurationHelper.GetSystemConfigFilePath();
@@ -84,12 +84,12 @@ public class ConfigCommandHandler : ICommandHandler
         }
     }
 
-    private static void InitConfig()
+    private static void InitConfig(ParseResult parseResult)
     {
         TomlConfigurationHelper.CreateDefaultUserConfigIfNotExists();
     }
 
-    private static void ShowConfigPath()
+    private static void ShowConfigPath(ParseResult parseResult)
     {
         if (File.Exists(TomlConfigurationHelper.GetUserConfigFilePath()))
         {
@@ -105,7 +105,7 @@ public class ConfigCommandHandler : ICommandHandler
         }
     }
 
-    private static void EditConfig()
+    private static void EditConfig(ParseResult parseResult)
     {
         var configPath = TomlConfigurationHelper.GetUserConfigFilePath();
         if (!File.Exists(configPath))
@@ -131,7 +131,7 @@ public class ConfigCommandHandler : ICommandHandler
         }
     }
 
-    private static void ResetConfig()
+    private static void ResetConfig(ParseResult parseResult)
     {
         var configPath = TomlConfigurationHelper.GetUserConfigFilePath();
         if (File.Exists(configPath))
