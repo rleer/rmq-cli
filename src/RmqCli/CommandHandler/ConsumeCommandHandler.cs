@@ -80,7 +80,7 @@ public class ConsumeCommandHandler : ICommandHandler
         rootCommand.Subcommands.Add(consumeCommand);
     }
 
-    private async Task Handle(ParseResult parseResult, CancellationToken cancellationToken)
+    private async Task<int> Handle(ParseResult parseResult, CancellationToken cancellationToken)
     {
         var consumeService = _serviceFactory.CreateConsumeService(parseResult);
         
@@ -98,6 +98,6 @@ public class ConsumeCommandHandler : ICommandHandler
             outputFileInfo = new FileInfo(Path.GetFullPath(outputFilePath, Environment.CurrentDirectory));
         }
 
-        await consumeService.ConsumeMessages(queue, ackMode, outputFileInfo, messageCount, outputFormat, cts.Token); 
+        return await consumeService.ConsumeMessages(queue, ackMode, outputFileInfo, messageCount, outputFormat, cts.Token); 
     }
 }

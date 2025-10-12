@@ -9,7 +9,7 @@ namespace RmqCli.ConsumeCommand;
 
 public interface IConsumeService
 {
-    Task ConsumeMessages(
+    Task<int> ConsumeMessages(
         string queue,
         AckModes ackMode,
         FileInfo? outputFileInfo = null,
@@ -37,7 +37,7 @@ public class ConsumeService : IConsumeService
         _statusOutput = statusOutput;
     }
 
-    public async Task ConsumeMessages(
+    public async Task<int> ConsumeMessages(
         string queue,
         AckModes ackMode,
         FileInfo? outputFileInfo,
@@ -124,6 +124,8 @@ public class ConsumeService : IConsumeService
         _statusOutput.ShowSuccess($"Consumed {OutputUtilities.GetMessageCountString(receivedCount, _statusOutput.NoColor)}");
         _logger.LogDebug("Consumption stopped. Waiting for RabbitMQ channel to close");
         await channel.CloseAsync();
+        
+        return 0;
     }
 
     private async Task HandleAcks(Channel<(ulong deliveryTag, AckModes ackMode)> ackChan, IChannel rmqChannel)
