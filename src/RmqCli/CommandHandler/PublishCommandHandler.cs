@@ -149,13 +149,8 @@ public class PublishCommandHandler : ICommandHandler
             RoutingKey = routingKey,
             Type = string.IsNullOrWhiteSpace(queueName) ? "exchange" : "queue"
         };
-        
-        var cts = new CancellationTokenSource();
-        Console.CancelKeyPress += (_, e) =>
-        {
-            e.Cancel = true; // Prevent the process from terminating immediately
-            cts.Cancel(); // Signal cancellation
-        };
+
+        var cts = CancellationHelper.LinkWithCtrlCHandler(cancellationToken);
 
         try
         {
