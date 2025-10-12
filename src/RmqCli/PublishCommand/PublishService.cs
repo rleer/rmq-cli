@@ -223,8 +223,6 @@ public class PublishService : IPublishService
                     Timestamp = new AmqpTimestamp(DateTimeOffset.UtcNow.ToUnixTimeSeconds())
                 };
 
-                await Task.Delay(TimeSpan.FromSeconds(1));
-                
                 await channel.BasicPublishAsync(
                     exchange: dest.Exchange ?? string.Empty,
                     routingKey: dest.Queue ?? dest.RoutingKey ?? string.Empty,

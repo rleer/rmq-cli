@@ -3,7 +3,6 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using RmqCli.Configuration;
 using RmqCli.ConsumeCommand.MessageFormatter.Json;
-using RmqCli.PublishCommand;
 using Spectre.Console;
 
 namespace RmqCli.Common;
@@ -47,7 +46,7 @@ public class StatusOutputService : IStatusOutputService
     {
         if (_cliConfig.Quiet)
             return;
-        
+
         _console.MarkupLine($"{StatusSymbol} {message}");
     }
 
@@ -59,7 +58,7 @@ public class StatusOutputService : IStatusOutputService
     {
         if (_cliConfig.Quiet)
             return;
-        
+
         _console.MarkupLine($"{SuccessSymbol} {message}");
     }
 
@@ -79,7 +78,7 @@ public class StatusOutputService : IStatusOutputService
 
         _console.MarkupLine($"{WarningSymbol} {message}");
     }
-    
+
     /// <summary>
     /// Prints an error message to STDERR console.
     /// If `errorInfo` is provided, it will print additional details about the error.
@@ -93,8 +92,9 @@ public class StatusOutputService : IStatusOutputService
             case OutputFormat.Plain:
             {
                 _console.MarkupLine($"{ErrorSymbol} {message}");
-                if (errorInfo is null) return;
-            
+                if (errorInfo is null)
+                    return;
+
                 _console.MarkupLine($"  Error: {EscapeMarkup(errorInfo.Error)}");
                 _console.MarkupLine($"  Category: {EscapeMarkup(errorInfo.Category)}");
                 if (!string.IsNullOrWhiteSpace(errorInfo.Suggestion))
@@ -125,7 +125,7 @@ public class StatusOutputService : IStatusOutputService
                     Error = errorInfo
                 };
 
-                var serializedError = JsonSerializer.Serialize(response, ctx.Response); 
+                var serializedError = JsonSerializer.Serialize(response, ctx.Response);
                 Console.Error.WriteLine(serializedError);
                 break;
             }
@@ -135,31 +135,30 @@ public class StatusOutputService : IStatusOutputService
     public async Task ExecuteWithProgress(string description, int maxValue, Func<IProgress<int>, Task> workload)
     {
         // TODO: Make progress bar threshold configurable
-        if ((_cliConfig.Quiet || _cliConfig.Format is OutputFormat.Json) && maxValue < 3000)
+        if (maxValue < 3000 || _cliConfig.Quiet)
         {
             // For quiet mode or JSON output and low number of messages to publish, provide a no-op progress reporter
             await workload(new Progress<int>());
         }
-
-        await AnsiConsole.Progress()
-            .AutoClear(true)
-            .HideCompleted(true)
-            .Columns(
-                new SpinnerColumn(Spinner.Known.Dots), 
-                new TaskDescriptionColumn(), 
-                new ProgressBarColumn(), 
-                new PercentageColumn())
-            .StartAsync(async ctx =>
-            {
-                var progressTask = ctx.AddTask(description, maxValue: maxValue);
-
-                var progress = new Progress<int>(value =>
+        else
+        {
+            await AnsiConsole.Progress()
+                .AutoClear(true)
+                .HideCompleted(true)
+                .Columns(
+                    new SpinnerColumn(Spinner.Known.Dots),
+                    new TaskDescriptionColumn(),
+                    new ProgressBarColumn(),
+                    new PercentageColumn())
+                .StartAsync(async ctx =>
                 {
-                    progressTask.Value = value;
-                });
+                    var progressTask = ctx.AddTask(description, maxValue: maxValue);
 
-                await workload(progress);
-            });
+                    var progress = new Progress<int>(value => { progressTask.Value = value; });
+
+                    await workload(progress);
+                });
+        }
     }
 
     private static string EscapeMarkup(string text)
