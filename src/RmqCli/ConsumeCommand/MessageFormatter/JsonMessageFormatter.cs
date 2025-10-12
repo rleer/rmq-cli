@@ -1,6 +1,4 @@
-using System.Text;
 using System.Text.Json;
-using RabbitMQ.Client;
 using RmqCli.ConsumeCommand.MessageFormatter.Json;
 
 namespace RmqCli.ConsumeCommand.MessageFormatter;
@@ -10,13 +8,6 @@ public class JsonMessageFormatter : IMessageFormatter
     public string FormatMessage(RabbitMessage message)
     {
         var messageJson = CreateMessageJson(message);
-        // var ctx = new JsonSerializationContext(new JsonSerializerOptions
-        // {
-        //     Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-        //     WriteIndented = true,
-        //     TypeInfoResolver = JsonSerializationContext.Default
-        // });
-        // return JsonSerializer.Serialize(messageDto, ctx.MessageDto);
         return JsonSerializer.Serialize(messageJson, JsonSerializationContext.RelaxedEscapingOptions.GetTypeInfo(typeof(MessageJson)));
     }
 
@@ -28,15 +19,8 @@ public class JsonMessageFormatter : IMessageFormatter
 
     private MessageJson CreateMessageJson(RabbitMessage message)
     {
-        Dictionary<string, object>? properties = null;
-        if (message.Props != null)
-        {
-            var props = CreatePropertiesObject(message.Props);
-            if (props.Count > 0)
-            {
-                properties = props;
-            }
-        }
+        var formattedProps = MessagePropertyExtractor.ExtractProperties(message.Props);
+        var properties = ConvertToJsonProperties(formattedProps);
 
         return new MessageJson(
             message.DeliveryTag,
@@ -47,100 +31,45 @@ public class JsonMessageFormatter : IMessageFormatter
     }
 
     /// <summary>
-    /// Directly serializing IReadOnlyBasicProperties works great but strings will be base64 encoded...
-    /// Thus, we roll our own serialization to avoid that.
+    /// Converts FormattedMessageProperties to a dictionary suitable for JSON serialization.
+    /// Only includes properties that are present (not null).
     /// </summary>
-    /// <param name="props"></param>
-    /// <returns></returns>
-    private Dictionary<string, object> CreatePropertiesObject(IReadOnlyBasicProperties props)
+    private Dictionary<string, object>? ConvertToJsonProperties(FormattedMessageProperties props)
     {
+        if (!props.HasAnyProperty())
+        {
+            return null;
+        }
+
         var properties = new Dictionary<string, object>();
 
-        // TODO: Make choice of properties configurable.
-        if (props.IsTypePresent())
-            properties["type"] = props.Type ?? string.Empty;
-        if (props.IsMessageIdPresent())
-            properties["messageId"] = props.MessageId ?? string.Empty;
-        if (props.IsAppIdPresent())
-            properties["appId"] = props.AppId ?? string.Empty;
-        if (props.IsClusterIdPresent())
-            properties["clusterId"] = props.ClusterId ?? string.Empty;
-        if (props.IsContentTypePresent())
-            properties["contentType"] = props.ContentType ?? string.Empty;
-        if (props.IsContentEncodingPresent())
-            properties["contentEncoding"] = props.ContentEncoding ?? string.Empty;
-        if (props.IsCorrelationIdPresent())
-            properties["correlationId"] = props.CorrelationId ?? string.Empty;
-        if (props.IsDeliveryModePresent())
-            properties["deliveryMode"] = props.DeliveryMode;
-        if (props.IsExpirationPresent())
-            properties["expiration"] = props.Expiration ?? string.Empty;
-        if (props.IsPriorityPresent())
-            properties["priority"] = props.Priority;
-        if (props.IsReplyToPresent())
-            properties["replyTo"] = props.ReplyTo ?? string.Empty;
-        if (props.IsTimestampPresent())
-        {
-            var timestamp = DateTimeOffset.FromUnixTimeSeconds(props.Timestamp.UnixTime);
-            properties["timestamp"] = timestamp.ToString("yyyy-MM-dd HH:mm:ss");
-        }
+        if (props.Type != null)
+            properties["type"] = props.Type;
+        if (props.MessageId != null)
+            properties["messageId"] = props.MessageId;
+        if (props.AppId != null)
+            properties["appId"] = props.AppId;
+        if (props.ClusterId != null)
+            properties["clusterId"] = props.ClusterId;
+        if (props.ContentType != null)
+            properties["contentType"] = props.ContentType;
+        if (props.ContentEncoding != null)
+            properties["contentEncoding"] = props.ContentEncoding;
+        if (props.CorrelationId != null)
+            properties["correlationId"] = props.CorrelationId;
+        if (props.DeliveryMode != null)
+            properties["deliveryMode"] = props.DeliveryMode.Value;
+        if (props.Expiration != null)
+            properties["expiration"] = props.Expiration;
+        if (props.Priority != null)
+            properties["priority"] = props.Priority.Value;
+        if (props.ReplyTo != null)
+            properties["replyTo"] = props.ReplyTo;
+        if (props.Timestamp != null)
+            properties["timestamp"] = props.Timestamp;
+        if (props.Headers != null)
+            properties["headers"] = props.Headers;
 
-        if (props.IsHeadersPresent() && props.Headers != null)
-        {
-            var headers = ConvertHeaders(props.Headers);
-            if (headers.Count > 0)
-            {
-                properties["headers"] = headers;
-            }
-        }
-
-        return properties;
-    }
-
-    private Dictionary<string, object> ConvertHeaders(IDictionary<string, object?> headers)
-    {
-        var convertedHeaders = new Dictionary<string, object>();
-
-        foreach (var header in headers)
-        {
-            if (header.Value != null)
-            {
-                convertedHeaders[header.Key] = ConvertValue(header.Value);
-            }
-        }
-
-        return convertedHeaders;
-    }
-
-    private object ConvertValue(object value)
-    {
-        return value switch
-        {
-            null => "null",
-            byte[] bytes => ConvertByteArray(bytes),
-            AmqpTimestamp timestamp => DateTimeOffset.FromUnixTimeSeconds(timestamp.UnixTime).ToString("yyyy-MM-dd HH:mm:ss"),
-            IEnumerable<object> enumerable when value is not string => enumerable.Select(ConvertValue).ToArray(),
-            IDictionary<string, object> dict => dict.ToDictionary(pair => pair.Key, pair => ConvertValue(pair.Value)),
-            _ => value
-        };
-    }
-
-    private object ConvertByteArray(byte[] bytes)
-    {
-        try
-        {
-            var strValue = Encoding.UTF8.GetString(bytes);
-            // Check if the string contains control characters (except common ones)
-            if (strValue.Any(c => char.IsControl(c) && c != '\r' && c != '\n' && c != '\t'))
-            {
-                return $"<binary data: {bytes.Length} bytes>";
-            }
-
-            return strValue;
-        }
-        catch
-        {
-            return $"<binary data: {bytes.Length} bytes>";
-        }
+        return properties.Count > 0 ? properties : null;
     }
 }
