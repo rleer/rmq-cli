@@ -55,106 +55,23 @@ public class ConsumeService : IConsumeService
         _logger.LogDebug("Initiating consume operation: queue={Queue}, mode={AckMode}, count={messageCount}",
             queue, ackMode, messageCount);
 
-        // Create a local cancellation token source to allow stopping the consumer
-        var localCts = new CancellationTokenSource();
-        var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, localCts.Token);
-
         await using var channel = await _rabbitChannelFactory.GetChannelAsync();
 
-        // Ensure the specified queue exists
-        try
-        {
-            await channel.QueueDeclarePassiveAsync(queue, linkedCts.Token);
-        }
-        catch (OperationInterruptedException ex)
-        {
-            _logger.LogError(ex, "Queue '{Queue}' not found. Reply code: {ReplyCode}, Reply text: {ReplyText}",
-                queue, ex.ShutdownReason?.ReplyCode, ex.ShutdownReason?.ReplyText);
-
-            var queueNotFoundError = ConsumeErrorInfoFactory.QueueNotFoundErrorInfo(queue);
-            _statusOutput.ShowError($"Failed to consume from queue", queueNotFoundError);
-
+        if (!await ValidateQueueExists(channel, queue, cancellationToken))
             return 1;
-        }
 
-        var receiveChan = Channel.CreateUnbounded<RabbitMessage>();
-        var ackChan = Channel.CreateUnbounded<(ulong deliveryTag, AckModes ackMode)>();
+        var (localCts, linkedCts) = CreateLinkedCancellationToken(cancellationToken);
+        var (receiveChan, ackChan) = SetupMessageChannels(linkedCts.Token, cancellationToken);
+        var (consumer, receivedCount) = CreateConsumer(channel, receiveChan, localCts, linkedCts.Token, messageCount);
 
-        // Hook up callback that completes the receive-channel when message count is reached or cancellation is requested by user/applicaiton
-        linkedCts.Token.Register(() =>
-        {
-            _logger.LogDebug("Completing receive channel (cancellation token status: application={ParentCt}, local={LocalCt})",
-                cancellationToken.IsCancellationRequested, localCts.IsCancellationRequested);
-            if (cancellationToken.IsCancellationRequested)
-            {
-                _statusOutput.ShowWarning("Consumption cancelled by user", addNewLine: true);
-            }
+        ShowConsumingStatus(queue, messageCount);
 
-            receiveChan.Writer.TryComplete();
-        });
+        await channel.BasicConsumeAsync(queue: queue, autoAck: false, consumer: consumer, cancellationToken);
+        await RunMessageProcessingPipeline(receiveChan, ackChan, channel, outputFileInfo, outputFormat, ackMode, messageCount);
 
-        long receivedCount = 0;
+        ShowCompletionStatus(receivedCount.Value);
+        await channel.CloseAsync(cancellationToken);
 
-        var consumer = new AsyncEventingBasicConsumer(channel);
-        consumer.ReceivedAsync += async (_, ea) =>
-        {
-            // Skip messages if cancellation is requested. Skipped and unack'd messages will be automatically re-queued by RabbitMQ once the channel closes.
-            if (linkedCts.Token.IsCancellationRequested)
-            {
-                return;
-            }
-
-            _logger.LogTrace("Received message #{DeliveryTag}", ea.DeliveryTag);
-            var message = new RabbitMessage(
-                System.Text.Encoding.UTF8.GetString(ea.Body.ToArray()),
-                ea.DeliveryTag,
-                ea.BasicProperties,
-                ea.Redelivered
-            );
-
-            await receiveChan.Writer.WriteAsync(message, linkedCts.Token);
-            _logger.LogTrace("Message #{DeliveryTag} written to receive channel", ea.DeliveryTag);
-
-            // Check if we reached the message count limit
-            if (Interlocked.Increment(ref receivedCount) == messageCount)
-            {
-                _logger.LogDebug("Message limit {MessageCount} reached - initiating cancellation!", messageCount);
-                await localCts.CancelAsync();
-            }
-        };
-
-        _logger.LogDebug("Starting RabbitMQ consumer for queue '{Queue}'", queue);
-
-        var formatedQueueName = _statusOutput.NoColor ? queue : $"[orange1]{queue}[/]";
-        var statusMessage = messageCount > 0
-            ? $"Consuming up to {OutputUtilities.GetMessageCountString(messageCount, _statusOutput.NoColor)} from queue '{formatedQueueName}' (Ctrl+C to stop)"
-            : $"Consuming messages from queue '{formatedQueueName}' (Ctrl+C to stop)";
-        _statusOutput.ShowStatus(statusMessage);
-
-        // Start consuming messages from the specified queue
-        _ = channel.BasicConsumeAsync(queue: queue, autoAck: false, consumer: consumer);
-
-        // Create message output handler using factory
-        var messageOutput = MessageOutputFactory.Create(
-            _loggerFactory,
-            outputFileInfo,
-            outputFormat,
-            _fileConfig,
-            messageCount);
-
-        // Start processing received messages
-        var writerTask = Task.Run(() =>
-            messageOutput.WriteMessagesAsync(receiveChan, ackChan, ackMode));
-
-        // Start dispatcher for acknowledgments of successfully processed messages
-        var ackDispatcher = Task.Run(() => HandleAcks(ackChan, channel));
-
-        await Task.WhenAll(writerTask, ackDispatcher);
-
-        _statusOutput.ShowSuccess($"Consumed {OutputUtilities.GetMessageCountString(receivedCount, _statusOutput.NoColor)}");
-        _logger.LogDebug("Consumption stopped. Waiting for RabbitMQ channel to close");
-        await channel.CloseAsync();
-        
         return 0;
     }
 
@@ -181,5 +98,146 @@ public class ConsumeService : IConsumeService
         }
 
         _logger.LogDebug("Acknowledgement dispatcher finished");
+    }
+
+    private async Task<bool> ValidateQueueExists(IChannel channel, string queue, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await channel.QueueDeclarePassiveAsync(queue, cancellationToken);
+            return true;
+        }
+        catch (OperationInterruptedException ex)
+        {
+            _logger.LogError(ex, "Queue '{Queue}' not found. Reply code: {ReplyCode}, Reply text: {ReplyText}",
+                queue, ex.ShutdownReason?.ReplyCode, ex.ShutdownReason?.ReplyText);
+
+            var queueNotFoundError = ConsumeErrorInfoFactory.QueueNotFoundErrorInfo(queue);
+            _statusOutput.ShowError("Failed to consume from queue", queueNotFoundError);
+
+            return false;
+        }
+    }
+
+    private (CancellationTokenSource LocalCts, CancellationTokenSource LinkedCts) CreateLinkedCancellationToken(CancellationToken cancellationToken)
+    {
+        var localCts = new CancellationTokenSource();
+        var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, localCts.Token);
+        return (localCts, linkedCts);
+    }
+
+    private (Channel<RabbitMessage> ReceiveChannel, Channel<(ulong, AckModes)> AckChannel) SetupMessageChannels(
+        CancellationToken linkedCtsToken,
+        CancellationToken cancellationToken)
+    {
+        var receiveChan = Channel.CreateUnbounded<RabbitMessage>();
+        var ackChan = Channel.CreateUnbounded<(ulong deliveryTag, AckModes ackMode)>();
+
+        // Hook up callback that completes the receive-channel when message count is reached or cancellation is requested by user/application
+        linkedCtsToken.Register(() =>
+        {
+            _logger.LogDebug("Completing receive channel (cancellation token status: application={ParentCt})",
+                cancellationToken.IsCancellationRequested);
+            if (cancellationToken.IsCancellationRequested)
+            {
+                _statusOutput.ShowWarning("Consumption cancelled by user", addNewLine: true);
+            }
+
+            receiveChan.Writer.TryComplete();
+        });
+
+        return (receiveChan, ackChan);
+    }
+
+    private (AsyncEventingBasicConsumer Consumer, ReceivedMessageCounter Counter) CreateConsumer(
+        IChannel channel,
+        Channel<RabbitMessage> receiveChan,
+        CancellationTokenSource localCts,
+        CancellationToken linkedCtsToken,
+        int messageCount)
+    {
+        var counter = new ReceivedMessageCounter();
+        var consumer = new AsyncEventingBasicConsumer(channel);
+        consumer.ReceivedAsync += async (_, ea) =>
+        {
+            // Skip messages if cancellation is requested. Skipped and unack'd messages will be automatically re-queued by RabbitMQ once the channel closes.
+            if (linkedCtsToken.IsCancellationRequested)
+            {
+                return;
+            }
+
+            _logger.LogTrace("Received message #{DeliveryTag}", ea.DeliveryTag);
+            var message = new RabbitMessage(
+                System.Text.Encoding.UTF8.GetString(ea.Body.ToArray()),
+                ea.DeliveryTag,
+                ea.BasicProperties,
+                ea.Redelivered
+            );
+
+            await receiveChan.Writer.WriteAsync(message, linkedCtsToken);
+            _logger.LogTrace("Message #{DeliveryTag} written to receive channel", ea.DeliveryTag);
+
+            // Check if we reached the message count limit
+            if (counter.Increment() == messageCount)
+            {
+                _logger.LogDebug("Message limit {MessageCount} reached - initiating cancellation!", messageCount);
+                await localCts.CancelAsync();
+            }
+        };
+
+        return (consumer, counter);
+    }
+
+    private sealed class ReceivedMessageCounter
+    {
+        private long _count;
+
+        public long Increment() => Interlocked.Increment(ref _count);
+
+        public long Value => Interlocked.Read(ref _count);
+    }
+
+    private void ShowConsumingStatus(string queue, int messageCount)
+    {
+        _logger.LogDebug("Starting RabbitMQ consumer for queue '{Queue}'", queue);
+
+        var formattedQueueName = _statusOutput.NoColor ? queue : $"[orange1]{queue}[/]";
+        var statusMessage = messageCount > 0
+            ? $"Consuming up to {OutputUtilities.GetMessageCountString(messageCount, _statusOutput.NoColor)} from queue '{formattedQueueName}' (Ctrl+C to stop)"
+            : $"Consuming messages from queue '{formattedQueueName}' (Ctrl+C to stop)";
+        _statusOutput.ShowStatus(statusMessage);
+    }
+
+    private async Task RunMessageProcessingPipeline(
+        Channel<RabbitMessage> receiveChan,
+        Channel<(ulong, AckModes)> ackChan,
+        IChannel channel,
+        FileInfo? outputFileInfo,
+        OutputFormat outputFormat,
+        AckModes ackMode,
+        int messageCount)
+    {
+        // Create message output handler using factory
+        var messageOutput = MessageOutputFactory.Create(
+            _loggerFactory,
+            outputFileInfo,
+            outputFormat,
+            _fileConfig,
+            messageCount);
+
+        // Start processing received messages
+        var writerTask = Task.Run(() =>
+            messageOutput.WriteMessagesAsync(receiveChan, ackChan, ackMode));
+
+        // Start dispatcher for acknowledgments of successfully processed messages
+        var ackDispatcher = Task.Run(() => HandleAcks(ackChan, channel));
+
+        await Task.WhenAll(writerTask, ackDispatcher);
+    }
+
+    private void ShowCompletionStatus(long receivedCount)
+    {
+        _statusOutput.ShowSuccess($"Consumed {OutputUtilities.GetMessageCountString(receivedCount, _statusOutput.NoColor)}");
+        _logger.LogDebug("Consumption stopped. Waiting for RabbitMQ channel to close");
     }
 }
