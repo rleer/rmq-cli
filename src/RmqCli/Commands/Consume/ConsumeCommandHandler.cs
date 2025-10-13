@@ -99,7 +99,12 @@ public class ConsumeCommandHandler : ICommandHandler
 
         try
         {
-            return await consumeService.ConsumeMessages(queue, ackMode, outputFileInfo, messageCount, outputFormat, cts.Token); 
+            return await consumeService.ConsumeMessages(queue, ackMode, outputFileInfo, messageCount, outputFormat, cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // Cancellation already handled
+            return 0;
         }
         catch (Exception e)
         {
