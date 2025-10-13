@@ -10,6 +10,6 @@ try
 }
 catch (Exception e)
 {
-    AnsiConsole.MarkupLineInterpolated($"[indianred1]⚠ An error occurred: {e.Message}[/]");
+    AnsiConsole.MarkupLineInterpolated($"[red3]⚠ An error occurred: {e.Message}[/]");
     return 1;
 }

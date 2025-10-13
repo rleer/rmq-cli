@@ -97,6 +97,6 @@ public class RootCommandHandler
     public async Task<int> RunAsync(string[] args)
     {
         var parseResult = _rootCommand.Parse(args);
-        return await parseResult.InvokeAsync();
+        return await parseResult.InvokeAsync(new InvocationConfiguration { EnableDefaultExceptionHandler = false });
     }
 }
