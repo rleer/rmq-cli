@@ -73,7 +73,7 @@ public class ConsumeService : IConsumeService
 
         await RunMessageProcessingPipeline(receiveChan, ackChan, channel, outputFileInfo, outputFormat, ackMode, messageCount, userCancellationToken);
 
-        ShowCompletionStatus(receivedCount.Value);
+        ShowCompletionStatus(receivedCount.Value, userCancellationToken.IsCancellationRequested);
         await channel.CloseAsync(userCancellationToken);
 
         return 0;
@@ -150,7 +150,7 @@ public class ConsumeService : IConsumeService
         // when cancellation is requested (Ctrl+C or message count limit reached)
         combinedCancellationToken.Register(() =>
         {
-            // Determine the cancellation reason for logging/user feedback
+            // Determine the cancellation reason for logging
             var isUserCancellation = userCancellationToken.IsCancellationRequested;
             var isMessageLimitReached = messageLimitToken.IsCancellationRequested && !isUserCancellation;
 
@@ -158,11 +158,6 @@ public class ConsumeService : IConsumeService
                 "Cancellation requested - stopping RabbitMQ consumer (tag: {ConsumerTag}, reason: {Reason})",
                 consumerTag,
                 isUserCancellation ? "User cancellation (Ctrl+C)" : isMessageLimitReached ? "Message count limit reached" : "Unknown");
-
-            if (isUserCancellation)
-            {
-                _statusOutput.ShowWarning("Consumption cancelled by user", addNewLine: true);
-            }
 
             // Cancel the consumer asynchronously to stop receiving new messages from RabbitMQ
             // Using fire-and-forget pattern as CancellationToken.Register doesn't support async callbacks
@@ -272,8 +267,13 @@ public class ConsumeService : IConsumeService
         await Task.WhenAll(writerTask, ackDispatcher);
     }
 
-    private void ShowCompletionStatus(long receivedCount)
+    private void ShowCompletionStatus(long receivedCount, bool wasCancelledByUser)
     {
+        if (wasCancelledByUser)
+        {
+            _statusOutput.ShowWarning("Consumption cancelled by user", addNewLine: true);
+        }
+
         _statusOutput.ShowSuccess($"Consumed {OutputUtilities.GetMessageCountString(receivedCount, _statusOutput.NoColor)}");
         _logger.LogDebug("Consumption stopped. Waiting for RabbitMQ channel to close");
     }
