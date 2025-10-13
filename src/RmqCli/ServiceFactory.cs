@@ -1,96 +1,41 @@
 using System.CommandLine;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using RmqCli.Common;
-using RmqCli.Configuration;
-using RmqCli.ConsumeCommand;
-using RmqCli.PublishCommand;
+using RmqCli.Commands.Consume;
+using RmqCli.Commands.Publish;
+using RmqCli.DependencyInjection;
 
 namespace RmqCli;
 
+/// <summary>
+/// Factory for creating command-specific services with dependency injection.
+/// </summary>
 public class ServiceFactory
 {
+    /// <summary>
+    /// Creates a configured consume service with all required dependencies.
+    /// </summary>
+    /// <param name="parseResult">The parse result containing CLI options.</param>
+    /// <returns>A configured consume service instance.</returns>
     public IConsumeService CreateConsumeService(ParseResult parseResult)
     {
         var services = new ServiceCollection();
-        Bootstrap(parseResult, services);
-
-        services.AddSingleton<IRabbitChannelFactory, RabbitChannelFactory>();
-        services.AddSingleton<IStatusOutputService, StatusOutputService>();
-        services.AddSingleton<IConsumeService, ConsumeService>();
+        services.AddRmqConsume(parseResult);
 
         var serviceProvider = services.BuildServiceProvider();
         return serviceProvider.GetRequiredService<IConsumeService>();
     }
 
+    /// <summary>
+    /// Creates a configured publish service with all required dependencies.
+    /// </summary>
+    /// <param name="parseResult">The parse result containing CLI options.</param>
+    /// <returns>A configured publish service instance.</returns>
     public IPublishService CreatePublishService(ParseResult parseResult)
     {
         var services = new ServiceCollection();
-        Bootstrap(parseResult, services);
-
-        services.AddSingleton<IRabbitChannelFactory, RabbitChannelFactory>();
-        services.AddSingleton<IStatusOutputService, StatusOutputService>();
-        services.AddSingleton<IPublishOutputService, PublishOutputService>();
-        services.AddSingleton<IPublishService, PublishService>();
+        services.AddRmqPublish(parseResult);
 
         var serviceProvider = services.BuildServiceProvider();
         return serviceProvider.GetRequiredService<IPublishService>();
-    }
-
-    private void Bootstrap(ParseResult parseResult, IServiceCollection services)
-    {
-        // Get common CLI options
-        var verboseLogging = parseResult.GetValue<bool>("--verbose");
-        var quietLogging = parseResult.GetValue<bool>("--quiet");
-        var format = parseResult.GetValue<OutputFormat>("--output");
-        var noColor = parseResult.GetValue<bool>("--no-color");
-        var customConfigPath = parseResult.GetValue<string>("--config");
-
-        ConfigureLogging(services, verboseLogging);
-
-        // Build custom configuration
-        var configuration = new ConfigurationBuilder()
-            .AddRmqConfig(customConfigPath)
-            .Build();
-
-        services.AddSingleton<IConfiguration>(configuration);
-
-        var rabbitMqConfig = new RabbitMqConfig();
-        configuration.GetSection(RabbitMqConfig.RabbitMqConfigName).Bind(rabbitMqConfig);
-        services.AddSingleton(rabbitMqConfig);
-
-        var fileConfig = new FileConfig();
-        configuration.GetSection(nameof(FileConfig)).Bind(fileConfig);
-        services.AddSingleton(fileConfig);
-
-        var cliConfig = new CliConfig
-        {
-            Format = format,
-            Quiet = quietLogging,
-            Verbose = verboseLogging,
-            NoColor = noColor
-        };
-        services.AddSingleton(cliConfig);
-    }
-
-    private void ConfigureLogging(IServiceCollection services, bool verbose)
-    {
-        var logLevel = verbose ? LogLevel.Debug : LogLevel.None;
-
-        services.AddLogging(builder =>
-        {
-            builder.AddConsole(options => { options.LogToStandardErrorThreshold = LogLevel.Trace; })
-                .AddFilter("Microsoft", LogLevel.Warning)
-                .AddFilter("System", LogLevel.Warning)
-                .SetMinimumLevel(logLevel);
-
-            builder.AddSimpleConsole(options =>
-            {
-                options.SingleLine = true;
-                options.TimestampFormat = "HH:mm:ss ";
-                options.IncludeScopes = false;
-            });
-        });
     }
 }
