@@ -61,12 +61,16 @@ public class ConsumeService : IConsumeService
             return 1;
 
         var (localCts, linkedCts) = CreateLinkedCancellationToken(cancellationToken);
-        var (receiveChan, ackChan) = SetupMessageChannels(linkedCts.Token, cancellationToken);
+        var (receiveChan, ackChan) = CreateMessageChannels();
         var (consumer, receivedCount) = CreateConsumer(channel, receiveChan, localCts, linkedCts.Token, messageCount);
 
         ShowConsumingStatus(queue, messageCount);
 
-        await channel.BasicConsumeAsync(queue: queue, autoAck: false, consumer: consumer, cancellationToken);
+        var consumerTag = await channel.BasicConsumeAsync(queue: queue, autoAck: false, consumer: consumer, cancellationToken);
+
+        // Register cancellation handler to stop consumer and complete channels gracefully
+        RegisterCancellationHandler(linkedCts.Token, cancellationToken, channel, consumerTag, receiveChan);
+
         await RunMessageProcessingPipeline(receiveChan, ackChan, channel, outputFileInfo, outputFormat, ackMode, messageCount);
 
         ShowCompletionStatus(receivedCount.Value);
@@ -126,27 +130,51 @@ public class ConsumeService : IConsumeService
         return (localCts, linkedCts);
     }
 
-    private (Channel<RabbitMessage> ReceiveChannel, Channel<(ulong, AckModes)> AckChannel) SetupMessageChannels(
-        CancellationToken linkedCtsToken,
-        CancellationToken cancellationToken)
+    private (Channel<RabbitMessage> ReceiveChannel, Channel<(ulong, AckModes)> AckChannel) CreateMessageChannels()
     {
         var receiveChan = Channel.CreateUnbounded<RabbitMessage>();
         var ackChan = Channel.CreateUnbounded<(ulong deliveryTag, AckModes ackMode)>();
 
-        // Hook up callback that completes the receive-channel when message count is reached or cancellation is requested by user/application
+        return (receiveChan, ackChan);
+    }
+
+    private void RegisterCancellationHandler(
+        CancellationToken linkedCtsToken,
+        CancellationToken cancellationToken,
+        IChannel channel,
+        string consumerTag,
+        Channel<RabbitMessage> receiveChan)
+    {
+        // Hook up callback that cancels the RabbitMQ consumer and completes the receive channel
+        // when cancellation is requested (Ctrl+C or message count limit reached)
         linkedCtsToken.Register(() =>
         {
-            _logger.LogDebug("Completing receive channel (cancellation token status: application={ParentCt})",
-                cancellationToken.IsCancellationRequested);
+            _logger.LogDebug("Cancellation requested - stopping RabbitMQ consumer (tag: {ConsumerTag})", consumerTag);
+
             if (cancellationToken.IsCancellationRequested)
             {
                 _statusOutput.ShowWarning("Consumption cancelled by user", addNewLine: true);
             }
 
-            receiveChan.Writer.TryComplete();
-        });
+            // Cancel the consumer asynchronously to stop receiving new messages from RabbitMQ
+            // Using fire-and-forget pattern as CancellationToken.Register doesn't support async callbacks
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await channel.BasicCancelAsync(consumerTag);
+                    _logger.LogDebug("RabbitMQ consumer cancelled successfully");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to cancel RabbitMQ consumer: {Message}", ex.Message);
+                }
+            });
 
-        return (receiveChan, ackChan);
+            // Complete the receive channel so the writer task can finish processing remaining messages
+            receiveChan.Writer.TryComplete();
+            _logger.LogDebug("Receive channel completed");
+        });
     }
 
     private (AsyncEventingBasicConsumer Consumer, ReceivedMessageCounter Counter) CreateConsumer(
