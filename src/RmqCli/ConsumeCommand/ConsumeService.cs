@@ -3,7 +3,8 @@ using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using RmqCli.Common;
-using RmqCli.ConsumeCommand.MessageWriter;
+using RmqCli.Configuration;
+using RmqCli.ConsumeCommand.MessageOutput;
 
 namespace RmqCli.ConsumeCommand;
 
@@ -21,20 +22,23 @@ public interface IConsumeService
 public class ConsumeService : IConsumeService
 {
     private readonly ILogger<ConsumeService> _logger;
+    private readonly ILoggerFactory _loggerFactory;
     private readonly IRabbitChannelFactory _rabbitChannelFactory;
-    private readonly IMessageWriterFactory _messageWriterFactory;
     private readonly IStatusOutputService _statusOutput;
+    private readonly FileConfig _fileConfig;
 
     public ConsumeService(
         ILogger<ConsumeService> logger,
+        ILoggerFactory loggerFactory,
         IRabbitChannelFactory rabbitChannelFactory,
-        IMessageWriterFactory messageWriterFactory,
-        IStatusOutputService statusOutput)
+        IStatusOutputService statusOutput,
+        FileConfig fileConfig)
     {
         _logger = logger;
+        _loggerFactory = loggerFactory;
         _rabbitChannelFactory = rabbitChannelFactory;
-        _messageWriterFactory = messageWriterFactory;
         _statusOutput = statusOutput;
+        _fileConfig = fileConfig;
     }
 
     public async Task<int> ConsumeMessages(
@@ -111,10 +115,17 @@ public class ConsumeService : IConsumeService
         // Start consuming messages from the specified queue
         _ = channel.BasicConsumeAsync(queue: queue, autoAck: false, consumer: consumer);
 
+        // Create message output handler using factory
+        var messageOutput = MessageOutputFactory.Create(
+            _loggerFactory,
+            outputFileInfo,
+            outputFormat,
+            _fileConfig,
+            messageCount);
+
         // Start processing received messages
-        var messageWriter = _messageWriterFactory.CreateWriter(outputFileInfo, messageCount, outputFormat);
         var writerTask = Task.Run(() =>
-            messageWriter.WriteMessageAsync(receiveChan, ackChan, ackMode));
+            messageOutput.WriteMessagesAsync(receiveChan, ackChan, ackMode));
 
         // Start dispatcher for acknowledgments of successfully processed messages
         var ackDispatcher = Task.Run(() => HandleAcks(ackChan, channel));

@@ -1,0 +1,176 @@
+using System.Diagnostics;
+using System.Threading.Channels;
+using Microsoft.Extensions.Logging;
+using RmqCli.Common;
+using RmqCli.Configuration;
+using RmqCli.ConsumeCommand.MessageFormatter;
+
+namespace RmqCli.ConsumeCommand.MessageOutput;
+
+/// <summary>
+/// Writes consumed messages to file(s).
+/// Supports single file mode or rotating file mode based on configuration.
+/// </summary>
+public class FileOutput : MessageOutput
+{
+    private readonly ILogger<FileOutput> _logger;
+    private readonly FileInfo _outputFileInfo;
+    private readonly OutputFormat _format;
+    private readonly FileConfig _fileConfig;
+    private readonly bool _useRotatingFiles;
+
+    public FileOutput(
+        ILogger<FileOutput> logger,
+        FileInfo outputFileInfo,
+        OutputFormat format,
+        FileConfig fileConfig,
+        int messageCount)
+    {
+        _logger = logger;
+        _outputFileInfo = outputFileInfo;
+        _format = format;
+        _fileConfig = fileConfig;
+
+        // Use rotating files if message count is unlimited or exceeds messages per file
+        _useRotatingFiles = messageCount == -1 || messageCount > fileConfig.MessagesPerFile;
+    }
+
+    public override async Task WriteMessagesAsync(
+        Channel<RabbitMessage> messageChannel,
+        Channel<(ulong deliveryTag, AckModes ackMode)> ackChannel,
+        AckModes ackMode)
+    {
+        _logger.LogDebug("Starting file message output (rotating: {UseRotating})", _useRotatingFiles);
+
+        try
+        {
+            if (_useRotatingFiles)
+            {
+                await WriteRotatingFilesAsync(messageChannel, ackChannel, ackMode);
+            }
+            else
+            {
+                await WriteSingleFileAsync(messageChannel, ackChannel, ackMode);
+            }
+        }
+        finally
+        {
+            ackChannel.Writer.TryComplete();
+            _logger.LogDebug("File message output completed");
+        }
+    }
+
+    private async Task WriteSingleFileAsync(
+        Channel<RabbitMessage> messageChannel,
+        Channel<(ulong deliveryTag, AckModes ackMode)> ackChannel,
+        AckModes ackMode)
+    {
+        await using var fileStream = _outputFileInfo.OpenWrite();
+        await using var writer = new StreamWriter(fileStream);
+
+        var isFirstMessage = true;
+
+        await foreach (var message in messageChannel.Reader.ReadAllAsync())
+        {
+            try
+            {
+                // Add delimiter between messages for plain text format
+                if (!isFirstMessage && _format == OutputFormat.Plain)
+                {
+                    await writer.WriteLineAsync(_fileConfig.MessageDelimiter);
+                }
+                isFirstMessage = false;
+
+                var formattedMessage = FormatMessage(message);
+                await writer.WriteLineAsync(formattedMessage);
+
+                await ackChannel.Writer.WriteAsync((message.DeliveryTag, ackMode));
+                _logger.LogTrace("Message #{DeliveryTag} written to file", message.DeliveryTag);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to write message #{DeliveryTag}: {Message}",
+                    message.DeliveryTag, ex.Message);
+                throw;
+            }
+        }
+
+        await writer.FlushAsync();
+    }
+
+    private async Task WriteRotatingFilesAsync(
+        Channel<RabbitMessage> messageChannel,
+        Channel<(ulong deliveryTag, AckModes ackMode)> ackChannel,
+        AckModes ackMode)
+    {
+        StreamWriter? writer = null;
+        try
+        {
+            var fileIndex = 0;
+            var messagesInCurrentFile = 0;
+            var baseFileName = Path.Combine(
+                _outputFileInfo.DirectoryName ?? string.Empty,
+                Path.GetFileNameWithoutExtension(_outputFileInfo.Name));
+            var fileExtension = _outputFileInfo.Extension;
+
+            await foreach (var message in messageChannel.Reader.ReadAllAsync())
+            {
+                try
+                {
+                    // Open new file if needed
+                    if (writer is null || messagesInCurrentFile >= _fileConfig.MessagesPerFile)
+                    {
+                        if (writer is not null)
+                        {
+                            await writer.FlushAsync();
+                            await writer.DisposeAsync();
+                        }
+
+                        var currentFileName = $"{baseFileName}.{fileIndex++}{fileExtension}";
+                        _logger.LogDebug("Creating new file: {FileName}", currentFileName);
+
+                        writer = new StreamWriter(currentFileName);
+                        messagesInCurrentFile = 0;
+                    }
+
+                    // Add delimiter between messages in same file for plain text format
+                    if (messagesInCurrentFile > 0 && _format == OutputFormat.Plain)
+                    {
+                        await writer.WriteLineAsync(_fileConfig.MessageDelimiter);
+                    }
+
+                    var formattedMessage = FormatMessage(message);
+                    await writer.WriteLineAsync(formattedMessage);
+                    messagesInCurrentFile++;
+
+                    await ackChannel.Writer.WriteAsync((message.DeliveryTag, ackMode));
+                    _logger.LogTrace("Message #{DeliveryTag} written to rotating file", message.DeliveryTag);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to write message #{DeliveryTag}: {Message}",
+                        message.DeliveryTag, ex.Message);
+                    throw;
+                }
+            }
+        }
+        finally
+        {
+            if (writer is not null)
+            {
+                await writer.DisposeAsync();
+            }
+        }
+    }
+
+    private string FormatMessage(RabbitMessage message)
+    {
+        return _format switch
+        {
+            OutputFormat.Plain => TextMessageFormatter.FormatMessage(message),
+            OutputFormat.Json => JsonMessageFormatter.FormatMessage(message),
+            OutputFormat.Table => throw new NotImplementedException("Table format is not yet implemented"),
+            _ => throw new UnreachableException($"Unexpected OutputFormat: {_format}")
+        };
+    }
+}

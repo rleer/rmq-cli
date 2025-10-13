@@ -3,9 +3,9 @@ using RabbitMQ.Client;
 
 namespace RmqCli.ConsumeCommand.MessageFormatter;
 
-public class TextMessageFormatter : IMessageFormatter
+public static class TextMessageFormatter
 {
-    public string FormatMessage(RabbitMessage message)
+    public static string FormatMessage(RabbitMessage message)
     {
         return "DeliveryTag: " + message.DeliveryTag + "\n" +
                "Redelivered: " + message.Redelivered + "\n" +
@@ -13,7 +13,7 @@ public class TextMessageFormatter : IMessageFormatter
                "Body:\n" + message.Body;
     }
 
-    public string FormatMessages(IEnumerable<RabbitMessage> messages)
+    public static string FormatMessages(IEnumerable<RabbitMessage> messages)
     {
         return string.Join("\n", messages.Select(FormatMessage));
     }

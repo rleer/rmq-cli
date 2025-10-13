@@ -3,21 +3,21 @@ using RmqCli.ConsumeCommand.MessageFormatter.Json;
 
 namespace RmqCli.ConsumeCommand.MessageFormatter;
 
-public class JsonMessageFormatter : IMessageFormatter
+public static class JsonMessageFormatter
 {
-    public string FormatMessage(RabbitMessage message)
+    public static string FormatMessage(RabbitMessage message)
     {
         var messageJson = CreateMessageJson(message);
         return JsonSerializer.Serialize(messageJson, JsonSerializationContext.RelaxedEscapingOptions.GetTypeInfo(typeof(MessageJson)));
     }
 
-    public string FormatMessages(IEnumerable<RabbitMessage> messages)
+    public static string FormatMessages(IEnumerable<RabbitMessage> messages)
     {
         var messageArr = messages.Select(CreateMessageJson).ToArray();
         return JsonSerializer.Serialize(messageArr, JsonSerializationContext.RelaxedEscapingOptions.GetTypeInfo(typeof(MessageJsonArray)));
     }
 
-    private MessageJson CreateMessageJson(RabbitMessage message)
+    private static MessageJson CreateMessageJson(RabbitMessage message)
     {
         var formattedProps = MessagePropertyExtractor.ExtractProperties(message.Props);
         var properties = ConvertToJsonProperties(formattedProps);
@@ -34,7 +34,7 @@ public class JsonMessageFormatter : IMessageFormatter
     /// Converts FormattedMessageProperties to a dictionary suitable for JSON serialization.
     /// Only includes properties that are present (not null).
     /// </summary>
-    private Dictionary<string, object>? ConvertToJsonProperties(FormattedMessageProperties props)
+    private static Dictionary<string, object>? ConvertToJsonProperties(FormattedMessageProperties props)
     {
         if (!props.HasAnyProperty())
         {

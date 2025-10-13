@@ -5,8 +5,6 @@ using Microsoft.Extensions.Logging;
 using RmqCli.Common;
 using RmqCli.Configuration;
 using RmqCli.ConsumeCommand;
-using RmqCli.ConsumeCommand.MessageFormatter;
-using RmqCli.ConsumeCommand.MessageWriter;
 using RmqCli.PublishCommand;
 
 namespace RmqCli;
@@ -21,17 +19,6 @@ public class ServiceFactory
         services.AddSingleton<IRabbitChannelFactory, RabbitChannelFactory>();
         services.AddSingleton<IStatusOutputService, StatusOutputService>();
         services.AddSingleton<IConsumeService, ConsumeService>();
-
-        // Register message formatters
-        services.AddSingleton<IMessageFormatter, TextMessageFormatter>();
-        services.AddSingleton<IMessageFormatter, JsonMessageFormatter>();
-        services.AddSingleton<IMessageFormatterFactory, MessageFormatterFactory>();
-
-        // Register message writers
-        services.AddSingleton<IMessageWriter, ConsoleMessageWriter>();
-        services.AddSingleton<IMessageWriter, SingleFileMessageWriter>();
-        services.AddSingleton<IMessageWriter, RotatingFileMessageWriter>();
-        services.AddSingleton<IMessageWriterFactory, MessageWriterFactory>();
 
         var serviceProvider = services.BuildServiceProvider();
         return serviceProvider.GetRequiredService<IConsumeService>();
