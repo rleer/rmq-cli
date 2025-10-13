@@ -39,7 +39,8 @@ public class FileOutput : MessageOutput
     public override async Task WriteMessagesAsync(
         Channel<RabbitMessage> messageChannel,
         Channel<(ulong deliveryTag, AckModes ackMode)> ackChannel,
-        AckModes ackMode)
+        AckModes ackMode,
+        CancellationToken cancellationToken = default)
     {
         _logger.LogDebug("Starting file message output (rotating: {UseRotating})", _useRotatingFiles);
 
@@ -47,11 +48,11 @@ public class FileOutput : MessageOutput
         {
             if (_useRotatingFiles)
             {
-                await WriteRotatingFilesAsync(messageChannel, ackChannel, ackMode);
+                await WriteRotatingFilesAsync(messageChannel, ackChannel, ackMode, cancellationToken);
             }
             else
             {
-                await WriteSingleFileAsync(messageChannel, ackChannel, ackMode);
+                await WriteSingleFileAsync(messageChannel, ackChannel, ackMode, cancellationToken);
             }
         }
         finally
@@ -64,7 +65,8 @@ public class FileOutput : MessageOutput
     private async Task WriteSingleFileAsync(
         Channel<RabbitMessage> messageChannel,
         Channel<(ulong deliveryTag, AckModes ackMode)> ackChannel,
-        AckModes ackMode)
+        AckModes ackMode,
+        CancellationToken cancellationToken)
     {
         await using var fileStream = _outputFileInfo.OpenWrite();
         await using var writer = new StreamWriter(fileStream);
@@ -85,8 +87,15 @@ public class FileOutput : MessageOutput
                 var formattedMessage = FormatMessage(message);
                 await writer.WriteLineAsync(formattedMessage);
 
-                await ackChannel.Writer.WriteAsync((message.DeliveryTag, ackMode));
+                await ackChannel.Writer.WriteAsync((message.DeliveryTag, ackMode), CancellationToken.None);
                 _logger.LogTrace("Message #{DeliveryTag} written to file", message.DeliveryTag);
+
+                // Check for cancellation after processing current message
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    _logger.LogDebug("Cancellation requested - stopping after current message");
+                    break;
+                }
             }
             catch (Exception ex)
             {
@@ -102,7 +111,8 @@ public class FileOutput : MessageOutput
     private async Task WriteRotatingFilesAsync(
         Channel<RabbitMessage> messageChannel,
         Channel<(ulong deliveryTag, AckModes ackMode)> ackChannel,
-        AckModes ackMode)
+        AckModes ackMode,
+        CancellationToken cancellationToken)
     {
         StreamWriter? writer = null;
         try
@@ -144,8 +154,15 @@ public class FileOutput : MessageOutput
                     await writer.WriteLineAsync(formattedMessage);
                     messagesInCurrentFile++;
 
-                    await ackChannel.Writer.WriteAsync((message.DeliveryTag, ackMode));
+                    await ackChannel.Writer.WriteAsync((message.DeliveryTag, ackMode), CancellationToken.None);
                     _logger.LogTrace("Message #{DeliveryTag} written to rotating file", message.DeliveryTag);
+
+                    // Check for cancellation after processing current message
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        _logger.LogDebug("Cancellation requested - stopping after current message");
+                        break;
+                    }
                 }
                 catch (Exception ex)
                 {

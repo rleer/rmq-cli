@@ -24,7 +24,8 @@ public class ConsoleOutput : MessageOutput
     public override async Task WriteMessagesAsync(
         Channel<RabbitMessage> messageChannel,
         Channel<(ulong deliveryTag, AckModes ackMode)> ackChannel,
-        AckModes ackMode)
+        AckModes ackMode,
+        CancellationToken cancellationToken = default)
     {
         _logger.LogDebug("Starting console message output");
 
@@ -33,17 +34,24 @@ public class ConsoleOutput : MessageOutput
             try
             {
                 var formattedMessage = FormatMessage(message);
-                System.Console.Out.WriteLine(formattedMessage);
+                await System.Console.Out.WriteLineAsync(formattedMessage);
 
-                await ackChannel.Writer.WriteAsync((message.DeliveryTag, ackMode));
+                await ackChannel.Writer.WriteAsync((message.DeliveryTag, ackMode), CancellationToken.None);
                 _logger.LogTrace("Message #{DeliveryTag} written to console", message.DeliveryTag);
+
+                // Check for cancellation after processing current message
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    _logger.LogDebug("Cancellation requested - stopping after current message");
+                    break;
+                }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to write message #{DeliveryTag}: {Message}",
                     message.DeliveryTag, ex.Message);
                 // Requeue on error
-                await ackChannel.Writer.WriteAsync((message.DeliveryTag, AckModes.Requeue));
+                await ackChannel.Writer.WriteAsync((message.DeliveryTag, AckModes.Requeue), CancellationToken.None);
             }
         }
 

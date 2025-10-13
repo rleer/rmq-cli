@@ -71,7 +71,7 @@ public class ConsumeService : IConsumeService
         // Register cancellation handler to stop consumer and complete channels gracefully
         RegisterCancellationHandler(combinedCts.Token, messageLimitCts.Token, userCancellationToken, channel, consumerTag, receiveChan);
 
-        await RunMessageProcessingPipeline(receiveChan, ackChan, channel, outputFileInfo, outputFormat, ackMode, messageCount);
+        await RunMessageProcessingPipeline(receiveChan, ackChan, channel, outputFileInfo, outputFormat, ackMode, messageCount, userCancellationToken);
 
         ShowCompletionStatus(receivedCount.Value);
         await channel.CloseAsync(userCancellationToken);
@@ -210,7 +210,7 @@ public class ConsumeService : IConsumeService
                 ea.Redelivered
             );
 
-            await receiveChan.Writer.WriteAsync(message, combinedCancellationToken);
+            await receiveChan.Writer.WriteAsync(message, CancellationToken.None);
             _logger.LogTrace("Message #{DeliveryTag} written to receive channel", ea.DeliveryTag);
 
             // Check if we reached the message count limit
@@ -251,7 +251,8 @@ public class ConsumeService : IConsumeService
         FileInfo? outputFileInfo,
         OutputFormat outputFormat,
         AckModes ackMode,
-        int messageCount)
+        int messageCount,
+        CancellationToken cancellationToken)
     {
         // Create message output handler using factory
         var messageOutput = MessageOutputFactory.Create(
@@ -263,10 +264,10 @@ public class ConsumeService : IConsumeService
 
         // Start processing received messages
         var writerTask = Task.Run(() =>
-            messageOutput.WriteMessagesAsync(receiveChan, ackChan, ackMode));
+            messageOutput.WriteMessagesAsync(receiveChan, ackChan, ackMode, cancellationToken), CancellationToken.None);
 
         // Start dispatcher for acknowledgments of successfully processed messages
-        var ackDispatcher = Task.Run(() => HandleAcks(ackChan, channel));
+        var ackDispatcher = Task.Run(() => HandleAcks(ackChan, channel), CancellationToken.None);
 
         await Task.WhenAll(writerTask, ackDispatcher);
     }

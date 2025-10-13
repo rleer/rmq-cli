@@ -16,8 +16,10 @@ public abstract class MessageOutput
     /// <param name="messageChannel">Channel containing messages to write</param>
     /// <param name="ackChannel">Channel for sending acknowledgment information</param>
     /// <param name="ackMode">The acknowledgment mode to use for successfully processed messages</param>
+    /// <param name="cancellationToken">Token to signal graceful shutdown after current message</param>
     public abstract Task WriteMessagesAsync(
         Channel<RabbitMessage> messageChannel,
         Channel<(ulong deliveryTag, AckModes ackMode)> ackChannel,
-        AckModes ackMode);
+        AckModes ackMode,
+        CancellationToken cancellationToken = default);
 }
