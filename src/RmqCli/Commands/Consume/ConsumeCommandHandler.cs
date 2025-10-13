@@ -97,6 +97,13 @@ public class ConsumeCommandHandler : ICommandHandler
             outputFileInfo = new FileInfo(Path.GetFullPath(outputFilePath, Environment.CurrentDirectory));
         }
 
-        return await consumeService.ConsumeMessages(queue, ackMode, outputFileInfo, messageCount, outputFormat, cts.Token); 
+        try
+        {
+            return await consumeService.ConsumeMessages(queue, ackMode, outputFileInfo, messageCount, outputFormat, cts.Token); 
+        }
+        catch (Exception)
+        {
+            return 1;
+        }
     }
 }
