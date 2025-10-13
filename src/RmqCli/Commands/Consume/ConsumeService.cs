@@ -2,9 +2,11 @@ using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
+using RabbitMQ.Client.Exceptions;
 using RmqCli.Core.Services;
 using RmqCli.Infrastructure.Configuration.Models;
 using RmqCli.Infrastructure.Output;
+using RmqCli.Infrastructure.RabbitMq;
 using RmqCli.Shared;
 
 namespace RmqCli.Commands.Consume;
@@ -58,6 +60,22 @@ public class ConsumeService : IConsumeService
         var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, localCts.Token);
 
         await using var channel = await _rabbitChannelFactory.GetChannelAsync();
+
+        // Ensure the specified queue exists
+        try
+        {
+            await channel.QueueDeclarePassiveAsync(queue, linkedCts.Token);
+        }
+        catch (OperationInterruptedException ex)
+        {
+            _logger.LogError(ex, "Queue '{Queue}' not found. Reply code: {ReplyCode}, Reply text: {ReplyText}",
+                queue, ex.ShutdownReason?.ReplyCode, ex.ShutdownReason?.ReplyText);
+
+            var queueNotFoundError = ConsumeErrorInfoFactory.QueueNotFoundErrorInfo(queue);
+            _statusOutput.ShowError($"Failed to consume from queue", queueNotFoundError);
+
+            return 1;
+        }
 
         var receiveChan = Channel.CreateUnbounded<RabbitMessage>();
         var ackChan = Channel.CreateUnbounded<(ulong deliveryTag, AckModes ackMode)>();

@@ -101,8 +101,9 @@ public class ConsumeCommandHandler : ICommandHandler
         {
             return await consumeService.ConsumeMessages(queue, ackMode, outputFileInfo, messageCount, outputFormat, cts.Token); 
         }
-        catch (Exception)
+        catch (Exception e)
         {
+            Console.Error.WriteLine(e);
             return 1;
         }
     }
