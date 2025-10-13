@@ -1,5 +1,5 @@
 ﻿using RmqCli;
-using RmqCli.Commandhandler;
+using RmqCli.Commands;
 using Spectre.Console;
 
 try
