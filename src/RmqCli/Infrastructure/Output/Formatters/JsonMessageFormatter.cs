@@ -1,6 +1,6 @@
 using System.Text.Json;
 using RmqCli.Commands.Consume;
-using RmqCli.Infrastructure.Output.Formatters.Json;
+using RmqCli.Shared.Json;
 
 namespace RmqCli.Infrastructure.Output.Formatters;
 

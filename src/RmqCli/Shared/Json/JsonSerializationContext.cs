@@ -5,7 +5,7 @@ using RmqCli.Commands.Consume;
 using RmqCli.Commands.Publish;
 using RmqCli.Core.Models;
 
-namespace RmqCli.Infrastructure.Output.Formatters.Json;
+namespace RmqCli.Shared.Json;
 
 [JsonSerializable(typeof(MessageJson))]
 [JsonSerializable(typeof(MessageJson[]), TypeInfoPropertyName = "ArrayOfMessageJson")]
