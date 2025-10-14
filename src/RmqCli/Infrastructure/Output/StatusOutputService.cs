@@ -25,11 +25,6 @@ public interface IStatusOutputService
 // (Json)Console -> stdout for results(structured output for automation)
 public class StatusOutputService : IStatusOutputService
 {
-    private const string SuccessSymbol = "\u2714"; // ✓
-    private const string WarningSymbol = "\u26A0"; // ⚠
-    private const string ErrorSymbol = "\u2717"; // ✗
-    private const string StatusSymbol = "\u26EF"; // ⛯
-
     private readonly CliConfig _cliConfig;
     private readonly IAnsiConsole _console;
 
@@ -50,7 +45,7 @@ public class StatusOutputService : IStatusOutputService
         if (_cliConfig.Quiet || _cliConfig.Format == OutputFormat.Json)
             return;
 
-        _console.MarkupLine($"{StatusSymbol} {message}");
+        _console.MarkupLine($"{Constants.StatusSymbol} {message}");
     }
 
     /// <summary>
@@ -62,7 +57,7 @@ public class StatusOutputService : IStatusOutputService
         if (_cliConfig.Quiet || _cliConfig.Format == OutputFormat.Json)
             return;
 
-        _console.MarkupLine($"{SuccessSymbol} {message}");
+        _console.MarkupLine($"{Constants.SuccessSymbol} {message}");
     }
 
     /// <summary>
@@ -79,7 +74,7 @@ public class StatusOutputService : IStatusOutputService
         if (addNewLine)
             _console.WriteLine();
 
-        _console.MarkupLine($"{WarningSymbol} {message}");
+        _console.MarkupLine($"{Constants.WarningSymbol} {message}");
     }
 
     /// <summary>
@@ -94,7 +89,7 @@ public class StatusOutputService : IStatusOutputService
         {
             case OutputFormat.Plain:
             {
-                _console.MarkupLine($"{ErrorSymbol} {message}");
+                _console.MarkupLine($"{Constants.ErrorSymbol} {message}");
                 if (errorInfo is null)
                     return;
 
