@@ -138,6 +138,7 @@ public static class ServiceCollectionExtensions
     /// <returns>The service collection for chaining.</returns>
     public static IServiceCollection AddConsumeServices(this IServiceCollection services)
     {
+        services.AddSingleton<IConsumeOutputService, ConsumeOutputService>();
         services.AddSingleton<IConsumeService, ConsumeService>();
 
         return services;

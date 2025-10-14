@@ -64,7 +64,7 @@ public static class MessagePropertyExtractor
     /// Recursively converts header values to appropriate types for formatting.
     /// Handles byte arrays, timestamps, collections, and nested dictionaries.
     /// </summary>
-    public static object ConvertValue(object value)
+    private static object ConvertValue(object value)
     {
         return value switch
         {
@@ -102,7 +102,7 @@ public static class MessagePropertyExtractor
     /// <summary>
     /// Formats binary data description. Can be customized per output format.
     /// </summary>
-    public static string FormatBinaryData(int length)
+    private static string FormatBinaryData(int length)
     {
         return $"<binary data: {length} bytes>";
     }

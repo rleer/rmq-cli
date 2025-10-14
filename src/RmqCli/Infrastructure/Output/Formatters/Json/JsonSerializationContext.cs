@@ -1,6 +1,7 @@
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using RmqCli.Commands.Consume;
 using RmqCli.Commands.Publish;
 using RmqCli.Core.Models;
 
@@ -25,6 +26,8 @@ namespace RmqCli.Infrastructure.Output.Formatters.Json;
 [JsonSerializable(typeof(Response))]
 [JsonSerializable(typeof(PublishResponse))]
 [JsonSerializable(typeof(PublishResult))]
+[JsonSerializable(typeof(ConsumeResponse))]
+[JsonSerializable(typeof(ConsumeResult))]
 [JsonSerializable(typeof(ErrorInfo))]
 [JsonSerializable(typeof(List<string>))]
 [JsonSourceGenerationOptions(

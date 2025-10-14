@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text;
 using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
 using RmqCli.Commands.Consume;
@@ -21,7 +22,7 @@ public class ConsoleOutput : MessageOutput
         _format = format;
     }
 
-    public override async Task WriteMessagesAsync(
+    public override async Task<MessageOutputResult> WriteMessagesAsync(
         Channel<RabbitMessage> messageChannel,
         Channel<(ulong deliveryTag, AckModes ackMode)> ackChannel,
         AckModes ackMode,
@@ -29,15 +30,23 @@ public class ConsoleOutput : MessageOutput
     {
         _logger.LogDebug("Starting console message output");
 
-        await foreach (var message in messageChannel.Reader.ReadAllAsync())
+        long processedCount = 0;
+        long totalBytes = 0;
+
+        await foreach (var message in messageChannel.Reader.ReadAllAsync(CancellationToken.None))
         {
             try
             {
+                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
                 var formattedMessage = FormatMessage(message);
                 await System.Console.Out.WriteLineAsync(formattedMessage);
 
                 await ackChannel.Writer.WriteAsync((message.DeliveryTag, ackMode), CancellationToken.None);
                 _logger.LogTrace("Message #{DeliveryTag} written to console", message.DeliveryTag);
+
+                // Track metrics
+                totalBytes += Encoding.UTF8.GetByteCount(message.Body);
+                processedCount++;
 
                 // Check for cancellation after processing current message
                 if (cancellationToken.IsCancellationRequested)
@@ -56,7 +65,9 @@ public class ConsoleOutput : MessageOutput
         }
 
         ackChannel.Writer.TryComplete();
-        _logger.LogDebug("Console message output completed");
+        _logger.LogDebug("Console message output completed (processed: {ProcessedCount})", processedCount);
+
+        return new MessageOutputResult(processedCount, totalBytes);
     }
 
     private string FormatMessage(RabbitMessage message)

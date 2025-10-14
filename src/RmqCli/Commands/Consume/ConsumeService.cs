@@ -28,6 +28,7 @@ public class ConsumeService : IConsumeService
     private readonly ILoggerFactory _loggerFactory;
     private readonly IRabbitChannelFactory _rabbitChannelFactory;
     private readonly IStatusOutputService _statusOutput;
+    private readonly IConsumeOutputService _resultOutput;
     private readonly FileConfig _fileConfig;
 
     public ConsumeService(
@@ -35,12 +36,14 @@ public class ConsumeService : IConsumeService
         ILoggerFactory loggerFactory,
         IRabbitChannelFactory rabbitChannelFactory,
         IStatusOutputService statusOutput,
+        IConsumeOutputService resultOutput,
         FileConfig fileConfig)
     {
         _logger = logger;
         _loggerFactory = loggerFactory;
         _rabbitChannelFactory = rabbitChannelFactory;
         _statusOutput = statusOutput;
+        _resultOutput = resultOutput;
         _fileConfig = fileConfig;
     }
 
@@ -52,6 +55,8 @@ public class ConsumeService : IConsumeService
         OutputFormat outputFormat = OutputFormat.Plain,
         CancellationToken userCancellationToken = default)
     {
+        var startTime = System.Diagnostics.Stopwatch.GetTimestamp();
+
         _logger.LogDebug("Initiating consume operation: queue={Queue}, mode={AckMode}, count={messageCount}",
             queue, ackMode, messageCount);
 
@@ -62,7 +67,7 @@ public class ConsumeService : IConsumeService
 
         var (messageLimitCts, combinedCts) = CreateCombinedCancellationToken(userCancellationToken);
         var (receiveChan, ackChan) = CreateMessageChannels();
-        var (consumer, receivedCount) = CreateConsumer(channel, receiveChan, messageLimitCts, combinedCts.Token, messageCount);
+        var (consumer, receivedCount) = CreateConsumer(channel, receiveChan, messageCount, messageLimitCts, combinedCts.Token);
 
         ShowConsumingStatus(queue, messageCount);
 
@@ -71,9 +76,27 @@ public class ConsumeService : IConsumeService
         // Register cancellation handler to stop consumer and complete channels gracefully
         RegisterCancellationHandler(combinedCts.Token, messageLimitCts.Token, userCancellationToken, channel, consumerTag, receiveChan);
 
-        await RunMessageProcessingPipeline(receiveChan, ackChan, channel, outputFileInfo, outputFormat, ackMode, messageCount, userCancellationToken);
+        var outputResult = await RunMessageProcessingPipeline(receiveChan, ackChan, channel, outputFileInfo, outputFormat, ackMode, messageCount,
+            userCancellationToken);
 
-        ShowCompletionStatus(receivedCount.Value, userCancellationToken.IsCancellationRequested);
+        var endTime = System.Diagnostics.Stopwatch.GetTimestamp();
+        var elapsedTime = System.Diagnostics.Stopwatch.GetElapsedTime(startTime, endTime);
+
+        ShowCompletionStatus(receivedCount.Value, userCancellationToken.IsCancellationRequested, elapsedTime);
+
+        // Build and output consume summary
+        var response = BuildConsumeResponse(
+            queue,
+            ackMode,
+            receivedCount.Value,
+            outputResult,
+            outputFileInfo,
+            outputFormat,
+            elapsedTime,
+            userCancellationToken.IsCancellationRequested);
+
+        _resultOutput.WriteConsumeResult(response);
+
         await channel.CloseAsync(userCancellationToken);
 
         return 0;
@@ -123,7 +146,8 @@ public class ConsumeService : IConsumeService
         }
     }
 
-    private (CancellationTokenSource MessageLimitCts, CancellationTokenSource CombinedCts) CreateCombinedCancellationToken(CancellationToken userCancellationToken)
+    private (CancellationTokenSource MessageLimitCts, CancellationTokenSource CombinedCts) CreateCombinedCancellationToken(
+        CancellationToken userCancellationToken)
     {
         var messageLimitCts = new CancellationTokenSource();
         var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(userCancellationToken, messageLimitCts.Token);
@@ -183,9 +207,9 @@ public class ConsumeService : IConsumeService
     private (AsyncEventingBasicConsumer Consumer, ReceivedMessageCounter Counter) CreateConsumer(
         IChannel channel,
         Channel<RabbitMessage> receiveChan,
+        int messageCount,
         CancellationTokenSource messageLimitCts,
-        CancellationToken combinedCancellationToken,
-        int messageCount)
+        CancellationToken combinedCancellationToken)
     {
         var counter = new ReceivedMessageCounter();
         var consumer = new AsyncEventingBasicConsumer(channel);
@@ -239,7 +263,7 @@ public class ConsumeService : IConsumeService
         _statusOutput.ShowStatus(statusMessage);
     }
 
-    private async Task RunMessageProcessingPipeline(
+    private async Task<MessageOutputResult> RunMessageProcessingPipeline(
         Channel<RabbitMessage> receiveChan,
         Channel<(ulong, AckModes)> ackChan,
         IChannel channel,
@@ -265,16 +289,60 @@ public class ConsumeService : IConsumeService
         var ackDispatcher = Task.Run(() => HandleAcks(ackChan, channel), CancellationToken.None);
 
         await Task.WhenAll(writerTask, ackDispatcher);
+
+        return writerTask.Result;
     }
 
-    private void ShowCompletionStatus(long receivedCount, bool wasCancelledByUser)
+    private ConsumeResponse BuildConsumeResponse(
+        string queue,
+        AckModes ackMode,
+        long messagesReceived,
+        MessageOutputResult outputResult,
+        FileInfo? outputFileInfo,
+        OutputFormat outputFormat,
+        TimeSpan elapsedTime,
+        bool wasCancelled)
+    {
+        var messagesPerSecond = elapsedTime.TotalSeconds > 0
+            ? Math.Round(outputResult.ProcessedCount / elapsedTime.TotalSeconds, 2)
+            : 0;
+
+        var outputDestination = outputFileInfo != null
+            ? outputFileInfo.Name
+            : "STDOUT";
+
+        var result = new ConsumeResult
+        {
+            MessagesReceived = messagesReceived,
+            MessagesProcessed = outputResult.ProcessedCount,
+            DurationMs = elapsedTime.TotalMilliseconds,
+            Duration = OutputUtilities.GetElapsedTimeString(elapsedTime),
+            AckMode = ackMode.ToString(),
+            OutputDestination = outputDestination,
+            OutputFormat = outputFormat.ToString().ToLower(),
+            CancellationReason = wasCancelled ? "User cancellation (Ctrl+C)" : null,
+            MessagesPerSecond = messagesPerSecond,
+            TotalSizeBytes = outputResult.TotalBytes,
+            TotalSize = OutputUtilities.ToSizeString(outputResult.TotalBytes)
+        };
+
+        return new ConsumeResponse
+        {
+            Status = "success",
+            Timestamp = DateTime.UtcNow,
+            Queue = queue,
+            Result = result
+        };
+    }
+
+    private void ShowCompletionStatus(long receivedCount, bool wasCancelledByUser, TimeSpan elapsedTime)
     {
         if (wasCancelledByUser)
         {
             _statusOutput.ShowWarning("Consumption cancelled by user", addNewLine: true);
         }
 
-        _statusOutput.ShowSuccess($"Consumed {OutputUtilities.GetMessageCountString(receivedCount, _statusOutput.NoColor)}");
+        _statusOutput.ShowSuccess($"Consumed {OutputUtilities.GetMessageCountString(receivedCount, _statusOutput.NoColor)} in {OutputUtilities.GetElapsedTimeString(elapsedTime)}");
         _logger.LogDebug("Consumption stopped. Waiting for RabbitMQ channel to close");
     }
 }

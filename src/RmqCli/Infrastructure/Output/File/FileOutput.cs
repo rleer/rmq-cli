@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text;
 using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
 using RmqCli.Commands.Consume;
@@ -36,7 +37,7 @@ public class FileOutput : MessageOutput
         _useRotatingFiles = messageCount == -1 || messageCount > fileConfig.MessagesPerFile;
     }
 
-    public override async Task WriteMessagesAsync(
+    public override async Task<MessageOutputResult> WriteMessagesAsync(
         Channel<RabbitMessage> messageChannel,
         Channel<(ulong deliveryTag, AckModes ackMode)> ackChannel,
         AckModes ackMode,
@@ -44,15 +45,16 @@ public class FileOutput : MessageOutput
     {
         _logger.LogDebug("Starting file message output (rotating: {UseRotating})", _useRotatingFiles);
 
+        MessageOutputResult result;
         try
         {
             if (_useRotatingFiles)
             {
-                await WriteRotatingFilesAsync(messageChannel, ackChannel, ackMode, cancellationToken);
+                result = await WriteRotatingFilesAsync(messageChannel, ackChannel, ackMode, cancellationToken);
             }
             else
             {
-                await WriteSingleFileAsync(messageChannel, ackChannel, ackMode, cancellationToken);
+                result = await WriteSingleFileAsync(messageChannel, ackChannel, ackMode, cancellationToken);
             }
         }
         finally
@@ -60,9 +62,11 @@ public class FileOutput : MessageOutput
             ackChannel.Writer.TryComplete();
             _logger.LogDebug("File message output completed");
         }
+
+        return result;
     }
 
-    private async Task WriteSingleFileAsync(
+    private async Task<MessageOutputResult> WriteSingleFileAsync(
         Channel<RabbitMessage> messageChannel,
         Channel<(ulong deliveryTag, AckModes ackMode)> ackChannel,
         AckModes ackMode,
@@ -72,8 +76,10 @@ public class FileOutput : MessageOutput
         await using var writer = new StreamWriter(fileStream);
 
         var isFirstMessage = true;
+        long processedCount = 0;
+        long totalBytes = 0;
 
-        await foreach (var message in messageChannel.Reader.ReadAllAsync())
+        await foreach (var message in messageChannel.Reader.ReadAllAsync(CancellationToken.None))
         {
             try
             {
@@ -90,6 +96,10 @@ public class FileOutput : MessageOutput
                 await ackChannel.Writer.WriteAsync((message.DeliveryTag, ackMode), CancellationToken.None);
                 _logger.LogTrace("Message #{DeliveryTag} written to file", message.DeliveryTag);
 
+                // Track metrics
+                totalBytes += Encoding.UTF8.GetByteCount(message.Body); 
+                processedCount++;
+
                 // Check for cancellation after processing current message
                 if (cancellationToken.IsCancellationRequested)
                 {
@@ -105,16 +115,20 @@ public class FileOutput : MessageOutput
             }
         }
 
-        await writer.FlushAsync();
+        await writer.FlushAsync(CancellationToken.None);
+        return new MessageOutputResult(processedCount, totalBytes);
     }
 
-    private async Task WriteRotatingFilesAsync(
+    private async Task<MessageOutputResult> WriteRotatingFilesAsync(
         Channel<RabbitMessage> messageChannel,
         Channel<(ulong deliveryTag, AckModes ackMode)> ackChannel,
         AckModes ackMode,
         CancellationToken cancellationToken)
     {
         StreamWriter? writer = null;
+        long processedCount = 0;
+        long totalBytes = 0;
+
         try
         {
             var fileIndex = 0;
@@ -124,7 +138,7 @@ public class FileOutput : MessageOutput
                 Path.GetFileNameWithoutExtension(_outputFileInfo.Name));
             var fileExtension = _outputFileInfo.Extension;
 
-            await foreach (var message in messageChannel.Reader.ReadAllAsync())
+            await foreach (var message in messageChannel.Reader.ReadAllAsync(CancellationToken.None))
             {
                 try
                 {
@@ -157,6 +171,10 @@ public class FileOutput : MessageOutput
                     await ackChannel.Writer.WriteAsync((message.DeliveryTag, ackMode), CancellationToken.None);
                     _logger.LogTrace("Message #{DeliveryTag} written to rotating file", message.DeliveryTag);
 
+                    // Track metrics
+                    totalBytes += Encoding.UTF8.GetByteCount(message.Body); 
+                    processedCount++;
+
                     // Check for cancellation after processing current message
                     if (cancellationToken.IsCancellationRequested)
                     {
@@ -179,6 +197,8 @@ public class FileOutput : MessageOutput
                 await writer.DisposeAsync();
             }
         }
+
+        return new MessageOutputResult(processedCount, totalBytes);
     }
 
     private string FormatMessage(RabbitMessage message)
