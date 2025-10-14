@@ -47,7 +47,7 @@ public class StatusOutputService : IStatusOutputService
     /// <param name="message"></param>
     public void ShowStatus(string message)
     {
-        if (_cliConfig.Quiet)
+        if (_cliConfig.Quiet || _cliConfig.Format == OutputFormat.Json)
             return;
 
         _console.MarkupLine($"{StatusSymbol} {message}");
@@ -59,7 +59,7 @@ public class StatusOutputService : IStatusOutputService
     /// <param name="message"></param>
     public void ShowSuccess(string message)
     {
-        if (_cliConfig.Quiet)
+        if (_cliConfig.Quiet || _cliConfig.Format == OutputFormat.Json)
             return;
 
         _console.MarkupLine($"{SuccessSymbol} {message}");
@@ -73,7 +73,7 @@ public class StatusOutputService : IStatusOutputService
     /// <param name="addNewLine"></param>
     public void ShowWarning(string message, bool addNewLine = false)
     {
-        if (_cliConfig.Quiet)
+        if (_cliConfig.Quiet || _cliConfig.Format == OutputFormat.Json)
             return;
 
         if (addNewLine)
