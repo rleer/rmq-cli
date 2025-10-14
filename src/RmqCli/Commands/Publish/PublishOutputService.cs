@@ -25,19 +25,22 @@ public class PublishOutputService : IPublishOutputService
 
     public void WritePublishResult(PublishResponse response)
     {
+        if (_cliConfig.Quiet)
+            return;
+
         if (_cliConfig.Format == OutputFormat.Json)
             WritePublishResultInJsonFormat(response);
-        
+
         if (_cliConfig.Format == OutputFormat.Plain)
             WritePublishResultInPlainFormat(response);
     }
-    
+
     private void WritePublishResultInJsonFormat(PublishResponse response)
     {
         var resultJson = JsonSerializer.Serialize(response, JsonSerializationContext.RelaxedEscapingOptions.GetTypeInfo(typeof(PublishResponse)));
         Console.Out.WriteLine(resultJson);
     }
-    
+
     private void WritePublishResultInPlainFormat(PublishResponse response)
     {
         if (response.Destination is { } dest)
@@ -50,14 +53,13 @@ public class PublishOutputService : IPublishOutputService
             {
                 _console.MarkupLineInterpolated($"  Exchange:    {dest.Exchange}");
                 _console.MarkupLineInterpolated($"  Routing Key: {dest.RoutingKey}");
-            } 
+            }
         }
 
         if (response.Result is { } result)
         {
             if (response.Result.MessagesPublished > 1)
             {
-
                 _console.MarkupLineInterpolated($"  Message IDs: {result.FirstMessageId} → {result.LastMessageId}");
                 _console.MarkupLineInterpolated($"  Size:        {result.AverageMessageSize} avg. ({result.TotalSize} total)");
                 _console.MarkupLineInterpolated($"  Time:        {result.FirstTimestamp} UTC → {result.LastTimestamp} UTC");
@@ -67,7 +69,7 @@ public class PublishOutputService : IPublishOutputService
                 _console.MarkupLineInterpolated($"  Message ID:  {result.FirstMessageId}");
                 _console.MarkupLineInterpolated($"  Size:        {result.TotalSize}");
                 _console.MarkupLineInterpolated($"  Timestamp:   {result.FirstTimestamp} UTC");
-            } 
+            }
         }
     }
 }
