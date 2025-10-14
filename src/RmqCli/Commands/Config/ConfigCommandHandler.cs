@@ -1,5 +1,6 @@
 using System.CommandLine;
 using RmqCli.Infrastructure.Configuration;
+using RmqCli.Shared;
 
 namespace RmqCli.Commands.Config;
 
@@ -46,14 +47,14 @@ public class ConfigCommandHandler : ICommandHandler
         configCommand.Subcommands.Add(editCommand);
 
         // config reset - resets the configuration file to default
-        var resetCommand = new Command("reset", "Reset the configuration file to default");
+        var resetCommand = new Command("reset", "Reset the user configuration file to default");
         resetCommand.SetAction(ResetConfig);
         configCommand.Subcommands.Add(resetCommand);
 
         rootCommand.Subcommands.Add(configCommand);
     }
 
-    private static Task ShowConfig(ParseResult parseResult, CancellationToken cancellationToken)
+    private static Task<int> ShowConfig(ParseResult parseResult, CancellationToken cancellationToken)
     {
         var userConfigPath = TomlConfigurationHelper.GetUserConfigFilePath();
         var systemConfigPath = TomlConfigurationHelper.GetSystemConfigFilePath();
@@ -79,43 +80,49 @@ public class ConfigCommandHandler : ICommandHandler
 
         if (!configFound)
         {
-            Console.Error.WriteLine("No configuration file found. Run the 'config init' command to create a default configuration file.");
+            Console.WriteLine($"{Constants.WarningSymbol} No configuration file found. Run the 'config init' command to create a default configuration file.");
+            return Task.FromResult(1);
         }
 
-        return Task.CompletedTask;
+        return Task.FromResult(0);
     }
 
-    private static Task InitConfig(ParseResult parseResult, CancellationToken cancellationToken)
+    private static Task<int> InitConfig(ParseResult parseResult, CancellationToken cancellationToken)
     {
         TomlConfigurationHelper.CreateDefaultUserConfigIfNotExists();
-        return Task.CompletedTask;
+        return Task.FromResult(0);
     }
 
-    private static Task ShowConfigPath(ParseResult parseResult, CancellationToken cancellationToken)
+    private static Task<int> ShowConfigPath(ParseResult parseResult, CancellationToken cancellationToken)
     {
-        if (File.Exists(TomlConfigurationHelper.GetUserConfigFilePath()))
+        var userConfigExists = File.Exists(TomlConfigurationHelper.GetUserConfigFilePath());
+        if (userConfigExists)
         {
             Console.WriteLine($"User configuration file path: {TomlConfigurationHelper.GetUserConfigFilePath()}");
         }
-        else if (File.Exists(TomlConfigurationHelper.GetSystemConfigFilePath()))
+        
+        var systemConfigExists = File.Exists(TomlConfigurationHelper.GetSystemConfigFilePath());
+        if (systemConfigExists)
         {
             Console.WriteLine($"System-wide configuration file path: {TomlConfigurationHelper.GetSystemConfigFilePath()}");
         }
-        else
-        {
-            Console.WriteLine("No configuration file found. Run the 'config init' command to create a default configuration file.");
-        }
         
-        return Task.CompletedTask;
+        if (!userConfigExists && !systemConfigExists)
+        {
+            Console.WriteLine($"{Constants.WarningSymbol} No configuration file found. Run the 'config init' command to create a default configuration file.");
+            return Task.FromResult(1);
+        }
+
+        return Task.FromResult(0);
     }
 
-    private static Task EditConfig(ParseResult parseResult, CancellationToken cancellationToken)
+    private static Task<int> EditConfig(ParseResult parseResult, CancellationToken cancellationToken)
     {
         var configPath = TomlConfigurationHelper.GetUserConfigFilePath();
         if (!File.Exists(configPath))
         {
-            Console.Error.WriteLine("Configuration file does not exist. Run 'config init' to create a default configuration file.");
-            return Task.CompletedTask;
+            Console.WriteLine($"{Constants.WarningSymbol} Configuration file does not exist. Run 'config init' to create a default configuration file.");
+            return Task.FromResult(1);
         }
 
         try
@@ -130,14 +137,15 @@ public class ConfigCommandHandler : ICommandHandler
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"Failed to open configuration file: {ex.Message}");
-            Console.Error.WriteLine($"Please manually edit the configuration file at: {configPath}");
+            Console.WriteLine($"Failed to open configuration file: {ex.Message}");
+            Console.WriteLine($"Please manually edit the configuration file at: {configPath}");
+            return Task.FromResult(1);
         }
-        
-        return Task.CompletedTask;
+
+        return Task.FromResult(0);
     }
 
-    private static Task ResetConfig(ParseResult parseResult, CancellationToken cancellationToken)
+    private static Task<int> ResetConfig(ParseResult parseResult, CancellationToken cancellationToken)
     {
         var configPath = TomlConfigurationHelper.GetUserConfigFilePath();
         if (File.Exists(configPath))
@@ -148,13 +156,14 @@ public class ConfigCommandHandler : ICommandHandler
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"Failed to delete previous configuration file: {ex.Message}");
+                Console.WriteLine($"{Constants.ErrorSymbol} Failed to delete previous configuration file: {ex.Message}");
+                return Task.FromResult(1);
             }
         }
 
         TomlConfigurationHelper.CreateDefaultUserConfigIfNotExists();
         Console.WriteLine($"Configuration reset to defaults: {configPath}");
 
-        return Task.CompletedTask;
+        return Task.FromResult(0);
     }
 }
