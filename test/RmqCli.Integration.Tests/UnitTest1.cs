@@ -1,4 +1,4 @@
-namespace RmqCli.Test.Xunit;
+﻿namespace RmqCli.Integration.Tests;
 
 public class UnitTest1
 {

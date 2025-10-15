@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 
 namespace RmqCli.Shared;
@@ -14,15 +15,15 @@ public static class OutputUtilities
         {
             case >= gb:
                 size = Math.Round(l / gb, 2);
-                return $"{size} GB";
+                return $"{size.ToString(CultureInfo.InvariantCulture)} GB";
             case >= mb:
                 size = Math.Round(l / mb, 2);
-                return $"{size} MB";
+                return $"{size.ToString(CultureInfo.InvariantCulture)} MB";
             case >= kb:
                 size = Math.Round(l / kb, 2);
-                return $"{size} KB";
+                return $"{size.ToString(CultureInfo.InvariantCulture)} KB";
             default:
-                return $"{size} bytes";
+                return $"{size.ToString(CultureInfo.InvariantCulture)} bytes";
         }
     }
 
@@ -44,7 +45,7 @@ public static class OutputUtilities
 
     public static string GetMessageCountString(long count, bool noColor = true)
     {
-        var countString = noColor ? count.ToString() : $"[orange1]{count}[/]";
+        var countString = noColor ? count.ToString(CultureInfo.InvariantCulture) : $"[orange1]{count.ToString(CultureInfo.InvariantCulture)}[/]";
         var pluralSuffix = count == 1 ? string.Empty : "s";
         return $"{countString} message{pluralSuffix}";
     }
