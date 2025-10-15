@@ -1,4 +1,5 @@
 using System.CommandLine;
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -35,12 +36,12 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IConfiguration>(configuration);
 
-        // Bind and register RabbitMQ configuration
+        // Bind and register RabbitMQ configuration (uses source generation - no reflection needed at runtime)
         var rabbitMqConfig = new RabbitMqConfig();
         configuration.GetSection(RabbitMqConfig.RabbitMqConfigName).Bind(rabbitMqConfig);
         services.AddSingleton(rabbitMqConfig);
 
-        // Bind and register file configuration
+        // Bind and register file configuration (uses source generation - no reflection needed at runtime)
         var fileConfig = new FileConfig();
         configuration.GetSection(nameof(FileConfig)).Bind(fileConfig);
         services.AddSingleton(fileConfig);
