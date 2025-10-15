@@ -97,7 +97,7 @@ public class FileOutput : MessageOutput
                 _logger.LogTrace("Message #{DeliveryTag} written to file", message.DeliveryTag);
 
                 // Track metrics
-                totalBytes += Encoding.UTF8.GetByteCount(message.Body); 
+                totalBytes += Encoding.UTF8.GetByteCount(message.Body);
                 processedCount++;
 
                 // Check for cancellation after processing current message
@@ -172,7 +172,7 @@ public class FileOutput : MessageOutput
                     _logger.LogTrace("Message #{DeliveryTag} written to rotating file", message.DeliveryTag);
 
                     // Track metrics
-                    totalBytes += Encoding.UTF8.GetByteCount(message.Body); 
+                    totalBytes += Encoding.UTF8.GetByteCount(message.Body);
                     processedCount++;
 
                     // Check for cancellation after processing current message

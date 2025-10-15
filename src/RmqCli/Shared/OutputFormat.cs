@@ -6,7 +6,7 @@ public enum OutputFormat
     /// Output results in plain text format.
     /// </summary>
     Plain,
-    
+
     /// <summary>
     /// Output results in a table format.
     /// </summary>

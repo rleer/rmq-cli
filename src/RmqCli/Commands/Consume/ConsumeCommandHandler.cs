@@ -27,7 +27,7 @@ public class ConsumeCommandHandler : ICommandHandler
                              rmq consume --queue my-queue --count 10
                              rmq consume --queue my-queue --to-file output.txt
                            """;
-        
+
         var consumeCommand = new Command("consume", description);
 
         var queueOption = new Option<string>("--queue")
@@ -55,7 +55,7 @@ public class ConsumeCommandHandler : ICommandHandler
         {
             Description = "Path to output file to save consumed messages. If not specified, messages will be printed to standard output (STDOUT).",
         };
-        
+
         consumeCommand.Options.Add(queueOption);
         consumeCommand.Options.Add(ackModeOption);
         consumeCommand.Options.Add(countOption);
@@ -82,13 +82,13 @@ public class ConsumeCommandHandler : ICommandHandler
     private async Task<int> Handle(ParseResult parseResult, CancellationToken cancellationToken)
     {
         var consumeService = _serviceFactory.CreateConsumeService(parseResult);
-        
+
         var queue = parseResult.GetRequiredValue<string>("--queue");
         var ackMode = parseResult.GetValue<AckModes>("--ack-mode");
         var messageCount = parseResult.GetValue<int>("--count");
         var outputFilePath = parseResult.GetValue<string>("--to-file");
         var outputFormat = parseResult.GetValue<OutputFormat>("--output");
- 
+
         var cts = CancellationHelper.LinkWithCtrlCHandler(cancellationToken);
 
         FileInfo? outputFileInfo = null;

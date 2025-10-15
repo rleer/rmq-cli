@@ -29,7 +29,7 @@ public static class PublishResponseFactory
 
         return response;
     }
-    
+
     public static PublishResponse Failure(
         DestinationInfo destination,
         int totalMessages,

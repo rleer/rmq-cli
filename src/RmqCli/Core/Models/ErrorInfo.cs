@@ -16,7 +16,7 @@ public class ErrorInfo
 
     [JsonPropertyName("category")]
     public string Category { get; set; } = string.Empty; // e.g. "validation", "connection", "routing", "internal"
-    
+
     [JsonPropertyName("details")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Dictionary<string, object>? Details { get; set; }

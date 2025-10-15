@@ -6,7 +6,7 @@ namespace RmqCli.Infrastructure.RabbitMq;
 
 public static partial class PublishErrorInfoFactory
 {
-    public static ErrorInfo NoRouteErrorInfo(bool isQueue)   
+    public static ErrorInfo NoRouteErrorInfo(bool isQueue)
     {
         return new ErrorInfo
         {
@@ -16,7 +16,7 @@ public static partial class PublishErrorInfoFactory
             Suggestion = isQueue ? "Check if the queue exists" : "Check if the exchange and routing key exist"
         };
     }
-    
+
     public static ErrorInfo ExchangeNotFoundErrorInfo()
     {
         return new ErrorInfo
@@ -27,7 +27,7 @@ public static partial class PublishErrorInfoFactory
             Suggestion = "Check if the exchange exists and is correctly configured"
         };
     }
-    
+
     public static ErrorInfo MaxSizeExceededErrorInfo(string errorText)
     {
         var regex = MaxMessageSizeRegex().Match(errorText);
@@ -37,7 +37,7 @@ public static partial class PublishErrorInfoFactory
         var maxSizeValue = long.TryParse(maxSize, out var max) ? max : 0;
         var messageSizeString = messageSizeValue > 0 ? OutputUtilities.ToSizeString(messageSizeValue) + " " : string.Empty;
         var maxSizeString = maxSizeValue > 0 ? " " + OutputUtilities.ToSizeString(maxSizeValue) : string.Empty;
-        
+
         return new ErrorInfo
         {
             Category = "validation",
@@ -51,7 +51,7 @@ public static partial class PublishErrorInfoFactory
             }
         };
     }
-    
+
     [GeneratedRegex(@"message size (?<message_size>\d+).+max size (?<max_size>\d+)$")]
     private static partial Regex MaxMessageSizeRegex();
 }

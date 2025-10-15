@@ -74,6 +74,7 @@ public static class TextMessageFormatter
         {
             sb.AppendLine($"  {header.Key}: {FormatValue(header.Value)}");
         }
+
         return sb.ToString().TrimEnd();
     }
 
@@ -94,6 +95,7 @@ public static class TextMessageFormatter
                 {
                     sb.AppendLine($"{new string(' ', (indentationLevel + 1) * 2 - 2)}- {FormatValue(item, indentationLevel + 1).TrimStart()}");
                 }
+
                 sb.AppendLine($"{new string(' ', indentationLevel)} ]");
                 return sb.ToString().TrimEnd();
             }

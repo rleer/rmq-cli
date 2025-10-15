@@ -22,14 +22,14 @@ public class RootCommandHandler
     {
         _serviceFactory = serviceFactory;
         _rootCommand = new RootCommand($"{RabbitAscii}\nDeveloper focused utility tool for common RabbitMQ tasks");
-        
+
         // Setup global options
         SetupGlobalOptions();
-        
+
         // Setup command handlers
         SetupCommands();
     }
-    
+
     private void SetupGlobalOptions()
     {
         var verboseOption = new Option<bool>("--verbose")
@@ -72,7 +72,7 @@ public class RootCommandHandler
             Recursive = true
         };
         _rootCommand.Add(configFileOption);
-        
+
         _rootCommand.Validators.Add(result =>
         {
             if (result.GetValue(verboseOption) && result.GetValue(quietOption))
@@ -87,7 +87,7 @@ public class RootCommandHandler
         _commandHandlers.Add(new ConfigCommandHandler());
         _commandHandlers.Add(new ConsumeCommandHandler(_serviceFactory));
         _commandHandlers.Add(new PublishCommandHandler(_serviceFactory));
-        
+
         foreach (var handler in _commandHandlers)
         {
             handler.Configure(_rootCommand);

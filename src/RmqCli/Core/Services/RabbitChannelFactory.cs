@@ -154,19 +154,19 @@ public class RabbitChannelFactory : IRabbitChannelFactory
                 break;
             case AuthenticationFailureException authEx:
                 _logger.LogError(authEx, "Authentication failed for user '{User}'", _config.User);
-                
+
                 var authenticationError = RabbitErrorInfoFactory.AuthenticationFailed(_config.User);
                 _output.ShowError("Connection failed", authenticationError);
                 break;
             case ConnectFailureException connectEx:
                 _logger.LogError(connectEx, "Could not connect to {Host}:{Port}", _config.Host, _config.Port);
-                
+
                 var connectionError = RabbitErrorInfoFactory.ConnectionFailed(_config.Host, _config.Port);
                 _output.ShowError("Connection failed", connectionError);
                 break;
             case BrokerUnreachableException brokerEx:
                 _logger.LogError(brokerEx, "RabbitMQ connection failed: Broker unreachable at {Host}:{Port}", _config.Host, _config.Port);
-                
+
                 var brokerUnreachableError = RabbitErrorInfoFactory.BrokerUnreachable(_config.Host, _config.Port);
                 _output.ShowError("Connection failed", brokerUnreachableError);
                 break;

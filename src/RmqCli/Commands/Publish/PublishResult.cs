@@ -24,13 +24,13 @@ public class PublishResult
 
     [JsonPropertyName("last_message_id")]
     public string? LastMessageId { get; set; } = string.Empty;
-    
+
     [JsonPropertyName("first_timestamp")]
     public string? FirstTimestamp { get; set; } = string.Empty;
-    
+
     [JsonPropertyName("last_timestamp")]
     public string? LastTimestamp { get; set; } = string.Empty;
-    
+
     [JsonPropertyName("average_size_bytes")]
     public double AverageMessageSizeBytes { get; set; }
 

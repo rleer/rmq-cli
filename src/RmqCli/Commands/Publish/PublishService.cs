@@ -125,7 +125,7 @@ public class PublishService : IPublishService
             if (ex.IsReturn)
             {
                 _logger.LogDebug(ex, "Caught publish exception due to 'basic.return'");
-                
+
                 var noRouteError = PublishErrorInfoFactory.NoRouteErrorInfo(dest.Type == "queue");
                 _statusOutput.ShowError($"Failed to publish to {GetDestinationString(dest)}", noRouteError);
                 return 1;

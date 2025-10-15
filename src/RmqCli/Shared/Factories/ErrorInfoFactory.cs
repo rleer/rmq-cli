@@ -18,5 +18,5 @@ public static class ErrorInfoFactory
                 { "exception_message", exception.Message }
             } : null
         };
-    } 
+    }
 }

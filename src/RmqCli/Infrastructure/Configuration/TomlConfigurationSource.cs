@@ -5,7 +5,7 @@ namespace RmqCli.Infrastructure.Configuration;
 public class TomlConfigurationSource : IConfigurationSource
 {
     public string FilePath { get; set; } = string.Empty;
-    
+
     public IConfigurationProvider Build(IConfigurationBuilder builder)
     {
         return new TomlConfigurationProvider(FilePath);

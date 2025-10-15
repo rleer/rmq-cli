@@ -100,13 +100,13 @@ public class ConfigCommandHandler : ICommandHandler
         {
             Console.WriteLine($"User configuration file path: {TomlConfigurationHelper.GetUserConfigFilePath()}");
         }
-        
+
         var systemConfigExists = File.Exists(TomlConfigurationHelper.GetSystemConfigFilePath());
         if (systemConfigExists)
         {
             Console.WriteLine($"System-wide configuration file path: {TomlConfigurationHelper.GetSystemConfigFilePath()}");
         }
-        
+
         if (!userConfigExists && !systemConfigExists)
         {
             Console.WriteLine($"{Constants.WarningSymbol} No configuration file found. Run the 'config init' command to create a default configuration file.");

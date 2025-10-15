@@ -49,7 +49,7 @@ public static class OutputUtilities
         var pluralSuffix = count == 1 ? string.Empty : "s";
         return $"{countString} message{pluralSuffix}";
     }
- 
+
     public static string GetElapsedTimeString(TimeSpan elapsed)
     {
         var sb = new StringBuilder();
