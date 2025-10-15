@@ -1,5 +1,10 @@
 # rmq - RabbitMQ CLI Tool
 
+[![.NET](https://github.com/rleer/rmq-cli/actions/workflows/dotnet.yml/badge.svg)](https://github.com/rleer/rmq-cli/actions/workflows/dotnet.yml)
+[![PR Check](https://github.com/rleer/rmq-cli/actions/workflows/pr.yml/badge.svg)](https://github.com/rleer/rmq-cli/actions/workflows/pr.yml)
+[![codecov](https://codecov.io/gh/rleer/rmq-cli/branch/main/graph/badge.svg)](https://codecov.io/gh/rleer/rmq-cli)
+[![License](https://img.shields.io/github/license/rleer/rmq-cli)](LICENSE)
+
 `rmq` is a command line tool for RabbitMQ focused on developers working with RabbitMQ. 
 
 
