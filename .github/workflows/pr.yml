@@ -1,0 +1,42 @@
+# Fast PR check workflow for quick feedback
+# Runs only unit tests on a single platform for speed
+
+name: PR Check
+
+on:
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  quick-check:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    - name: Cache NuGet packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build
+      run: dotnet build --no-restore --configuration Debug
+
+    - name: Run Unit Tests
+      run: dotnet test test/RmqCli.Unit.Tests/RmqCli.Unit.Tests.csproj --no-build --configuration Debug --verbosity normal
+
+    - name: Check code formatting
+      run: dotnet format --verify-no-changes --verbosity diagnostic || echo "::warning::Code formatting issues detected. Run 'dotnet format' to fix."
+      continue-on-error: true
