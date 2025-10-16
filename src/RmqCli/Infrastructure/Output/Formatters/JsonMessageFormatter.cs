@@ -15,7 +15,8 @@ public static class JsonMessageFormatter
     public static string FormatMessages(IEnumerable<RabbitMessage> messages)
     {
         var messageArr = messages.Select(CreateMessageJson).ToArray();
-        return JsonSerializer.Serialize(messageArr, JsonSerializationContext.RelaxedEscapingOptions.GetTypeInfo(typeof(MessageJsonArray)));
+        var wrapper = new MessageJsonArray(messageArr);
+        return JsonSerializer.Serialize(wrapper, JsonSerializationContext.RelaxedEscapingOptions.GetTypeInfo(typeof(MessageJsonArray)));
     }
 
     private static MessageJson CreateMessageJson(RabbitMessage message)
