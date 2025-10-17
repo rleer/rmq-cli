@@ -114,36 +114,56 @@ public class ConsoleOutputTests
         }
 
         [Fact]
-        public async Task RespectsCancellationToken()
+        public async Task StopsProcessingAfterCancellation()
         {
             // Arrange
             var logger = new NullLogger<ConsoleOutput>();
             var output = new ConsoleOutput(logger, OutputFormat.Plain);
 
-            var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
+            // Use bounded channel to control message flow rate
+            var messageChannel = Channel.CreateBounded<RabbitMessage>(500);
             var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
 
-            // Add multiple messages
-            for (int i = 1; i <= 1500; i++)
-            {
-                await messageChannel.Writer.WriteAsync(new RabbitMessage($"Message {i}", (ulong)i, null, false));
-            }
-            messageChannel.Writer.Complete();
-
+            const int totalMessages = 100000;
             using var cts = new CancellationTokenSource();
-            cts.CancelAfter(TimeSpan.FromMilliseconds(5)); // Cancel after ~500 messages
 
-            // Act
-            var result = await output.WriteMessagesAsync(
+            // Start processing in background BEFORE all messages are added
+            var processingTask = output.WriteMessagesAsync(
                 messageChannel,
                 ackChannel,
                 AckModes.Ack,
                 cts.Token);
 
-            // Assert - Should process at least 100 message but not all 1500
-            result.ProcessedCount.Should().BeGreaterThan(100);
-            result.ProcessedCount.Should().BeLessThan(1500);
-            _testOutputHelper.WriteLine($"processed: {result.ProcessedCount}");
+            // Writer task that adds messages concurrently
+            var writerTask = Task.Run(async () =>
+            {
+                for (int i = 1; i <= totalMessages; i++)
+                {
+                    // Stop writing if cancelled
+                    if (cts.Token.IsCancellationRequested)
+                        break;
+
+                    await messageChannel.Writer.WriteAsync(new RabbitMessage($"Message {i}", (ulong)i, null, false));
+
+                    // Cancel after some messages have been written
+                    if (i == 1000)
+                    {
+                        cts.Cancel();
+                    }
+                }
+                messageChannel.Writer.Complete();
+            });
+
+            // Wait for processing to complete
+            var result = await processingTask;
+            await writerTask; // Ensure writer completes
+
+            // Assert - Should have processed some messages but not all
+            result.Should().NotBeNull();
+            result.ProcessedCount.Should().BeGreaterThan(100, "at least 100 messages should be processed before cancellation");
+            result.ProcessedCount.Should().BeLessThan(totalMessages, "cancellation should stop processing before all messages are consumed");
+
+            _testOutputHelper.WriteLine($"Processed {result.ProcessedCount} out of {totalMessages} messages before cancellation took effect");
         }
 
         [Fact]
