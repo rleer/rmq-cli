@@ -37,7 +37,6 @@ public class ConsoleOutput : MessageOutput
         {
             try
             {
-                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
                 var formattedMessage = FormatMessage(message);
                 await System.Console.Out.WriteLineAsync(formattedMessage);
 
