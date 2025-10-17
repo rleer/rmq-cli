@@ -25,6 +25,8 @@ public static class JsonMessageFormatter
         var properties = ConvertToJsonProperties(formattedProps);
 
         return new MessageJson(
+            message.Exchange,
+            message.RoutingKey,
             message.DeliveryTag,
             message.Redelivered,
             message.Body,

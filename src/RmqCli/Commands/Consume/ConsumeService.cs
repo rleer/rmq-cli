@@ -222,7 +222,10 @@ public class ConsumeService : IConsumeService
             }
 
             _logger.LogTrace("Received message #{DeliveryTag}", ea.DeliveryTag);
+
             var message = new RabbitMessage(
+                ea.Exchange,
+                ea.RoutingKey,
                 System.Text.Encoding.UTF8.GetString(ea.Body.ToArray()),
                 ea.DeliveryTag,
                 ea.BasicProperties,
@@ -342,7 +345,8 @@ public class ConsumeService : IConsumeService
             _statusOutput.ShowWarning("Consumption cancelled by user", addNewLine: true);
         }
 
-        _statusOutput.ShowSuccess($"Consumed {OutputUtilities.GetMessageCountString(receivedCount, _statusOutput.NoColor)} in {OutputUtilities.GetElapsedTimeString(elapsedTime)}");
+        _statusOutput.ShowSuccess(
+            $"Consumed {OutputUtilities.GetMessageCountString(receivedCount, _statusOutput.NoColor)} in {OutputUtilities.GetElapsedTimeString(elapsedTime)}");
         _logger.LogDebug("Consumption stopped. Waiting for RabbitMQ channel to close");
     }
 }

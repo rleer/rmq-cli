@@ -32,8 +32,8 @@ public class ConsoleOutputTests
             var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
 
             // Add test messages
-            var message1 = new RabbitMessage("Test message 1", 1, null, false);
-            var message2 = new RabbitMessage("Test message 2", 2, null, false);
+            var message1 = new RabbitMessage("exchange", "routing-key", "Test message 1", 1, null, false);
+            var message2 = new RabbitMessage("exchange", "routing-key", "Test message 2", 2, null, false);
 
             await messageChannel.Writer.WriteAsync(message1);
             await messageChannel.Writer.WriteAsync(message2);
@@ -71,7 +71,7 @@ public class ConsoleOutputTests
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
 
-            var message = new RabbitMessage("Test message", 1, null, false);
+            var message = new RabbitMessage("exchange", "routing-key", "Test message", 1, null, false);
             await messageChannel.Writer.WriteAsync(message);
             messageChannel.Writer.Complete();
 
@@ -143,7 +143,7 @@ public class ConsoleOutputTests
                     if (cts.Token.IsCancellationRequested)
                         break;
 
-                    await messageChannel.Writer.WriteAsync(new RabbitMessage($"Message {i}", (ulong)i, null, false));
+                    await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", $"Message {i}", (ulong)i, null, false));
 
                     // Cancel after some messages have been written
                     if (i == 1000)
@@ -151,6 +151,7 @@ public class ConsoleOutputTests
                         cts.Cancel();
                     }
                 }
+
                 messageChannel.Writer.Complete();
             });
 
@@ -176,7 +177,7 @@ public class ConsoleOutputTests
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
 
-            var message = new RabbitMessage("Test", 42, null, false);
+            var message = new RabbitMessage("exchange", "routing-key", "Test", 42, null, false);
             await messageChannel.Writer.WriteAsync(message);
             messageChannel.Writer.Complete();
 
@@ -206,10 +207,10 @@ public class ConsoleOutputTests
             var body1 = "Message 1";
             var body2 = "Message 2 - longer";
             var expectedBytes = System.Text.Encoding.UTF8.GetByteCount(body1)
-                              + System.Text.Encoding.UTF8.GetByteCount(body2);
+                                + System.Text.Encoding.UTF8.GetByteCount(body2);
 
-            await messageChannel.Writer.WriteAsync(new RabbitMessage(body1, 1, null, false));
-            await messageChannel.Writer.WriteAsync(new RabbitMessage(body2, 2, null, false));
+            await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", body1, 1, null, false));
+            await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", body2, 2, null, false));
             messageChannel.Writer.Complete();
 
             // Act
@@ -237,7 +238,7 @@ public class ConsoleOutputTests
             props.IsMessageIdPresent().Returns(true);
             props.MessageId.Returns("msg-123");
 
-            var message = new RabbitMessage("Test with properties", 1, props, false);
+            var message = new RabbitMessage("exchange", "routing-key", "Test with properties", 1, props, false);
             await messageChannel.Writer.WriteAsync(message);
             messageChannel.Writer.Complete();
 
@@ -262,7 +263,7 @@ public class ConsoleOutputTests
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
 
-            var message = new RabbitMessage("Redelivered message", 1, null, Redelivered: true);
+            var message = new RabbitMessage("exchange", "routing-key", "Redelivered message", 1, null, Redelivered: true);
             await messageChannel.Writer.WriteAsync(message);
             messageChannel.Writer.Complete();
 
@@ -290,7 +291,7 @@ public class ConsoleOutputTests
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
 
-            await messageChannel.Writer.WriteAsync(new RabbitMessage("Test", 1, null, false));
+            await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "Test", 1, null, false));
             messageChannel.Writer.Complete();
 
             // Act

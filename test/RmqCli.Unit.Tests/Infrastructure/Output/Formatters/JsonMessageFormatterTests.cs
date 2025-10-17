@@ -15,7 +15,7 @@ public class JsonMessageFormatterTests
         public void ReturnsValidJson_ForSimpleMessage()
         {
             // Arrange
-            var message = CreateRabbitMessage("Hello, World!", deliveryTag: 1);
+            var message = CreateRabbitMessage("Hello, World!", exchange: "exchange", routingKey: "key", deliveryTag: 1);
 
             // Act
             var result = JsonMessageFormatter.FormatMessage(message);
@@ -25,6 +25,8 @@ public class JsonMessageFormatterTests
             var json = JsonDocument.Parse(result);
             json.RootElement.GetProperty("deliveryTag").GetUInt64().Should().Be(1);
             json.RootElement.GetProperty("body").GetString().Should().Be("Hello, World!");
+            json.RootElement.GetProperty("exchange").GetString().Should().Be("exchange");
+            json.RootElement.GetProperty("routingKey").GetString().Should().Be("key");
         }
 
         [Fact]
@@ -67,6 +69,34 @@ public class JsonMessageFormatterTests
             // Assert
             var json = JsonDocument.Parse(result);
             json.RootElement.GetProperty("redelivered").GetBoolean().Should().BeFalse();
+        }
+        
+        [Fact]
+        public void IncludesExchange()
+        {
+            // Arrange
+            var message = CreateRabbitMessage("Test message body", exchange: "amq.direct");
+
+            // Act
+            var result = JsonMessageFormatter.FormatMessage(message);
+
+            // Assert
+            var json = JsonDocument.Parse(result);
+            json.RootElement.GetProperty("exchange").GetString().Should().Be("amq.direct");
+        }
+        
+        [Fact]
+        public void IncludesRoutingKey()
+        {
+            // Arrange
+            var message = CreateRabbitMessage("Test message body", routingKey: "my.routing.key");
+
+            // Act
+            var result = JsonMessageFormatter.FormatMessage(message);
+
+            // Assert
+            var json = JsonDocument.Parse(result);
+            json.RootElement.GetProperty("routingKey").GetString().Should().Be("my.routing.key");
         }
 
         [Fact]
@@ -256,8 +286,8 @@ public class JsonMessageFormatterTests
             // Arrange
             var messages = new[]
             {
-                CreateRabbitMessage("First", deliveryTag: 1),
-                CreateRabbitMessage("Second", deliveryTag: 2)
+                CreateRabbitMessage("First", "exchange1", "routing.key.1", deliveryTag: 1),
+                CreateRabbitMessage("Second", "exchange2", "routing.key.2", deliveryTag: 2)
             };
 
             // Act
@@ -269,9 +299,13 @@ public class JsonMessageFormatterTests
 
             array[0].GetProperty("body").GetString().Should().Be("First");
             array[0].GetProperty("deliveryTag").GetUInt64().Should().Be(1);
+            array[0].GetProperty("exchange").GetString().Should().Be("exchange1");
+            array[0].GetProperty("routingKey").GetString().Should().Be("routing.key.1");
 
             array[1].GetProperty("body").GetString().Should().Be("Second");
             array[1].GetProperty("deliveryTag").GetUInt64().Should().Be(2);
+            array[1].GetProperty("exchange").GetString().Should().Be("exchange2");
+            array[1].GetProperty("routingKey").GetString().Should().Be("routing.key.2");
         }
 
         [Fact]
@@ -293,7 +327,7 @@ public class JsonMessageFormatterTests
         public void HandlesSingleMessage()
         {
             // Arrange
-            var messages = new[] { CreateRabbitMessage("Only one", deliveryTag: 99) };
+            var messages = new[] { CreateRabbitMessage("Only one", "amq.direct", "key", deliveryTag: 99) };
 
             // Act
             var result = JsonMessageFormatter.FormatMessages(messages);
@@ -304,6 +338,8 @@ public class JsonMessageFormatterTests
             messagesArray.GetArrayLength().Should().Be(1);
             messagesArray[0].GetProperty("body").GetString().Should().Be("Only one");
             messagesArray[0].GetProperty("deliveryTag").GetUInt64().Should().Be(99);
+            messagesArray[0].GetProperty("exchange").GetString().Should().Be("amq.direct");
+            messagesArray[0].GetProperty("routingKey").GetString().Should().Be("key");
         }
 
         [Fact]
@@ -342,11 +378,13 @@ public class JsonMessageFormatterTests
 
     private static RabbitMessage CreateRabbitMessage(
         string body,
+        string exchange = "exchange",
+        string routingKey = "routing.key",
         ulong deliveryTag = 1,
         IReadOnlyBasicProperties? props = null,
         bool redelivered = false)
     {
-        return new RabbitMessage(body, deliveryTag, props, redelivered);
+        return new RabbitMessage(exchange, routingKey, body, deliveryTag, props, redelivered);
     }
 
     /// <summary>

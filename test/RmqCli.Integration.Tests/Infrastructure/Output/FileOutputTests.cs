@@ -53,7 +53,7 @@ public class FileOutputTests
             // Add messages
             for (int i = 1; i <= 5; i++)
             {
-                await messageChannel.Writer.WriteAsync(new RabbitMessage($"Message {i}", (ulong)i, null, false));
+                await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", $"Message {i}", (ulong)i, null, false));
             }
             messageChannel.Writer.Complete();
 
@@ -89,9 +89,9 @@ public class FileOutputTests
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
 
-            await messageChannel.Writer.WriteAsync(new RabbitMessage("Message 1", 1, null, false));
-            await messageChannel.Writer.WriteAsync(new RabbitMessage("Message 2", 2, null, false));
-            await messageChannel.Writer.WriteAsync(new RabbitMessage("Message 3", 3, null, false));
+            await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "Message 1", 1, null, false));
+            await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "Message 2", 2, null, false));
+            await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "Message 3", 3, null, false));
             messageChannel.Writer.Complete();
 
             // Act
@@ -119,8 +119,8 @@ public class FileOutputTests
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
 
-            await messageChannel.Writer.WriteAsync(new RabbitMessage("Message 1", 1, null, false));
-            await messageChannel.Writer.WriteAsync(new RabbitMessage("Message 2", 2, null, false));
+            await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "Message 1", 1, null, false));
+            await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "Message 2", 2, null, false));
             messageChannel.Writer.Complete();
 
             // Act
@@ -178,8 +178,8 @@ public class FileOutputTests
             var expectedBytes = System.Text.Encoding.UTF8.GetByteCount(body1)
                               + System.Text.Encoding.UTF8.GetByteCount(body2);
 
-            await messageChannel.Writer.WriteAsync(new RabbitMessage(body1, 1, null, false));
-            await messageChannel.Writer.WriteAsync(new RabbitMessage(body2, 2, null, false));
+            await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", body1, 1, null, false));
+            await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", body2, 2, null, false));
             messageChannel.Writer.Complete();
 
             // Act
@@ -231,7 +231,7 @@ public class FileOutputTests
             // Add 5 messages (should create 3 files: 2+2+1)
             for (int i = 1; i <= 5; i++)
             {
-                await messageChannel.Writer.WriteAsync(new RabbitMessage($"Message {i}", (ulong)i, null, false));
+                await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", $"Message {i}", (ulong)i, null, false));
             }
             messageChannel.Writer.Complete();
 
@@ -265,7 +265,7 @@ public class FileOutputTests
             // Add 5 messages
             for (int i = 1; i <= 5; i++)
             {
-                await messageChannel.Writer.WriteAsync(new RabbitMessage($"Message {i}", (ulong)i, null, false));
+                await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", $"Message {i}", (ulong)i, null, false));
             }
             messageChannel.Writer.Complete();
 
@@ -298,7 +298,7 @@ public class FileOutputTests
 
             for (int i = 1; i <= 6; i++)
             {
-                await messageChannel.Writer.WriteAsync(new RabbitMessage($"Message {i}", (ulong)i, null, false));
+                await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", $"Message {i}", (ulong)i, null, false));
             }
             messageChannel.Writer.Complete();
 
@@ -331,7 +331,7 @@ public class FileOutputTests
 
             for (int i = 1; i <= 3; i++)
             {
-                await messageChannel.Writer.WriteAsync(new RabbitMessage($"Message {i}", (ulong)i, null, false));
+                await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", $"Message {i}", (ulong)i, null, false));
             }
             messageChannel.Writer.Complete();
 
@@ -366,7 +366,7 @@ public class FileOutputTests
 
             for (int i = 1; i <= 6; i++)
             {
-                await messageChannel.Writer.WriteAsync(new RabbitMessage($"Message {i}", (ulong)i, null, false));
+                await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", $"Message {i}", (ulong)i, null, false));
             }
             messageChannel.Writer.Complete();
 
@@ -401,7 +401,7 @@ public class FileOutputTests
 
             for (int i = 1; i <= 4; i++)
             {
-                await messageChannel.Writer.WriteAsync(new RabbitMessage($"Message {i}", (ulong)i, null, false));
+                await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", $"Message {i}", (ulong)i, null, false));
             }
             messageChannel.Writer.Complete();
 
@@ -458,7 +458,7 @@ public class FileOutputTests
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
 
-            await messageChannel.Writer.WriteAsync(new RabbitMessage("Test", 42, null, false));
+            await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "Test", 42, null, false));
             messageChannel.Writer.Complete();
 
             // Act
@@ -490,7 +490,7 @@ public class FileOutputTests
             props.IsMessageIdPresent().Returns(true);
             props.MessageId.Returns("msg-123");
 
-            await messageChannel.Writer.WriteAsync(new RabbitMessage("Test", 1, props, false));
+            await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "Test", 1, props, false));
             messageChannel.Writer.Complete();
 
             // Act
@@ -538,7 +538,7 @@ public class FileOutputTests
                     if (cts.Token.IsCancellationRequested)
                         break;
 
-                    await messageChannel.Writer.WriteAsync(new RabbitMessage($"Message {i}", (ulong)i, null, false));
+                    await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", $"Message {i}", (ulong)i, null, false));
 
                     // Cancel after some messages have been written
                     if (i == 1000)

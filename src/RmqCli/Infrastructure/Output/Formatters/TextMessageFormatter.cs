@@ -9,6 +9,8 @@ public static class TextMessageFormatter
     public static string FormatMessage(RabbitMessage message)
     {
         return "DeliveryTag: " + message.DeliveryTag + "\n" +
+               "Exchange: " + message.Exchange + "\n" +
+               "RoutingKey: " + message.RoutingKey + "\n" +
                "Redelivered: " + message.Redelivered + "\n" +
                FormatBasicProperties(message.Props) +
                "Body:\n" + message.Body;

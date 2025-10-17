@@ -50,6 +50,32 @@ public class TextMessageFormatterTests
         }
 
         [Fact]
+        public void IncludesExchange()
+        {
+            // Arrange
+            var message = CreateRabbitMessage("Test message body", exchange: "test.exchange");
+
+            // Act
+            var result = TextMessageFormatter.FormatMessage(message);
+
+            // Assert
+            result.Should().Contain("Exchange: test.exchange");
+        }
+
+        [Fact]
+        public void IncludesRoutingKey()
+        {
+            // Arrange
+            var message = CreateRabbitMessage("Test message body", routingKey: "test.routingKey");
+
+            // Act
+            var result = TextMessageFormatter.FormatMessage(message);
+
+            // Assert
+            result.Should().Contain("RoutingKey: test.routingKey");
+        }
+
+        [Fact]
         public void IncludesBody()
         {
             // Arrange
@@ -273,15 +299,21 @@ public class TextMessageFormatterTests
             // Arrange
             var messages = new[]
             {
-                CreateRabbitMessage("Message 1", deliveryTag: 1),
-                CreateRabbitMessage("Message 2", deliveryTag: 2),
-                CreateRabbitMessage("Message 3", deliveryTag: 3)
+                CreateRabbitMessage("Message 1", exchange: "amq.direct", routingKey: "key.1", deliveryTag: 1),
+                CreateRabbitMessage("Message 2", exchange: "amq.topic", routingKey: "key.2", deliveryTag: 2),
+                CreateRabbitMessage("Message 3", exchange: "amq.fanout", routingKey: "key.3", deliveryTag: 3)
             };
 
             // Act
             var result = TextMessageFormatter.FormatMessages(messages);
 
             // Assert
+            result.Should().Contain("Exchange: amq.direct");
+            result.Should().Contain("Exchange: amq.topic");
+            result.Should().Contain("Exchange: amq.fanout");
+            result.Should().Contain("RoutingKey: key.1");
+            result.Should().Contain("RoutingKey: key.2");
+            result.Should().Contain("RoutingKey: key.3");
             result.Should().Contain("DeliveryTag: 1");
             result.Should().Contain("DeliveryTag: 2");
             result.Should().Contain("DeliveryTag: 3");
@@ -296,14 +328,18 @@ public class TextMessageFormatterTests
             // Arrange
             var messages = new[]
             {
-                CreateRabbitMessage("First", deliveryTag: 1),
-                CreateRabbitMessage("Second", deliveryTag: 2)
+                CreateRabbitMessage("First", exchange: "amq.direct", routingKey: "key.1", deliveryTag: 1),
+                CreateRabbitMessage("Second", exchange: "amq.topic", routingKey: "key.2", deliveryTag: 2)
             };
 
             // Act
             var result = TextMessageFormatter.FormatMessages(messages);
 
             // Assert
+            result.Should().Contain("Exchange: amq.direct");
+            result.Should().Contain("Exchange: amq.topic");
+            result.Should().Contain("RoutingKey: key.1");
+            result.Should().Contain("RoutingKey: key.2");
             result.Should().Contain("DeliveryTag: 1");
             result.Should().Contain("DeliveryTag: 2");
             result.Should().Contain("Body:\nFirst");
@@ -327,12 +363,14 @@ public class TextMessageFormatterTests
         public void HandlesSingleMessage()
         {
             // Arrange
-            var messages = new[] { CreateRabbitMessage("Only one", deliveryTag: 99) };
+            var messages = new[] { CreateRabbitMessage("Only one", exchange: "amq.direct", routingKey: "key.1", deliveryTag: 99) };
 
             // Act
             var result = TextMessageFormatter.FormatMessages(messages);
 
             // Assert
+            result.Should().Contain("Exchange: amq.direct");
+            result.Should().Contain("RoutingKey: key.1");
             result.Should().Contain("DeliveryTag: 99");
             result.Should().Contain("Body:\nOnly one");
         }
@@ -370,11 +408,13 @@ public class TextMessageFormatterTests
 
     private static RabbitMessage CreateRabbitMessage(
         string body,
+        string exchange = "exchange",
+        string routingKey = "routing.key",
         ulong deliveryTag = 1,
         IReadOnlyBasicProperties? props = null,
         bool redelivered = false)
     {
-        return new RabbitMessage(body, deliveryTag, props, redelivered);
+        return new RabbitMessage(exchange, routingKey, body, deliveryTag, props, redelivered);
     }
 
     /// <summary>
