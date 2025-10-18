@@ -26,6 +26,9 @@ public static class JsonMessageFormatter
         var formattedProps = MessagePropertyExtractor.ExtractProperties(message.Props);
         var properties = ConvertToJsonProperties(formattedProps);
 
+        var bodySizeBytes = Encoding.UTF8.GetByteCount(message.Body);
+        var bodySize = OutputUtilities.ToSizeString(bodySizeBytes);
+
         return new MessageJson(
             message.Exchange,
             message.RoutingKey,
@@ -33,6 +36,8 @@ public static class JsonMessageFormatter
             message.DeliveryTag,
             message.Redelivered,
             message.Body,
+            bodySizeBytes,
+            bodySize,
             properties
         );
     }

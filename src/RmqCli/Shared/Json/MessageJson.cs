@@ -10,6 +10,8 @@ public record MessageJson(
     bool Redelivered,
     [property: JsonConverter(typeof(BodyJsonConverter))]
     string Body,
+    long BodySizeBytes,
+    string BodySize,
     Dictionary<string, object>? Properties = null
 );
 
