@@ -79,6 +79,14 @@ public class PublishCommandHandler : ICommandHandler
             Aliases = { "-b" },
             DefaultValueFactory = _ => 1
         };
+ 
+        var outputFormatOption = new Option<OutputFormat>("--output")
+        {
+            Description = "Output format",
+            Aliases = { "-o" },
+            DefaultValueFactory = _ => OutputFormat.Plain
+        };
+        outputFormatOption.AcceptOnlyFromAmong("plain", "json");
 
         publishCommand.Options.Add(queueOption);
         publishCommand.Options.Add(exchangeOption);
@@ -86,6 +94,7 @@ public class PublishCommandHandler : ICommandHandler
         publishCommand.Options.Add(messageOption);
         publishCommand.Options.Add(fromFileOption);
         publishCommand.Options.Add(burstOption);
+        publishCommand.Options.Add(outputFormatOption);
 
         publishCommand.Validators.Add(result =>
         {

@@ -15,18 +15,18 @@ public class ConsumeCommandHandler : ICommandHandler
     public void Configure(RootCommand rootCommand)
     {
         var description = """
-                           Consume messages from a queue. Warning: getting messages from a queue is a destructive action!
+                          Consume messages from a queue. Warning: getting messages from a queue is a destructive action!
 
-                           By default, messages are acknowledged after they are consumed. You can change the acknowledgment mode using the --ack-mode option.
+                          By default, messages are acknowledged after they are consumed. You can change the acknowledgment mode using the --ack-mode option.
 
-                           Consumed messages can be printed to standard output (STDOUT) or saved to a file using the --to-file option.
+                          Consumed messages can be printed to standard output (STDOUT) or saved to a file using the --to-file option.
 
-                           Example usage:
-                             rmq consume --queue my-queue
-                             rmq consume --queue my-queue --ack-mode requeue
-                             rmq consume --queue my-queue --count 10
-                             rmq consume --queue my-queue --to-file output.txt
-                           """;
+                          Example usage:
+                            rmq consume --queue my-queue
+                            rmq consume --queue my-queue --ack-mode requeue
+                            rmq consume --queue my-queue --count 10
+                            rmq consume --queue my-queue --to-file output.txt
+                          """;
 
         var consumeCommand = new Command("consume", description);
 
@@ -51,6 +51,14 @@ public class ConsumeCommandHandler : ICommandHandler
             DefaultValueFactory = _ => -1
         };
 
+        var outputFormatOption = new Option<OutputFormat>("--output")
+        {
+            Description = "Output format",
+            Aliases = { "-o" },
+            DefaultValueFactory = _ => OutputFormat.Table
+        };
+        outputFormatOption.AcceptOnlyFromAmong("plain", "table", "json");
+
         var outputFileOption = new Option<string>("--to-file")
         {
             Description = "Path to output file to save consumed messages. If not specified, messages will be printed to standard output (STDOUT).",
@@ -67,6 +75,7 @@ public class ConsumeCommandHandler : ICommandHandler
         consumeCommand.Options.Add(countOption);
         consumeCommand.Options.Add(outputFileOption);
         consumeCommand.Options.Add(compactOption);
+        consumeCommand.Options.Add(outputFormatOption);
 
         consumeCommand.Validators.Add(result =>
         {

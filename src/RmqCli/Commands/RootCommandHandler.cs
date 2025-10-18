@@ -2,7 +2,6 @@ using System.CommandLine;
 using RmqCli.Commands.Config;
 using RmqCli.Commands.Consume;
 using RmqCli.Commands.Publish;
-using RmqCli.Shared;
 
 namespace RmqCli.Commands;
 
@@ -47,16 +46,6 @@ public class RootCommandHandler
             Recursive = true
         };
         _rootCommand.Options.Add(quietOption);
-
-        var outputFormatOption = new Option<OutputFormat>("--output")
-        {
-            Description = "Output format",
-            Aliases = { "-o" },
-            DefaultValueFactory = _ => OutputFormat.Plain,
-            Recursive = true
-        };
-        outputFormatOption.AcceptOnlyFromAmong("plain", "table", "json");
-        _rootCommand.Options.Add(outputFormatOption);
 
         var noColorOption = new Option<bool>("--no-color")
         {
