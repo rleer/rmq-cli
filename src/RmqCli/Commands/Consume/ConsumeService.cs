@@ -13,14 +13,7 @@ namespace RmqCli.Commands.Consume;
 
 public interface IConsumeService
 {
-    Task<int> ConsumeMessages(
-        string queue,
-        AckModes ackMode,
-        FileInfo? outputFileInfo = null,
-        int messageCount = -1,
-        OutputFormat outputFormat = OutputFormat.Plain,
-        bool compact = false,
-        CancellationToken cancellationToken = default);
+    Task<int> ConsumeMessages(CancellationToken cancellationToken = default);
 }
 
 public class ConsumeService : IConsumeService
@@ -31,6 +24,8 @@ public class ConsumeService : IConsumeService
     private readonly IStatusOutputService _statusOutput;
     private readonly IConsumeOutputService _resultOutput;
     private readonly FileConfig _fileConfig;
+    private readonly ConsumeOptions _consumeOptions;
+    private readonly OutputOptions _outputOptions;
 
     public ConsumeService(
         ILogger<ConsumeService> logger,
@@ -38,7 +33,9 @@ public class ConsumeService : IConsumeService
         IRabbitChannelFactory rabbitChannelFactory,
         IStatusOutputService statusOutput,
         IConsumeOutputService resultOutput,
-        FileConfig fileConfig)
+        FileConfig fileConfig,
+        ConsumeOptions consumeOptions,
+        OutputOptions outputOptions)
     {
         _logger = logger;
         _loggerFactory = loggerFactory;
@@ -46,18 +43,17 @@ public class ConsumeService : IConsumeService
         _statusOutput = statusOutput;
         _resultOutput = resultOutput;
         _fileConfig = fileConfig;
+        _consumeOptions = consumeOptions;
+        _outputOptions = outputOptions;
     }
 
-    public async Task<int> ConsumeMessages(
-        string queue,
-        AckModes ackMode,
-        FileInfo? outputFileInfo,
-        int messageCount = -1,
-        OutputFormat outputFormat = OutputFormat.Plain,
-        bool compact = false,
-        CancellationToken userCancellationToken = default)
+    public async Task<int> ConsumeMessages(CancellationToken userCancellationToken = default)
     {
         var startTime = System.Diagnostics.Stopwatch.GetTimestamp();
+
+        var queue = _consumeOptions.Queue;
+        var ackMode = _consumeOptions.AckMode;
+        var messageCount = _consumeOptions.MessageCount;
 
         _logger.LogDebug("Initiating consume operation: queue={Queue}, mode={AckMode}, count={messageCount}",
             queue, ackMode, messageCount);
@@ -78,7 +74,7 @@ public class ConsumeService : IConsumeService
         // Register cancellation handler to stop consumer and complete channels gracefully
         RegisterCancellationHandler(combinedCts.Token, messageLimitCts.Token, userCancellationToken, channel, consumerTag, receiveChan);
 
-        var outputResult = await RunMessageProcessingPipeline(receiveChan, ackChan, channel, outputFileInfo, outputFormat, compact, ackMode, messageCount,
+        var outputResult = await RunMessageProcessingPipeline(receiveChan, ackChan, channel, ackMode, messageCount,
             userCancellationToken);
 
         var endTime = System.Diagnostics.Stopwatch.GetTimestamp();
@@ -92,8 +88,6 @@ public class ConsumeService : IConsumeService
             ackMode,
             receivedCount.Value,
             outputResult,
-            outputFileInfo,
-            outputFormat,
             elapsedTime,
             userCancellationToken.IsCancellationRequested);
 
@@ -191,14 +185,14 @@ public class ConsumeService : IConsumeService
             {
                 try
                 {
-                    await channel.BasicCancelAsync(consumerTag);
+                    await channel.BasicCancelAsync(consumerTag, cancellationToken: CancellationToken.None);
                     _logger.LogDebug("RabbitMQ consumer cancelled successfully");
                 }
                 catch (Exception ex)
                 {
                     _logger.LogWarning(ex, "Failed to cancel RabbitMQ consumer: {Message}", ex.Message);
                 }
-            });
+            }, CancellationToken.None);
 
             // Complete the receive channel so the writer task can finish processing remaining messages
             receiveChan.Writer.TryComplete();
@@ -272,9 +266,6 @@ public class ConsumeService : IConsumeService
         Channel<RabbitMessage> receiveChan,
         Channel<(ulong, AckModes)> ackChan,
         IChannel channel,
-        FileInfo? outputFileInfo,
-        OutputFormat outputFormat,
-        bool compact,
         AckModes ackMode,
         int messageCount,
         CancellationToken cancellationToken)
@@ -282,9 +273,7 @@ public class ConsumeService : IConsumeService
         // Create message output handler using factory
         var messageOutput = MessageOutputFactory.Create(
             _loggerFactory,
-            outputFileInfo,
-            outputFormat,
-            compact,
+            _outputOptions,
             _fileConfig,
             messageCount);
 
@@ -305,8 +294,6 @@ public class ConsumeService : IConsumeService
         AckModes ackMode,
         long messagesReceived,
         MessageOutputResult outputResult,
-        FileInfo? outputFileInfo,
-        OutputFormat outputFormat,
         TimeSpan elapsedTime,
         bool wasCancelled)
     {
@@ -314,8 +301,8 @@ public class ConsumeService : IConsumeService
             ? Math.Round(outputResult.ProcessedCount / elapsedTime.TotalSeconds, 2)
             : 0;
 
-        var outputDestination = outputFileInfo != null
-            ? outputFileInfo.Name
+        var outputDestination = _outputOptions.OutputFile != null
+            ? _outputOptions.OutputFile.Name
             : "STDOUT";
 
         var result = new ConsumeResult
@@ -326,7 +313,7 @@ public class ConsumeService : IConsumeService
             Duration = OutputUtilities.GetElapsedTimeString(elapsedTime),
             AckMode = ackMode.ToString(),
             OutputDestination = outputDestination,
-            OutputFormat = outputFormat.ToString().ToLower(),
+            OutputFormat = _outputOptions.Format.ToString().ToLower(),
             CancellationReason = wasCancelled ? "User cancellation (Ctrl+C)" : null,
             MessagesPerSecond = messagesPerSecond,
             TotalSizeBytes = outputResult.TotalBytes,

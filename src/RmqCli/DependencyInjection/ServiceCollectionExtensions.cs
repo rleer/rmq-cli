@@ -50,31 +50,6 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Adds RmqCli CLI configuration from parse result to the service collection.
-    /// </summary>
-    /// <param name="services">The service collection to add services to.</param>
-    /// <param name="parseResult">The parse result containing CLI options.</param>
-    /// <returns>The service collection for chaining.</returns>
-    public static IServiceCollection AddRmqCliConfig(this IServiceCollection services, ParseResult parseResult)
-    {
-        var verboseLogging = parseResult.GetValue<bool>("--verbose");
-        var quietLogging = parseResult.GetValue<bool>("--quiet");
-        var format = parseResult.GetValue<OutputFormat>("--output");
-        var noColor = parseResult.GetValue<bool>("--no-color");
-
-        var cliConfig = new CliConfig
-        {
-            Format = format,
-            Quiet = quietLogging,
-            Verbose = verboseLogging,
-            NoColor = noColor
-        };
-
-        services.AddSingleton(cliConfig);
-        return services;
-    }
-
-    /// <summary>
     /// Adds RmqCli logging configuration to the service collection.
     /// </summary>
     /// <param name="services">The service collection to add services to.</param>
@@ -151,14 +126,19 @@ public static class ServiceCollectionExtensions
     /// </summary>
     /// <param name="services">The service collection to add services to.</param>
     /// <param name="parseResult">The parse result containing CLI options.</param>
+    /// <param name="outputOptions">Output formatting options.</param>
     /// <returns>The service collection for chaining.</returns>
-    public static IServiceCollection AddRmqPublish(this IServiceCollection services, ParseResult parseResult)
+    public static IServiceCollection AddRmqPublish(
+        this IServiceCollection services,
+        ParseResult parseResult,
+        OutputOptions outputOptions)
     {
-        var verboseLogging = parseResult.GetValue<bool>("--verbose");
-
-        services.AddRmqLogging(verboseLogging);
+        services.AddRmqLogging(outputOptions.Verbose);
         services.AddRmqConfiguration(parseResult);
-        services.AddRmqCliConfig(parseResult);
+
+        // Register output options as singleton
+        services.AddSingleton(outputOptions);
+
         services.AddRmqCoreServices();
         services.AddPublishServices();
 
@@ -171,14 +151,22 @@ public static class ServiceCollectionExtensions
     /// </summary>
     /// <param name="services">The service collection to add services to.</param>
     /// <param name="parseResult">The parse result containing CLI options.</param>
+    /// <param name="consumeOptions">Consume-specific options.</param>
+    /// <param name="outputOptions">Output formatting options.</param>
     /// <returns>The service collection for chaining.</returns>
-    public static IServiceCollection AddRmqConsume(this IServiceCollection services, ParseResult parseResult)
+    public static IServiceCollection AddRmqConsume(
+        this IServiceCollection services,
+        ParseResult parseResult,
+        ConsumeOptions consumeOptions,
+        OutputOptions outputOptions)
     {
-        var verboseLogging = parseResult.GetValue<bool>("--verbose");
-
-        services.AddRmqLogging(verboseLogging);
+        services.AddRmqLogging(outputOptions.Verbose);
         services.AddRmqConfiguration(parseResult);
-        services.AddRmqCliConfig(parseResult);
+
+        // Register command-specific options as singletons
+        services.AddSingleton(consumeOptions);
+        services.AddSingleton(outputOptions);
+
         services.AddRmqCoreServices();
         services.AddConsumeServices();
 

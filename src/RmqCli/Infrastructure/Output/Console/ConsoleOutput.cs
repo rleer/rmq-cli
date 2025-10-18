@@ -14,14 +14,12 @@ namespace RmqCli.Infrastructure.Output.Console;
 public class ConsoleOutput : MessageOutput
 {
     private readonly ILogger<ConsoleOutput> _logger;
-    private readonly OutputFormat _format;
-    private readonly bool _compact;
+    private readonly OutputOptions _outputOptions;
 
-    public ConsoleOutput(ILogger<ConsoleOutput> logger, OutputFormat format, bool compact = false)
+    public ConsoleOutput(ILogger<ConsoleOutput> logger, OutputOptions outputOptions)
     {
         _logger = logger;
-        _format = format;
-        _compact = compact;
+        _outputOptions = outputOptions;
     }
 
     public override async Task<MessageOutputResult> WriteMessagesAsync(
@@ -73,12 +71,12 @@ public class ConsoleOutput : MessageOutput
 
     private string FormatMessage(RabbitMessage message)
     {
-        return _format switch
+        return _outputOptions.Format switch
         {
             OutputFormat.Plain => TextMessageFormatter.FormatMessage(message),
             OutputFormat.Json => JsonMessageFormatter.FormatMessage(message),
-            OutputFormat.Table => TableMessageFormatter.FormatMessage(message, compact: _compact),
-            _ => throw new UnreachableException($"Unexpected OutputFormat: {_format}")
+            OutputFormat.Table => TableMessageFormatter.FormatMessage(message, compact: _outputOptions.Compact),
+            _ => throw new UnreachableException($"Unexpected OutputFormat: {_outputOptions.Format}")
         };
     }
 }

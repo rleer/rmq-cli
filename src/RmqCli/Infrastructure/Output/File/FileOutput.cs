@@ -16,24 +16,18 @@ namespace RmqCli.Infrastructure.Output.File;
 public class FileOutput : MessageOutput
 {
     private readonly ILogger<FileOutput> _logger;
-    private readonly FileInfo _outputFileInfo;
-    private readonly OutputFormat _format;
-    private readonly bool _compact;
+    private readonly OutputOptions _outputOptions;
     private readonly FileConfig _fileConfig;
     private readonly bool _useRotatingFiles;
 
     public FileOutput(
         ILogger<FileOutput> logger,
-        FileInfo outputFileInfo,
-        OutputFormat format,
-        bool compact,
+        OutputOptions outputOptions,
         FileConfig fileConfig,
         int messageCount)
     {
         _logger = logger;
-        _outputFileInfo = outputFileInfo;
-        _format = format;
-        _compact = compact;
+        _outputOptions = outputOptions;
         _fileConfig = fileConfig;
 
         // Use rotating files if message count is unlimited or exceeds messages per file
@@ -75,7 +69,7 @@ public class FileOutput : MessageOutput
         AckModes ackMode,
         CancellationToken cancellationToken)
     {
-        await using var fileStream = _outputFileInfo.OpenWrite();
+        await using var fileStream = _outputOptions.OutputFile!.OpenWrite();
         await using var writer = new StreamWriter(fileStream);
 
         var isFirstMessage = true;
@@ -87,7 +81,7 @@ public class FileOutput : MessageOutput
             try
             {
                 // Add delimiter between messages for plain text format
-                if (!isFirstMessage && _format == OutputFormat.Plain)
+                if (!isFirstMessage && _outputOptions.Format == OutputFormat.Plain)
                 {
                     await writer.WriteLineAsync(_fileConfig.MessageDelimiter);
                 }
@@ -137,9 +131,9 @@ public class FileOutput : MessageOutput
             var fileIndex = 0;
             var messagesInCurrentFile = 0;
             var baseFileName = Path.Combine(
-                _outputFileInfo.DirectoryName ?? string.Empty,
-                Path.GetFileNameWithoutExtension(_outputFileInfo.Name));
-            var fileExtension = _outputFileInfo.Extension;
+                _outputOptions.OutputFile!.DirectoryName ?? string.Empty,
+                Path.GetFileNameWithoutExtension(_outputOptions.OutputFile.Name));
+            var fileExtension = _outputOptions.OutputFile.Extension;
 
             await foreach (var message in messageChannel.Reader.ReadAllAsync(CancellationToken.None))
             {
@@ -162,7 +156,7 @@ public class FileOutput : MessageOutput
                     }
 
                     // Add delimiter between messages in same file for plain text format
-                    if (messagesInCurrentFile > 0 && _format == OutputFormat.Plain)
+                    if (messagesInCurrentFile > 0 && _outputOptions.Format == OutputFormat.Plain)
                     {
                         await writer.WriteLineAsync(_fileConfig.MessageDelimiter);
                     }
@@ -206,12 +200,12 @@ public class FileOutput : MessageOutput
 
     private string FormatMessage(RabbitMessage message)
     {
-        return _format switch
+        return _outputOptions.Format switch
         {
             OutputFormat.Plain => TextMessageFormatter.FormatMessage(message),
             OutputFormat.Json => JsonMessageFormatter.FormatMessage(message),
-            OutputFormat.Table => TableMessageFormatter.FormatMessage(message, compact: _compact),
-            _ => throw new UnreachableException($"Unexpected OutputFormat: {_format}")
+            OutputFormat.Table => TableMessageFormatter.FormatMessage(message, compact: _outputOptions.Compact),
+            _ => throw new UnreachableException($"Unexpected OutputFormat: {_outputOptions.Format}")
         };
     }
 }

@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using RabbitMQ.Client;
 using RmqCli.Commands.Consume;
 using RmqCli.Infrastructure.Configuration.Models;
+using RmqCli.Infrastructure.Output;
 using RmqCli.Infrastructure.Output.File;
 using RmqCli.Shared;
 
@@ -45,7 +46,7 @@ public class FileOutputTests
             var logger = new NullLogger<FileOutput>();
             var outputFile = new FileInfo(Path.Combine(_tempDir, "output.txt"));
             var fileConfig = new FileConfig { MessagesPerFile = 100 };
-            var output = new FileOutput(logger, outputFile, OutputFormat.Plain, compact: false, fileConfig, messageCount: 5);
+            var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 5);
 
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
@@ -84,7 +85,7 @@ public class FileOutputTests
                 MessagesPerFile = 100,
                 MessageDelimiter = "---"
             };
-            var output = new FileOutput(logger, outputFile, OutputFormat.Plain, compact: false, fileConfig, messageCount: 3);
+            var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 3);
 
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
@@ -114,7 +115,7 @@ public class FileOutputTests
             var logger = new NullLogger<FileOutput>();
             var outputFile = new FileInfo(Path.Combine(_tempDir, "output.json"));
             var fileConfig = new FileConfig { MessagesPerFile = 100, MessageDelimiter = "---" };
-            var output = new FileOutput(logger, outputFile, OutputFormat.Json, compact: false, fileConfig, messageCount: 2);
+            var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Json, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 2);
 
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
@@ -143,7 +144,7 @@ public class FileOutputTests
             var logger = new NullLogger<FileOutput>();
             var outputFile = new FileInfo(Path.Combine(_tempDir, "empty.txt"));
             var fileConfig = new FileConfig { MessagesPerFile = 100 };
-            var output = new FileOutput(logger, outputFile, OutputFormat.Plain, compact: false, fileConfig, messageCount: 10);
+            var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 10);
 
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
@@ -168,7 +169,7 @@ public class FileOutputTests
             var logger = new NullLogger<FileOutput>();
             var outputFile = new FileInfo(Path.Combine(_tempDir, "bytes.txt"));
             var fileConfig = new FileConfig { MessagesPerFile = 100 };
-            var output = new FileOutput(logger, outputFile, OutputFormat.Plain, compact: false, fileConfig, messageCount: 2);
+            var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 2);
 
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
@@ -223,7 +224,7 @@ public class FileOutputTests
             var logger = new NullLogger<FileOutput>();
             var outputFile = new FileInfo(Path.Combine(_tempDir, "output.txt"));
             var fileConfig = new FileConfig { MessagesPerFile = 2 }; // 2 messages per file
-            var output = new FileOutput(logger, outputFile, OutputFormat.Plain, compact: false, fileConfig, messageCount: 5);
+            var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 5);
 
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
@@ -257,7 +258,7 @@ public class FileOutputTests
             var logger = new NullLogger<FileOutput>();
             var outputFile = new FileInfo(Path.Combine(_tempDir, "unlimited.txt"));
             var fileConfig = new FileConfig { MessagesPerFile = 2 };
-            var output = new FileOutput(logger, outputFile, OutputFormat.Plain, compact: false, fileConfig, messageCount: -1); // Unlimited
+            var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: -1); // Unlimited
 
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
@@ -291,7 +292,7 @@ public class FileOutputTests
             var logger = new NullLogger<FileOutput>();
             var outputFile = new FileInfo(Path.Combine(_tempDir, "rotating.txt"));
             var fileConfig = new FileConfig { MessagesPerFile = 3 };
-            var output = new FileOutput(logger, outputFile, OutputFormat.Plain, compact: false, fileConfig, messageCount: 10); // 10 > 3
+            var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 10); // 10 > 3
 
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
@@ -324,7 +325,7 @@ public class FileOutputTests
             var logger = new NullLogger<FileOutput>();
             var outputFile = new FileInfo(Path.Combine(_tempDir, "indexed.txt"));
             var fileConfig = new FileConfig { MessagesPerFile = 1 }; // 1 message per file
-            var output = new FileOutput(logger, outputFile, OutputFormat.Plain, compact: false, fileConfig, messageCount: 3);
+            var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 3);
 
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
@@ -359,7 +360,7 @@ public class FileOutputTests
                 MessagesPerFile = 3,
                 MessageDelimiter = "---"
             };
-            var output = new FileOutput(logger, outputFile, OutputFormat.Plain, compact: false, fileConfig, messageCount: 6);
+            var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 6);
 
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
@@ -394,7 +395,7 @@ public class FileOutputTests
             var logger = new NullLogger<FileOutput>();
             var outputFile = new FileInfo(Path.Combine(_tempDir, "json.txt"));
             var fileConfig = new FileConfig { MessagesPerFile = 2 };
-            var output = new FileOutput(logger, outputFile, OutputFormat.Json, compact: false, fileConfig, messageCount: 4);
+            var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Json, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 4);
 
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
@@ -453,7 +454,7 @@ public class FileOutputTests
             var logger = new NullLogger<FileOutput>();
             var outputFile = new FileInfo(Path.Combine(_tempDir, "ack.txt"));
             var fileConfig = new FileConfig { MessagesPerFile = 100 };
-            var output = new FileOutput(logger, outputFile, OutputFormat.Plain, compact: false, fileConfig, messageCount: 1);
+            var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 1);
 
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
@@ -481,7 +482,7 @@ public class FileOutputTests
             var logger = new NullLogger<FileOutput>();
             var outputFile = new FileInfo(Path.Combine(_tempDir, "props.txt"));
             var fileConfig = new FileConfig { MessagesPerFile = 100 };
-            var output = new FileOutput(logger, outputFile, OutputFormat.Plain, compact: false, fileConfig, messageCount: 1);
+            var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 1);
 
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
@@ -513,7 +514,7 @@ public class FileOutputTests
             var logger = new NullLogger<FileOutput>();
             var outputFile = new FileInfo(Path.Combine(_tempDir, "cancel.txt"));
             var fileConfig = new FileConfig { MessagesPerFile = 10000 };
-            var output = new FileOutput(logger, outputFile, OutputFormat.Plain, compact: false, fileConfig, messageCount: 100000);
+            var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 100000);
 
             // Use bounded channel to control message flow rate
             var messageChannel = Channel.CreateBounded<RabbitMessage>(500);

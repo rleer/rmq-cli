@@ -1,5 +1,4 @@
 using System.CommandLine;
-using RmqCli.Core.Models;
 using RmqCli.Shared;
 
 namespace RmqCli.Commands.Publish;
@@ -134,40 +133,39 @@ public class PublishCommandHandler : ICommandHandler
 
     private async Task<int> Handle(ParseResult parseResult, CancellationToken cancellationToken)
     {
+        // Create service (ServiceFactory extracts OutputOptions from ParseResult)
         var publishService = _serviceFactory.CreatePublishService(parseResult);
 
-        var filePath = parseResult.GetValue<string>("--from-file");
-        var exchangeName = parseResult.GetValue<string>("--exchange");
-        var queueName = parseResult.GetValue<string>("--queue");
-        var routingKey = parseResult.GetValue<string>("--routing-key");
-        var message = parseResult.GetValue<string>("--body") ?? string.Empty;
-        var burstCount = parseResult.GetValue<int>("--burst");
-
-        var dest = new DestinationInfo
-        {
-            Exchange = exchangeName,
-            Queue = queueName,
-            RoutingKey = routingKey,
-            Type = string.IsNullOrWhiteSpace(queueName) ? "exchange" : "queue"
-        };
+        // Extract publish-specific options
+        var options = ServiceFactory.CreatePublishOptions(parseResult);
 
         var cts = CancellationHelper.LinkWithCtrlCHandler(cancellationToken);
 
         try
         {
-            if (!string.IsNullOrWhiteSpace(filePath))
+            // Route to appropriate method based on input source
+            if (options.InputFile is not null)
             {
-                var fileInfo = new FileInfo(Path.GetFullPath(filePath, Environment.CurrentDirectory));
-
-                return await publishService.PublishMessageFromFile(dest, fileInfo, burstCount, cts.Token);
+                return await publishService.PublishMessageFromFile(
+                    options.Destination,
+                    options.InputFile,
+                    options.BurstCount,
+                    cts.Token);
             }
 
-            if (Console.IsInputRedirected)
+            if (options.IsStdinRedirected)
             {
-                return await publishService.PublishMessageFromStdin(dest, burstCount, cts.Token);
+                return await publishService.PublishMessageFromStdin(
+                    options.Destination,
+                    options.BurstCount,
+                    cts.Token);
             }
 
-            return await publishService.PublishMessage(dest, [message], burstCount, cts.Token);
+            return await publishService.PublishMessage(
+                options.Destination,
+                [options.MessageBody ?? string.Empty],
+                options.BurstCount,
+                cts.Token);
         }
         catch (OperationCanceledException)
         {

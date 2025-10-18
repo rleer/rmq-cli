@@ -1,5 +1,5 @@
 using System.Text.Json;
-using RmqCli.Infrastructure.Configuration.Models;
+using RmqCli.Infrastructure.Output;
 using RmqCli.Shared;
 using RmqCli.Shared.Json;
 using Spectre.Console;
@@ -14,24 +14,24 @@ public interface IPublishOutputService
 
 public class PublishOutputService : IPublishOutputService
 {
-    private readonly CliConfig _cliConfig;
+    private readonly OutputOptions _outputOptions;
     private readonly IAnsiConsole _console;
 
-    public PublishOutputService(CliConfig cliConfig)
+    public PublishOutputService(OutputOptions outputOptions)
     {
-        _cliConfig = cliConfig;
+        _outputOptions = outputOptions;
         _console = AnsiConsoleFactory.CreateStdoutConsole();
     }
 
     public void WritePublishResult(PublishResponse response)
     {
-        if (_cliConfig.Quiet)
+        if (_outputOptions.Quiet)
             return;
 
-        if (_cliConfig.Format == OutputFormat.Json)
+        if (_outputOptions.Format == OutputFormat.Json)
             WritePublishResultInJsonFormat(response);
 
-        if (_cliConfig.Format == OutputFormat.Plain)
+        if (_outputOptions.Format == OutputFormat.Plain)
             WritePublishResultInPlainFormat(response);
     }
 

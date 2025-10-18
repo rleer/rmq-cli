@@ -2,7 +2,6 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using RmqCli.Core.Models;
-using RmqCli.Infrastructure.Configuration.Models;
 using RmqCli.Shared;
 using RmqCli.Shared.Json;
 using Spectre.Console;
@@ -25,16 +24,16 @@ public interface IStatusOutputService
 // (Json)Console -> stdout for results(structured output for automation)
 public class StatusOutputService : IStatusOutputService
 {
-    private readonly CliConfig _cliConfig;
+    private readonly OutputOptions _outputOptions;
     private readonly IAnsiConsole _console;
 
-    public StatusOutputService(CliConfig cliConfig)
+    public StatusOutputService(OutputOptions outputOptions)
     {
-        _cliConfig = cliConfig;
+        _outputOptions = outputOptions;
         _console = AnsiConsoleFactory.CreateStderrConsole();
     }
 
-    public bool NoColor => _cliConfig.NoColor;
+    public bool NoColor => _outputOptions.NoColor;
 
     /// <summary>
     /// Prints a status message to STDERR console.
@@ -42,7 +41,7 @@ public class StatusOutputService : IStatusOutputService
     /// <param name="message"></param>
     public void ShowStatus(string message)
     {
-        if (_cliConfig.Quiet || _cliConfig.Format == OutputFormat.Json)
+        if (_outputOptions.Quiet || _outputOptions.Format == OutputFormat.Json)
             return;
 
         _console.MarkupLine($"{Constants.StatusSymbol} {message}");
@@ -54,7 +53,7 @@ public class StatusOutputService : IStatusOutputService
     /// <param name="message"></param>
     public void ShowSuccess(string message)
     {
-        if (_cliConfig.Quiet || _cliConfig.Format == OutputFormat.Json)
+        if (_outputOptions.Quiet || _outputOptions.Format == OutputFormat.Json)
             return;
 
         _console.MarkupLine($"{Constants.SuccessSymbol} {message}");
@@ -68,7 +67,7 @@ public class StatusOutputService : IStatusOutputService
     /// <param name="addNewLine"></param>
     public void ShowWarning(string message, bool addNewLine = false)
     {
-        if (_cliConfig.Quiet || _cliConfig.Format == OutputFormat.Json)
+        if (_outputOptions.Quiet || _outputOptions.Format == OutputFormat.Json)
             return;
 
         if (addNewLine)
@@ -85,7 +84,7 @@ public class StatusOutputService : IStatusOutputService
     /// <param name="errorInfo"></param>
     public void ShowError(string message, ErrorInfo? errorInfo = null)
     {
-        switch (_cliConfig.Format)
+        switch (_outputOptions.Format)
         {
             case OutputFormat.Plain:
             {
@@ -133,7 +132,7 @@ public class StatusOutputService : IStatusOutputService
     public async Task ExecuteWithProgress(string description, int maxValue, Func<IProgress<int>, Task> workload)
     {
         // TODO: Make progress bar threshold configurable
-        if (maxValue < 3000 || _cliConfig.Quiet)
+        if (maxValue < 3000 || _outputOptions.Quiet)
         {
             // For quiet mode or JSON output and low number of messages to publish, provide a no-op progress reporter
             await workload(new Progress<int>());

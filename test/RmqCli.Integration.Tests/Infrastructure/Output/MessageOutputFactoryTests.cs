@@ -20,15 +20,21 @@ public class MessageOutputFactoryTests
             // Arrange
             var loggerFactory = new NullLoggerFactory();
             var fileConfig = new FileConfig();
-            var format = OutputFormat.Plain;
             var messageCount = 10;
+            var outputOptions = new OutputOptions
+            {
+                Format = OutputFormat.Plain,
+                OutputFile = null,
+                Compact = false,
+                Quiet = false,
+                Verbose = false,
+                NoColor = false
+            };
 
             // Act
             var result = MessageOutputFactory.Create(
                 loggerFactory,
-                outputFileInfo: null,
-                format,
-                compact: false,
+                outputOptions,
                 fileConfig,
                 messageCount);
 
@@ -43,16 +49,22 @@ public class MessageOutputFactoryTests
             // Arrange
             var loggerFactory = new NullLoggerFactory();
             var fileConfig = new FileConfig();
-            var format = OutputFormat.Plain;
             var messageCount = 10;
             var outputFile = new FileInfo(Path.Combine(Path.GetTempPath(), "test.txt"));
+            var outputOptions = new OutputOptions
+            {
+                Format = OutputFormat.Plain,
+                OutputFile = outputFile,
+                Compact = false,
+                Quiet = false,
+                Verbose = false,
+                NoColor = false
+            };
 
             // Act
             var result = MessageOutputFactory.Create(
                 loggerFactory,
-                outputFile,
-                format,
-                compact: false,
+                outputOptions,
                 fileConfig,
                 messageCount);
 
@@ -70,13 +82,20 @@ public class MessageOutputFactoryTests
             var loggerFactory = new NullLoggerFactory();
             var fileConfig = new FileConfig();
             var messageCount = 10;
+            var outputOptions = new OutputOptions
+            {
+                Format = format,
+                OutputFile = null,
+                Compact = false,
+                Quiet = false,
+                Verbose = false,
+                NoColor = false
+            };
 
             // Act
             var result = MessageOutputFactory.Create(
                 loggerFactory,
-                outputFileInfo: null,
-                format,
-                compact: false,
+                outputOptions,
                 fileConfig,
                 messageCount);
 
@@ -94,13 +113,20 @@ public class MessageOutputFactoryTests
             var fileConfig = new FileConfig();
             var messageCount = 10;
             var outputFile = new FileInfo(Path.Combine(Path.GetTempPath(), "test.txt"));
+            var outputOptions = new OutputOptions
+            {
+                Format = format,
+                OutputFile = outputFile,
+                Compact = false,
+                Quiet = false,
+                Verbose = false,
+                NoColor = false
+            };
 
             // Act
             var result = MessageOutputFactory.Create(
                 loggerFactory,
-                outputFile,
-                format,
-                compact: false,
+                outputOptions,
                 fileConfig,
                 messageCount);
 
@@ -114,15 +140,21 @@ public class MessageOutputFactoryTests
             // Arrange
             var loggerFactory = new NullLoggerFactory();
             var fileConfig = new FileConfig();
-            var format = OutputFormat.Plain;
             var messageCount = -1; // Unlimited
+            var outputOptions = new OutputOptions
+            {
+                Format = OutputFormat.Plain,
+                OutputFile = null,
+                Compact = false,
+                Quiet = false,
+                Verbose = false,
+                NoColor = false
+            };
 
             // Act
             var result = MessageOutputFactory.Create(
                 loggerFactory,
-                outputFileInfo: null,
-                format,
-                compact: false,
+                outputOptions,
                 fileConfig,
                 messageCount);
 
@@ -137,15 +169,21 @@ public class MessageOutputFactoryTests
             // Arrange
             var loggerFactory = new NullLoggerFactory();
             var fileConfig = new FileConfig();
-            var format = OutputFormat.Plain;
             var messageCount = 0;
+            var outputOptions = new OutputOptions
+            {
+                Format = OutputFormat.Plain,
+                OutputFile = null,
+                Compact = false,
+                Quiet = false,
+                Verbose = false,
+                NoColor = false
+            };
 
             // Act
             var result = MessageOutputFactory.Create(
                 loggerFactory,
-                outputFileInfo: null,
-                format,
-                compact: false,
+                outputOptions,
                 fileConfig,
                 messageCount);
 
@@ -161,15 +199,21 @@ public class MessageOutputFactoryTests
             var mockLogger = Substitute.For<ILogger<ConsoleOutput>>();
             loggerFactory.CreateLogger<ConsoleOutput>().Returns(mockLogger);
             var fileConfig = new FileConfig();
-            var format = OutputFormat.Plain;
             var messageCount = 10;
+            var outputOptions = new OutputOptions
+            {
+                Format = OutputFormat.Plain,
+                OutputFile = null,
+                Compact = false,
+                Quiet = false,
+                Verbose = false,
+                NoColor = false
+            };
 
             // Act
             var result = MessageOutputFactory.Create(
                 loggerFactory,
-                outputFileInfo: null,
-                format,
-                compact: false,
+                outputOptions,
                 fileConfig,
                 messageCount);
 
@@ -186,16 +230,22 @@ public class MessageOutputFactoryTests
             var mockLogger = Substitute.For<ILogger<FileOutput>>();
             loggerFactory.CreateLogger<FileOutput>().Returns(mockLogger);
             var fileConfig = new FileConfig();
-            var format = OutputFormat.Plain;
             var messageCount = 10;
             var outputFile = new FileInfo(Path.Combine(Path.GetTempPath(), "test.txt"));
+            var outputOptions = new OutputOptions
+            {
+                Format = OutputFormat.Plain,
+                OutputFile = outputFile,
+                Compact = false,
+                Quiet = false,
+                Verbose = false,
+                NoColor = false
+            };
 
             // Act
             var result = MessageOutputFactory.Create(
                 loggerFactory,
-                outputFile,
-                format,
-                compact: false,
+                outputOptions,
                 fileConfig,
                 messageCount);
 
@@ -210,16 +260,22 @@ public class MessageOutputFactoryTests
             // Arrange
             var loggerFactory = new NullLoggerFactory();
             var fileConfig = new FileConfig();
-            var format = OutputFormat.Plain;
             var messageCount = 10;
             var outputFile = new FileInfo(Path.Combine(Path.GetTempPath(), "nonexistent", "test.txt"));
+            var outputOptions = new OutputOptions
+            {
+                Format = OutputFormat.Plain,
+                OutputFile = outputFile,
+                Compact = false,
+                Quiet = false,
+                Verbose = false,
+                NoColor = false
+            };
 
             // Act
             var result = MessageOutputFactory.Create(
                 loggerFactory,
-                outputFile,
-                format,
-                compact: false,
+                outputOptions,
                 fileConfig,
                 messageCount);
 

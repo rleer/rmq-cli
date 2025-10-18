@@ -88,26 +88,14 @@ public class ConsumeCommandHandler : ICommandHandler
 
     private async Task<int> Handle(ParseResult parseResult, CancellationToken cancellationToken)
     {
+        // Create service (ServiceFactory extracts options from ParseResult)
         var consumeService = _serviceFactory.CreateConsumeService(parseResult);
-
-        var queue = parseResult.GetRequiredValue<string>("--queue");
-        var ackMode = parseResult.GetValue<AckModes>("--ack-mode");
-        var messageCount = parseResult.GetValue<int>("--count");
-        var outputFilePath = parseResult.GetValue<string>("--to-file");
-        var outputFormat = parseResult.GetValue<OutputFormat>("--output");
-        var compact = parseResult.GetValue<bool>("--compact");
 
         var cts = CancellationHelper.LinkWithCtrlCHandler(cancellationToken);
 
-        FileInfo? outputFileInfo = null;
-        if (!string.IsNullOrWhiteSpace(outputFilePath))
-        {
-            outputFileInfo = new FileInfo(Path.GetFullPath(outputFilePath, Environment.CurrentDirectory));
-        }
-
         try
         {
-            return await consumeService.ConsumeMessages(queue, ackMode, outputFileInfo, messageCount, outputFormat, compact, cts.Token);
+            return await consumeService.ConsumeMessages(cts.Token);
         }
         catch (OperationCanceledException)
         {

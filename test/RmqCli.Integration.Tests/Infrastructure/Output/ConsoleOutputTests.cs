@@ -2,6 +2,7 @@ using System.Threading.Channels;
 using Microsoft.Extensions.Logging.Abstractions;
 using RabbitMQ.Client;
 using RmqCli.Commands.Consume;
+using RmqCli.Infrastructure.Output;
 using RmqCli.Infrastructure.Output.Console;
 using RmqCli.Shared;
 using Xunit.Abstractions;
@@ -26,7 +27,8 @@ public class ConsoleOutputTests
         {
             // Arrange
             var logger = new NullLogger<ConsoleOutput>();
-            var output = new ConsoleOutput(logger, OutputFormat.Plain);
+            var output = new ConsoleOutput(logger,
+                new OutputOptions { Format = OutputFormat.Plain, OutputFile = null, Compact = false, Quiet = false, Verbose = false, NoColor = false });
 
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
@@ -66,7 +68,8 @@ public class ConsoleOutputTests
         {
             // Arrange
             var logger = new NullLogger<ConsoleOutput>();
-            var output = new ConsoleOutput(logger, OutputFormat.Json);
+            var output = new ConsoleOutput(logger,
+                new OutputOptions { Format = OutputFormat.Json, OutputFile = null, Compact = false, Quiet = false, Verbose = false, NoColor = false });
 
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
@@ -93,7 +96,8 @@ public class ConsoleOutputTests
         {
             // Arrange
             var logger = new NullLogger<ConsoleOutput>();
-            var output = new ConsoleOutput(logger, OutputFormat.Plain);
+            var output = new ConsoleOutput(logger,
+                new OutputOptions { Format = OutputFormat.Plain, OutputFile = null, Compact = false, Quiet = false, Verbose = false, NoColor = false });
 
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
@@ -118,7 +122,8 @@ public class ConsoleOutputTests
         {
             // Arrange
             var logger = new NullLogger<ConsoleOutput>();
-            var output = new ConsoleOutput(logger, OutputFormat.Plain);
+            var output = new ConsoleOutput(logger,
+                new OutputOptions { Format = OutputFormat.Plain, OutputFile = null, Compact = false, Quiet = false, Verbose = false, NoColor = false });
 
             // Use bounded channel to control message flow rate
             var messageChannel = Channel.CreateBounded<RabbitMessage>(500);
@@ -172,7 +177,8 @@ public class ConsoleOutputTests
         {
             // Arrange
             var logger = new NullLogger<ConsoleOutput>();
-            var output = new ConsoleOutput(logger, OutputFormat.Plain);
+            var output = new ConsoleOutput(logger,
+                new OutputOptions { Format = OutputFormat.Plain, OutputFile = null, Compact = false, Quiet = false, Verbose = false, NoColor = false });
 
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
@@ -199,7 +205,8 @@ public class ConsoleOutputTests
         {
             // Arrange
             var logger = new NullLogger<ConsoleOutput>();
-            var output = new ConsoleOutput(logger, OutputFormat.Plain);
+            var output = new ConsoleOutput(logger,
+                new OutputOptions { Format = OutputFormat.Plain, OutputFile = null, Compact = false, Quiet = false, Verbose = false, NoColor = false });
 
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
@@ -229,7 +236,8 @@ public class ConsoleOutputTests
         {
             // Arrange
             var logger = new NullLogger<ConsoleOutput>();
-            var output = new ConsoleOutput(logger, OutputFormat.Plain);
+            var output = new ConsoleOutput(logger,
+                new OutputOptions { Format = OutputFormat.Plain, OutputFile = null, Compact = false, Quiet = false, Verbose = false, NoColor = false });
 
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
@@ -258,7 +266,8 @@ public class ConsoleOutputTests
         {
             // Arrange
             var logger = new NullLogger<ConsoleOutput>();
-            var output = new ConsoleOutput(logger, OutputFormat.Plain);
+            var output = new ConsoleOutput(logger,
+                new OutputOptions { Format = OutputFormat.Plain, OutputFile = null, Compact = false, Quiet = false, Verbose = false, NoColor = false });
 
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
@@ -286,7 +295,8 @@ public class ConsoleOutputTests
         {
             // Arrange
             var logger = new NullLogger<ConsoleOutput>();
-            var output = new ConsoleOutput(logger, OutputFormat.Plain);
+            var output = new ConsoleOutput(logger,
+                new OutputOptions { Format = OutputFormat.Plain, OutputFile = null, Compact = false, Quiet = false, Verbose = false, NoColor = false });
 
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
