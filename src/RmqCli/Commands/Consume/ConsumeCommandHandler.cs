@@ -56,10 +56,17 @@ public class ConsumeCommandHandler : ICommandHandler
             Description = "Path to output file to save consumed messages. If not specified, messages will be printed to standard output (STDOUT).",
         };
 
+        var compactOption = new Option<bool>("--compact")
+        {
+            Description = "Use compact table format (only show properties with values). Only applies to table output format.",
+            DefaultValueFactory = _ => false
+        };
+
         consumeCommand.Options.Add(queueOption);
         consumeCommand.Options.Add(ackModeOption);
         consumeCommand.Options.Add(countOption);
         consumeCommand.Options.Add(outputFileOption);
+        consumeCommand.Options.Add(compactOption);
 
         consumeCommand.Validators.Add(result =>
         {
@@ -88,6 +95,7 @@ public class ConsumeCommandHandler : ICommandHandler
         var messageCount = parseResult.GetValue<int>("--count");
         var outputFilePath = parseResult.GetValue<string>("--to-file");
         var outputFormat = parseResult.GetValue<OutputFormat>("--output");
+        var compact = parseResult.GetValue<bool>("--compact");
 
         var cts = CancellationHelper.LinkWithCtrlCHandler(cancellationToken);
 
@@ -99,7 +107,7 @@ public class ConsumeCommandHandler : ICommandHandler
 
         try
         {
-            return await consumeService.ConsumeMessages(queue, ackMode, outputFileInfo, messageCount, outputFormat, cts.Token);
+            return await consumeService.ConsumeMessages(queue, ackMode, outputFileInfo, messageCount, outputFormat, compact, cts.Token);
         }
         catch (OperationCanceledException)
         {

@@ -28,6 +28,7 @@ public class MessageOutputFactoryTests
                 loggerFactory,
                 outputFileInfo: null,
                 format,
+                compact: false,
                 fileConfig,
                 messageCount);
 
@@ -51,6 +52,7 @@ public class MessageOutputFactoryTests
                 loggerFactory,
                 outputFile,
                 format,
+                compact: false,
                 fileConfig,
                 messageCount);
 
@@ -74,6 +76,7 @@ public class MessageOutputFactoryTests
                 loggerFactory,
                 outputFileInfo: null,
                 format,
+                compact: false,
                 fileConfig,
                 messageCount);
 
@@ -97,6 +100,7 @@ public class MessageOutputFactoryTests
                 loggerFactory,
                 outputFile,
                 format,
+                compact: false,
                 fileConfig,
                 messageCount);
 
@@ -118,6 +122,7 @@ public class MessageOutputFactoryTests
                 loggerFactory,
                 outputFileInfo: null,
                 format,
+                compact: false,
                 fileConfig,
                 messageCount);
 
@@ -140,6 +145,7 @@ public class MessageOutputFactoryTests
                 loggerFactory,
                 outputFileInfo: null,
                 format,
+                compact: false,
                 fileConfig,
                 messageCount);
 
@@ -163,6 +169,7 @@ public class MessageOutputFactoryTests
                 loggerFactory,
                 outputFileInfo: null,
                 format,
+                compact: false,
                 fileConfig,
                 messageCount);
 
@@ -188,6 +195,7 @@ public class MessageOutputFactoryTests
                 loggerFactory,
                 outputFile,
                 format,
+                compact: false,
                 fileConfig,
                 messageCount);
 
@@ -211,6 +219,7 @@ public class MessageOutputFactoryTests
                 loggerFactory,
                 outputFile,
                 format,
+                compact: false,
                 fileConfig,
                 messageCount);
 

@@ -18,6 +18,7 @@ public class FileOutput : MessageOutput
     private readonly ILogger<FileOutput> _logger;
     private readonly FileInfo _outputFileInfo;
     private readonly OutputFormat _format;
+    private readonly bool _compact;
     private readonly FileConfig _fileConfig;
     private readonly bool _useRotatingFiles;
 
@@ -25,12 +26,14 @@ public class FileOutput : MessageOutput
         ILogger<FileOutput> logger,
         FileInfo outputFileInfo,
         OutputFormat format,
+        bool compact,
         FileConfig fileConfig,
         int messageCount)
     {
         _logger = logger;
         _outputFileInfo = outputFileInfo;
         _format = format;
+        _compact = compact;
         _fileConfig = fileConfig;
 
         // Use rotating files if message count is unlimited or exceeds messages per file

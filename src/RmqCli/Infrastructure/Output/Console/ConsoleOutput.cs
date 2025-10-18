@@ -15,11 +15,13 @@ public class ConsoleOutput : MessageOutput
 {
     private readonly ILogger<ConsoleOutput> _logger;
     private readonly OutputFormat _format;
+    private readonly bool _compact;
 
-    public ConsoleOutput(ILogger<ConsoleOutput> logger, OutputFormat format)
+    public ConsoleOutput(ILogger<ConsoleOutput> logger, OutputFormat format, bool compact = false)
     {
         _logger = logger;
         _format = format;
+        _compact = compact;
     }
 
     public override async Task<MessageOutputResult> WriteMessagesAsync(

@@ -19,6 +19,7 @@ public interface IConsumeService
         FileInfo? outputFileInfo = null,
         int messageCount = -1,
         OutputFormat outputFormat = OutputFormat.Plain,
+        bool compact = false,
         CancellationToken cancellationToken = default);
 }
 
@@ -53,6 +54,7 @@ public class ConsumeService : IConsumeService
         FileInfo? outputFileInfo,
         int messageCount = -1,
         OutputFormat outputFormat = OutputFormat.Plain,
+        bool compact = false,
         CancellationToken userCancellationToken = default)
     {
         var startTime = System.Diagnostics.Stopwatch.GetTimestamp();
@@ -76,7 +78,7 @@ public class ConsumeService : IConsumeService
         // Register cancellation handler to stop consumer and complete channels gracefully
         RegisterCancellationHandler(combinedCts.Token, messageLimitCts.Token, userCancellationToken, channel, consumerTag, receiveChan);
 
-        var outputResult = await RunMessageProcessingPipeline(receiveChan, ackChan, channel, outputFileInfo, outputFormat, ackMode, messageCount,
+        var outputResult = await RunMessageProcessingPipeline(receiveChan, ackChan, channel, outputFileInfo, outputFormat, compact, ackMode, messageCount,
             userCancellationToken);
 
         var endTime = System.Diagnostics.Stopwatch.GetTimestamp();
@@ -222,7 +224,7 @@ public class ConsumeService : IConsumeService
             }
 
             _logger.LogTrace("Received message #{DeliveryTag}", ea.DeliveryTag);
-
+            
             var message = new RabbitMessage(
                 ea.Exchange,
                 ea.RoutingKey,
@@ -272,6 +274,7 @@ public class ConsumeService : IConsumeService
         IChannel channel,
         FileInfo? outputFileInfo,
         OutputFormat outputFormat,
+        bool compact,
         AckModes ackMode,
         int messageCount,
         CancellationToken cancellationToken)
@@ -281,6 +284,7 @@ public class ConsumeService : IConsumeService
             _loggerFactory,
             outputFileInfo,
             outputFormat,
+            compact,
             _fileConfig,
             messageCount);
 

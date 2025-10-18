@@ -18,6 +18,7 @@ public static class MessageOutputFactory
     /// <param name="loggerFactory">Logger factory for creating loggers</param>
     /// <param name="outputFileInfo">File to write to, or null for console output</param>
     /// <param name="format">Output format (Plain, Json, Table)</param>
+    /// <param name="compact">Use compact table format (only show properties with values)</param>
     /// <param name="fileConfig">File configuration (for message delimiter and rotation)</param>
     /// <param name="messageCount">Number of messages to consume (-1 for unlimited)</param>
     /// <returns>A configured MessageOutput instance</returns>
@@ -25,6 +26,7 @@ public static class MessageOutputFactory
         ILoggerFactory loggerFactory,
         FileInfo? outputFileInfo,
         OutputFormat format,
+        bool compact,
         FileConfig fileConfig,
         int messageCount)
     {
@@ -32,13 +34,13 @@ public static class MessageOutputFactory
         {
             // Write to console
             var logger = loggerFactory.CreateLogger<ConsoleOutput>();
-            return new ConsoleOutput(logger, format);
+            return new ConsoleOutput(logger, format, compact);
         }
         else
         {
             // Write to file(s)
             var logger = loggerFactory.CreateLogger<FileOutput>();
-            return new FileOutput(logger, outputFileInfo, format, fileConfig, messageCount);
+            return new FileOutput(logger, outputFileInfo, format, compact, fileConfig, messageCount);
         }
     }
 }
