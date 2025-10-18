@@ -1,6 +1,7 @@
 using System.Text;
 using RabbitMQ.Client;
 using RmqCli.Commands.Consume;
+using RmqCli.Shared;
 using Spectre.Console;
 using Spectre.Console.Rendering;
 
@@ -99,7 +100,7 @@ public static class TableMessageFormatter
 
         // Body Section
         var bodySize = Encoding.UTF8.GetByteCount(message.Body);
-        renderables.Add(new Rule($"[dim]Body ({bodySize} bytes)[/]").LeftJustified().RuleStyle("dim"));
+        renderables.Add(new Rule($"[dim]Body ({OutputUtilities.ToSizeString(bodySize)})[/]").LeftJustified().RuleStyle("dim"));
         renderables.Add(new Markup(Markup.Escape(message.Body)));
 
         // Combine all renderables into a Rows layout

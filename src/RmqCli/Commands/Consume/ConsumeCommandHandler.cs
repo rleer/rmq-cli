@@ -66,7 +66,7 @@ public class ConsumeCommandHandler : ICommandHandler
 
         var compactOption = new Option<bool>("--compact")
         {
-            Description = "Use compact table format (only show properties with values). Only applies to table output format.",
+            Description = "Use compact format (only show properties with values). Applies to plain and table output formats.",
             DefaultValueFactory = _ => false
         };
 

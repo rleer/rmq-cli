@@ -73,7 +73,7 @@ public class ConsoleOutput : MessageOutput
     {
         return _outputOptions.Format switch
         {
-            OutputFormat.Plain => TextMessageFormatter.FormatMessage(message),
+            OutputFormat.Plain => TextMessageFormatter.FormatMessage(message, compact: _outputOptions.Compact),
             OutputFormat.Json => JsonMessageFormatter.FormatMessage(message),
             OutputFormat.Table => TableMessageFormatter.FormatMessage(message, compact: _outputOptions.Compact),
             _ => throw new UnreachableException($"Unexpected OutputFormat: {_outputOptions.Format}")

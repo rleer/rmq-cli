@@ -11,7 +11,7 @@ public class TextMessageFormatterTests
     public class FormatMessage
     {
         [Fact]
-        public void IncludesDeliveryTag()
+        public void IncludesMessageDeliveryTagAsHeader()
         {
             // Arrange
             var message = CreateRabbitMessage("test", deliveryTag: 42);
@@ -20,7 +20,7 @@ public class TextMessageFormatterTests
             var result = TextMessageFormatter.FormatMessage(message);
 
             // Assert
-            result.Should().Contain("DeliveryTag: 42");
+            result.Should().Contain("== Message #42 ==");
         }
 
         [Fact]
@@ -33,7 +33,7 @@ public class TextMessageFormatterTests
             var result = TextMessageFormatter.FormatMessage(message);
 
             // Assert
-            result.Should().Contain("Redelivered: True");
+            result.Should().Contain("Redelivered: Yes");
         }
 
         [Fact]
@@ -46,7 +46,7 @@ public class TextMessageFormatterTests
             var result = TextMessageFormatter.FormatMessage(message);
 
             // Assert
-            result.Should().Contain("Redelivered: False");
+            result.Should().Contain("Redelivered: No");
         }
 
         [Fact]
@@ -72,7 +72,7 @@ public class TextMessageFormatterTests
             var result = TextMessageFormatter.FormatMessage(message);
 
             // Assert
-            result.Should().Contain("RoutingKey: test.routingKey");
+            result.Should().Contain("Routing Key: test.routingKey");
         }
 
         [Fact]
@@ -85,7 +85,7 @@ public class TextMessageFormatterTests
             var result = TextMessageFormatter.FormatMessage(message);
 
             // Assert
-            result.Should().Contain("Body:\nTest message body");
+            result.Should().Contain("== Body (17 bytes) ==\nTest message body");
         }
 
         [Fact]
@@ -98,7 +98,7 @@ public class TextMessageFormatterTests
             var result = TextMessageFormatter.FormatMessage(message);
 
             // Assert
-            result.Should().Contain("Body:\n");
+            result.Should().Contain("== Body (0 bytes) ==\n");
             result.Should().EndWith("");
         }
 
@@ -108,12 +108,12 @@ public class TextMessageFormatterTests
             // Arrange
             var message = CreateRabbitMessage("test", props: null);
 
-            // Act
-            var result = TextMessageFormatter.FormatMessage(message);
+            // Act - use compact mode to omit empty properties
+            var result = TextMessageFormatter.FormatMessage(message, compact: true);
 
             // Assert
-            result.Should().NotContain("MessageId:");
-            result.Should().NotContain("ContentType:");
+            result.Should().NotContain("Message ID:");
+            result.Should().NotContain("Content Type:");
             result.Should().NotContain("Type:");
         }
 
@@ -131,7 +131,7 @@ public class TextMessageFormatterTests
             var result = TextMessageFormatter.FormatMessage(message);
 
             // Assert
-            result.Should().Contain("MessageId: msg-123");
+            result.Should().Contain("Message ID: msg-123");
         }
 
         [Fact]
@@ -148,7 +148,7 @@ public class TextMessageFormatterTests
             var result = TextMessageFormatter.FormatMessage(message);
 
             // Assert
-            result.Should().Contain("ContentType: application/json");
+            result.Should().Contain("Content Type: application/json");
         }
 
         [Fact]
@@ -162,19 +162,20 @@ public class TextMessageFormatterTests
             var result = TextMessageFormatter.FormatMessage(message);
 
             // Assert
+            result.Should().Contain("== Properties ==");
             result.Should().Contain("Type: test.type");
-            result.Should().Contain("MessageId: msg-001");
-            result.Should().Contain("AppId: test-app");
-            result.Should().Contain("ClusterId: cluster-1");
-            result.Should().Contain("ContentType: application/json");
-            result.Should().Contain("ContentEncoding: utf-8");
-            result.Should().Contain("CorrelationId: corr-123");
-            result.Should().Contain("DeliveryMode: Persistent");
+            result.Should().Contain("Message ID: msg-001");
+            result.Should().Contain("App ID: test-app");
+            result.Should().Contain("Cluster ID: cluster-1");
+            result.Should().Contain("Content Type: application/json");
+            result.Should().Contain("Content Encoding: utf-8");
+            result.Should().Contain("Correlation ID: corr-123");
+            result.Should().Contain("Delivery Mode: Persistent (2)");
             result.Should().Contain("Expiration: 60000");
             result.Should().Contain("Priority: 5");
-            result.Should().Contain("ReplyTo: reply-queue");
+            result.Should().Contain("Reply To: reply-queue");
             result.Should().Contain("Timestamp:");
-            result.Should().Contain("Headers:");
+            result.Should().Contain("== Custom Headers ==");
             result.Should().Contain("x-custom: custom-value");
         }
 
@@ -196,9 +197,9 @@ public class TextMessageFormatterTests
             var result = TextMessageFormatter.FormatMessage(message);
 
             // Assert
-            result.Should().Contain("Headers:");
-            result.Should().Contain("  x-key1: value1");
-            result.Should().Contain("  x-key2: value2");
+            result.Should().Contain("== Custom Headers ==");
+            result.Should().Contain("x-key1: value1");
+            result.Should().Contain("x-key2: value2");
         }
 
         [Fact]
@@ -280,7 +281,7 @@ public class TextMessageFormatterTests
             var result = TextMessageFormatter.FormatMessage(message);
 
             // Assert
-            result.Should().Contain("Body:\nLine 1\nLine 2\nLine 3");
+            result.Should().Contain("== Body (20 bytes) ==\nLine 1\nLine 2\nLine 3");
         }
     }
 
@@ -308,15 +309,15 @@ public class TextMessageFormatterTests
             result.Should().Contain("Exchange: amq.direct");
             result.Should().Contain("Exchange: amq.topic");
             result.Should().Contain("Exchange: amq.fanout");
-            result.Should().Contain("RoutingKey: key.1");
-            result.Should().Contain("RoutingKey: key.2");
-            result.Should().Contain("RoutingKey: key.3");
-            result.Should().Contain("DeliveryTag: 1");
-            result.Should().Contain("DeliveryTag: 2");
-            result.Should().Contain("DeliveryTag: 3");
-            result.Should().Contain("Body:\nMessage 1");
-            result.Should().Contain("Body:\nMessage 2");
-            result.Should().Contain("Body:\nMessage 3");
+            result.Should().Contain("Routing Key: key.1");
+            result.Should().Contain("Routing Key: key.2");
+            result.Should().Contain("Routing Key: key.3");
+            result.Should().Contain("== Message #1 ==");
+            result.Should().Contain("== Message #2 ==");
+            result.Should().Contain("== Message #3 ==");
+            result.Should().Contain("== Body (9 bytes) ==\nMessage 1");
+            result.Should().Contain("== Body (9 bytes) ==\nMessage 2");
+            result.Should().Contain("== Body (9 bytes) ==\nMessage 3");
         }
 
         [Fact]
@@ -333,14 +334,14 @@ public class TextMessageFormatterTests
             var result = TextMessageFormatter.FormatMessages(messages);
 
             // Assert
+            result.Should().Contain("== Message #1 ==");
+            result.Should().Contain("== Message #2 ==");
             result.Should().Contain("Exchange: amq.direct");
             result.Should().Contain("Exchange: amq.topic");
-            result.Should().Contain("RoutingKey: key.1");
-            result.Should().Contain("RoutingKey: key.2");
-            result.Should().Contain("DeliveryTag: 1");
-            result.Should().Contain("DeliveryTag: 2");
-            result.Should().Contain("Body:\nFirst");
-            result.Should().Contain("Body:\nSecond");
+            result.Should().Contain("Routing Key: key.1");
+            result.Should().Contain("Routing Key: key.2");
+            result.Should().Contain("== Body (5 bytes) ==\nFirst");
+            result.Should().Contain("== Body (6 bytes) ==\nSecond");
         }
 
         [Fact]
@@ -366,10 +367,10 @@ public class TextMessageFormatterTests
             var result = TextMessageFormatter.FormatMessages(messages);
 
             // Assert
+            result.Should().Contain("== Message #99 ==");
             result.Should().Contain("Exchange: amq.direct");
-            result.Should().Contain("RoutingKey: key.1");
-            result.Should().Contain("DeliveryTag: 99");
-            result.Should().Contain("Body:\nOnly one");
+            result.Should().Contain("Routing Key: key.1");
+            result.Should().Contain("== Body (8 bytes) ==\nOnly one");
         }
 
         [Fact]
@@ -394,8 +395,8 @@ public class TextMessageFormatterTests
             var result = TextMessageFormatter.FormatMessages(messages);
 
             // Assert
-            result.Should().Contain("MessageId: msg-1");
-            result.Should().Contain("MessageId: msg-2");
+            result.Should().Contain("Message ID: msg-1");
+            result.Should().Contain("Message ID: msg-2");
         }
     }
 
