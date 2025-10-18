@@ -219,7 +219,7 @@ public class TextMessageFormatterTests
             var result = TextMessageFormatter.FormatMessage(message);
 
             // Assert
-            result.Should().Contain("x-binary: byte[3]");
+            result.Should().Contain("x-binary: <binary data: 3 bytes>");
         }
 
         [Fact]
@@ -239,11 +239,8 @@ public class TextMessageFormatterTests
             var result = TextMessageFormatter.FormatMessage(message);
 
             // Assert
-            result.Should().Contain("x-array: [");
-            result.Should().Contain("- item1");
-            result.Should().Contain("- item2");
-            result.Should().Contain("- 42");
-            result.Should().Contain("]");
+            // Simple arrays (≤5 items, no complex objects) are formatted inline
+            result.Should().Contain("x-array: [item1, item2, 42]");
         }
 
         [Fact]

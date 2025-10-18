@@ -74,45 +74,9 @@ public static class TextMessageFormatter
         sb.AppendLine("Headers:");
         foreach (var header in headers)
         {
-            sb.AppendLine($"  {header.Key}: {FormatValue(header.Value)}");
+            sb.AppendLine($"  {header.Key}: {HeaderValueFormatter.FormatValue(header.Value)}");
         }
 
         return sb.ToString().TrimEnd();
-    }
-
-    private static string FormatValue(object value, int indentationLevel = 1)
-    {
-        switch (value)
-        {
-            case null:
-                return "null";
-            case string str when str.StartsWith("<binary data:"):
-                // Binary data already formatted by extractor, just need to adjust format
-                return str.Replace("<binary data: ", "byte[").Replace(" bytes>", "]");
-            case IEnumerable<object> enumerable when value is not string:
-            {
-                var sb = new StringBuilder();
-                sb.AppendLine("[");
-                foreach (var item in enumerable)
-                {
-                    sb.AppendLine($"{new string(' ', (indentationLevel + 1) * 2 - 2)}- {FormatValue(item, indentationLevel + 1).TrimStart()}");
-                }
-
-                sb.AppendLine($"{new string(' ', indentationLevel)} ]");
-                return sb.ToString().TrimEnd();
-            }
-            case IDictionary<string, object> dict:
-            {
-                var sb = new StringBuilder();
-                foreach (var pair in dict)
-                {
-                    sb.AppendLine($"{new string(' ', indentationLevel * 2)}{pair.Key}: {FormatValue(pair.Value, indentationLevel + 1)}");
-                }
-
-                return sb.ToString().TrimEnd();
-            }
-            default:
-                return value.ToString() ?? "null";
-        }
     }
 }
