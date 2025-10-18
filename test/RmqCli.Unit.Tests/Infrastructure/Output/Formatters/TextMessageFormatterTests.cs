@@ -120,7 +120,7 @@ public class TextMessageFormatterTests
             var result = TextMessageFormatter.FormatMessage(message);
 
             // Assert
-            result.Should().Contain("== Body (17 bytes) ==\nTest message body");
+            result.Should().Contain($"== Body (17 bytes) =={Environment.NewLine}Test message body");
         }
 
         [Fact]
@@ -133,7 +133,7 @@ public class TextMessageFormatterTests
             var result = TextMessageFormatter.FormatMessage(message);
 
             // Assert
-            result.Should().Contain("== Body (0 bytes) ==\n");
+            result.Should().Contain($"== Body (0 bytes) =={Environment.NewLine}");
             result.Should().EndWith("");
         }
 
@@ -557,14 +557,14 @@ public class TextMessageFormatterTests
         public void PreservesNewlinesInBody()
         {
             // Arrange
-            var multilineBody = "Line 1\nLine 2\nLine 3";
+            var multilineBody = $"Line 1{Environment.NewLine}Line 2{Environment.NewLine}Line 3";
             var message = CreateRabbitMessage(multilineBody);
 
             // Act
             var result = TextMessageFormatter.FormatMessage(message);
 
             // Assert
-            result.Should().Contain("== Body (20 bytes) ==\nLine 1\nLine 2\nLine 3");
+            result.Should().Contain($"== Body (20 bytes) =={Environment.NewLine}Line 1{Environment.NewLine}Line 2{Environment.NewLine}Line 3");
         }
     }
 
@@ -598,9 +598,9 @@ public class TextMessageFormatterTests
             result.Should().Contain("== Message #1 ==");
             result.Should().Contain("== Message #2 ==");
             result.Should().Contain("== Message #3 ==");
-            result.Should().Contain("== Body (9 bytes) ==\nMessage 1");
-            result.Should().Contain("== Body (9 bytes) ==\nMessage 2");
-            result.Should().Contain("== Body (9 bytes) ==\nMessage 3");
+            result.Should().Contain($"== Body (9 bytes) =={Environment.NewLine}Message 1");
+            result.Should().Contain($"== Body (9 bytes) =={Environment.NewLine}Message 2");
+            result.Should().Contain($"== Body (9 bytes) =={Environment.NewLine}Message 3");
         }
 
         [Fact]
@@ -623,8 +623,8 @@ public class TextMessageFormatterTests
             result.Should().Contain("Exchange: amq.topic");
             result.Should().Contain("Routing Key: key.1");
             result.Should().Contain("Routing Key: key.2");
-            result.Should().Contain("== Body (5 bytes) ==\nFirst");
-            result.Should().Contain("== Body (6 bytes) ==\nSecond");
+            result.Should().Contain($"== Body (5 bytes) =={Environment.NewLine}First");
+            result.Should().Contain($"== Body (6 bytes) =={Environment.NewLine}Second");
         }
 
         [Fact]
@@ -653,7 +653,7 @@ public class TextMessageFormatterTests
             result.Should().Contain("== Message #99 ==");
             result.Should().Contain("Exchange: amq.direct");
             result.Should().Contain("Routing Key: key.1");
-            result.Should().Contain("== Body (8 bytes) ==\nOnly one");
+            result.Should().Contain($"== Body (8 bytes) =={Environment.NewLine}Only one");
         }
 
         [Fact]
