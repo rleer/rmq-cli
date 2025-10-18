@@ -1,3 +1,4 @@
+using System.Globalization;
 using RabbitMQ.Client;
 using RmqCli.Commands.Consume;
 using RmqCli.Infrastructure.Output.Formatters;
@@ -214,7 +215,7 @@ public class TextMessageFormatterTests
         }
 
         [Fact]
-        public void FormatsHeaders_WithIndentation()
+        public void FormatsSimpleHeaders()
         {
             // Arrange
             var props = Substitute.For<IReadOnlyBasicProperties>();
@@ -237,7 +238,29 @@ public class TextMessageFormatterTests
         }
 
         [Fact]
-        public void FormatsBinaryData_WithBracketNotation()
+        public void OmitsNullHeaderValues()
+        {
+            // Arrange - RabbitMQ filters out null header values
+            var props = Substitute.For<IReadOnlyBasicProperties>();
+            props.IsHeadersPresent().Returns(true);
+            props.Headers.Returns(new Dictionary<string, object?>
+            {
+                ["x-valid"] = "value"
+                // null values are not stored in RabbitMQ headers
+            });
+
+            var message = CreateRabbitMessage("test", props: props);
+
+            // Act
+            var result = TextMessageFormatter.FormatMessage(message);
+
+            // Assert
+            result.Should().Contain("x-valid: value");
+            result.Should().NotContain("x-null");
+        }
+
+        [Fact]
+        public void FormatsBinaryDataHeader()
         {
             // Arrange
             var binaryData = new byte[] { 0x00, 0x01, 0xFF };
@@ -253,19 +276,69 @@ public class TextMessageFormatterTests
             // Act
             var result = TextMessageFormatter.FormatMessage(message);
 
-            // Assert
-            result.Should().Contain("x-binary: <binary data: 3 bytes>");
+            // Assert - Verify binary data is formatted with byte count
+            result.Should().Contain("""
+                                    == Custom Headers ==
+                                    x-binary: <binary data: 3 bytes>
+                                    """);
         }
 
         [Fact]
-        public void FormatsNestedArrays_WithIndentation()
+        public void FormatsEmptyArray()
         {
             // Arrange
             var props = Substitute.For<IReadOnlyBasicProperties>();
             props.IsHeadersPresent().Returns(true);
             props.Headers.Returns(new Dictionary<string, object?>
             {
-                ["x-array"] = new object[] { "item1", "item2", 42 }
+                ["x-empty-array"] = Array.Empty<object>()
+            });
+
+            var message = CreateRabbitMessage("test", props: props);
+
+            // Act
+            var result = TextMessageFormatter.FormatMessage(message);
+
+            // Assert - Verify empty array is formatted as []
+            result.Should().Contain("""
+                                    == Custom Headers ==
+                                    x-empty-array: []
+                                    """);
+        }
+
+        [Fact]
+        public void FormatsSmallArrayInline()
+        {
+            // Arrange - Arrays ≤5 items without complex objects are formatted inline
+            CultureInfo.CurrentCulture = new CultureInfo("en-US"); // Ensure consistent decimal formatting
+            var props = Substitute.For<IReadOnlyBasicProperties>();
+            props.IsHeadersPresent().Returns(true);
+            props.Headers.Returns(new Dictionary<string, object?>
+            {
+                ["x-array"] = new object[] { "item1", "item2", 42, true, 3.14 }
+            });
+
+            var message = CreateRabbitMessage("test", props: props);
+
+            // Act
+            var result = TextMessageFormatter.FormatMessage(message);
+
+            // Assert - Verify array is formatted inline (all on one line)
+            result.Should().Contain("""
+                                    == Custom Headers ==
+                                    x-array: [item1, item2, 42, True, 3.14]
+                                    """);
+        }
+
+        [Fact]
+        public void FormatsLargeArrayMultiLine()
+        {
+            // Arrange - Arrays >5 items are formatted multi-line
+            var props = Substitute.For<IReadOnlyBasicProperties>();
+            props.IsHeadersPresent().Returns(true);
+            props.Headers.Returns(new Dictionary<string, object?>
+            {
+                ["x-large-array"] = new object[] { 1, 2, 3, 4, 5, 6 }
             });
 
             var message = CreateRabbitMessage("test", props: props);
@@ -274,22 +347,116 @@ public class TextMessageFormatterTests
             var result = TextMessageFormatter.FormatMessage(message);
 
             // Assert
-            // Simple arrays (≤5 items, no complex objects) are formatted inline
-            result.Should().Contain("x-array: [item1, item2, 42]");
+            result.Should().Contain("""
+                                    == Custom Headers ==
+                                    x-large-array: [
+                                      1
+                                      2
+                                      3
+                                      4
+                                      5
+                                      6
+                                    ]
+                                    """);
         }
 
         [Fact]
-        public void FormatsNestedDictionaries_WithIndentation()
+        public void FormatsArrayWithComplexObjectsMultiLine()
+        {
+            // Arrange - Arrays containing complex objects are formatted multi-line
+            var props = Substitute.For<IReadOnlyBasicProperties>();
+            props.IsHeadersPresent().Returns(true);
+            props.Headers.Returns(new Dictionary<string, object?>
+            {
+                ["x-array-of-objects"] = new object[]
+                {
+                    new Dictionary<string, object> { ["name"] = "Alice", ["age"] = 30 },
+                    new Dictionary<string, object> { ["name"] = "Bob", ["age"] = 25 }
+                }
+            });
+
+            var message = CreateRabbitMessage("test", props: props);
+
+            // Act
+            var result = TextMessageFormatter.FormatMessage(message);
+
+            // Assert - Verify proper multi-line formatting with correct indentation
+            result.Should().Contain("""
+                                    == Custom Headers ==
+                                    x-array-of-objects: [
+                                      {name: Alice, age: 30}
+                                      {name: Bob, age: 25}
+                                    ]
+                                    """);
+        }
+
+        [Fact]
+        public void FormatsEmptyDictionary()
         {
             // Arrange
             var props = Substitute.For<IReadOnlyBasicProperties>();
             props.IsHeadersPresent().Returns(true);
             props.Headers.Returns(new Dictionary<string, object?>
             {
+                ["x-empty-dict"] = new Dictionary<string, object>()
+            });
+
+            var message = CreateRabbitMessage("test", props: props);
+
+            // Act
+            var result = TextMessageFormatter.FormatMessage(message);
+
+            // Assert - Verify empty dictionary is formatted as {}
+            result.Should().Contain("""
+                                    == Custom Headers ==
+                                    x-empty-dict: {}
+                                    """);
+        }
+
+        [Fact]
+        public void FormatsSimpleDictionaryInline()
+        {
+            // Arrange - Simple dictionaries (≤3 items, no nested objects) are formatted inline
+            var props = Substitute.For<IReadOnlyBasicProperties>();
+            props.IsHeadersPresent().Returns(true);
+            props.Headers.Returns(new Dictionary<string, object?>
+            {
+                ["x-simple-dict"] = new Dictionary<string, object>
+                {
+                    ["status"] = "active",
+                    ["count"] = 42,
+                    ["enabled"] = true
+                }
+            });
+
+            var message = CreateRabbitMessage("test", props: props);
+
+            // Act
+            var result = TextMessageFormatter.FormatMessage(message);
+
+            // Assert - Verify dictionary is formatted inline (all on one line)
+            result.Should().Contain("""
+                                    == Custom Headers ==
+                                    x-simple-dict: {status: active, count: 42, enabled: True}
+                                    """);
+        }
+
+        [Fact]
+        public void FormatsNestedDictionaryMultiLine()
+        {
+            // Arrange - Dictionaries with nested objects are formatted multi-line
+            var props = Substitute.For<IReadOnlyBasicProperties>();
+            props.IsHeadersPresent().Returns(true);
+            props.Headers.Returns(new Dictionary<string, object?>
+            {
                 ["x-nested"] = new Dictionary<string, object>
                 {
-                    ["nested-key"] = "nested-value",
-                    ["nested-num"] = 99
+                    ["user"] = new Dictionary<string, object>
+                    {
+                        ["name"] = "Alice",
+                        ["role"] = "admin"
+                    },
+                    ["timestamp"] = 1234567890
                 }
             });
 
@@ -299,9 +466,91 @@ public class TextMessageFormatterTests
             var result = TextMessageFormatter.FormatMessage(message);
 
             // Assert
-            result.Should().Contain("x-nested:");
-            result.Should().Contain("nested-key: nested-value");
-            result.Should().Contain("nested-num: 99");
+            result.Should().Contain("""
+                                    == Custom Headers ==
+                                    x-nested: {
+                                      user: {name: Alice, role: admin}
+                                      timestamp: 1234567890
+                                    }
+                                    """);
+        }
+
+        [Fact]
+        public void FormatsDeeplyNestedStructure()
+        {
+            // Arrange - Test deeply nested structure with proper indentation (2 spaces per level)
+            var props = Substitute.For<IReadOnlyBasicProperties>();
+            props.IsHeadersPresent().Returns(true);
+            props.Headers.Returns(new Dictionary<string, object?>
+            {
+                ["x-deep"] = new Dictionary<string, object>
+                {
+                    ["level1"] = new Dictionary<string, object>
+                    {
+                        ["level2"] = new Dictionary<string, object>
+                        {
+                            ["level3"] = new Dictionary<string, object>
+                            {
+                                ["value"] = "deep-value"
+                            }
+                        },
+                        ["anotherKey"] = "anotherValue"
+                    },
+                    ["simpleKey"] = "simpleValue"
+                }
+            });
+
+            var message = CreateRabbitMessage("test", props: props);
+
+            // Act
+            var result = TextMessageFormatter.FormatMessage(message, compact:true);
+
+            // Assert - Verify proper indentation at each nesting level
+            // Multi-line format: key on one line, opening brace on next line with 2-space indent increments
+            result.Should().Contain("""
+                                    == Custom Headers ==
+                                    x-deep: {
+                                      level1: {
+                                        level2: {
+                                          level3: {value: deep-value}
+                                        }
+                                        anotherKey: anotherValue
+                                      }
+                                      simpleKey: simpleValue
+                                    }
+                                    """);
+        }
+
+        [Fact]
+        public void FormatsMixedComplexHeaders()
+        {
+            // Arrange - Test mix of different header types (null values are filtered by RabbitMQ)
+            var props = Substitute.For<IReadOnlyBasicProperties>();
+            props.IsHeadersPresent().Returns(true);
+            var headers = new Dictionary<string, object?>
+            {
+                ["x-string"] = "simple-value",
+                ["x-number"] = 123,
+                ["x-bool"] = true,
+                ["x-array"] = new object[] { 1, 2, 3 },
+                ["x-dict"] = new Dictionary<string, object> { ["key"] = "value" }
+            };
+            props.Headers.Returns(headers);
+
+            var message = CreateRabbitMessage("test", props: props);
+
+            // Act
+            var result = TextMessageFormatter.FormatMessage(message);
+
+            // Assert - Verify all types are formatted correctly
+            result.Should().Contain("""
+                                    == Custom Headers ==
+                                    x-string: simple-value
+                                    x-number: 123
+                                    x-bool: True
+                                    x-array: [1, 2, 3]
+                                    x-dict: {key: value}
+                                    """);
         }
 
         [Fact]
@@ -421,8 +670,8 @@ public class TextMessageFormatterTests
 
             var messages = new[]
             {
-                CreateRabbitMessage("First", props: props1),
-                CreateRabbitMessage("Second", props: props2)
+                CreateRabbitMessage("First", deliveryTag: 1, props: props1),
+                CreateRabbitMessage("Second", deliveryTag: 2, props: props2)
             };
 
             // Act
@@ -431,6 +680,8 @@ public class TextMessageFormatterTests
             // Assert
             result.Should().Contain("Message ID: msg-1");
             result.Should().Contain("Message ID: msg-2");
+            result.Should().Contain("== Message #1 ==");
+            result.Should().Contain("== Message #2 ==");
         }
     }
 

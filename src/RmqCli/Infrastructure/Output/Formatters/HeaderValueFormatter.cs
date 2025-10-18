@@ -17,13 +17,16 @@ public static class HeaderValueFormatter
         {
             null => "-",
 
+            // Handle byte arrays (binary data) - must come before other array handling
+            byte[] bytes => $"<binary data: {bytes.Length} bytes>",
+
             // Handle dictionaries (nested objects)
             IDictionary<string, object> dict when dict.Count == 0 => "{}",
             IDictionary<string, object> dict => FormatDictionary(dict, indent),
 
             // Handle strings - preserve binary data markers (before arrays since string is IEnumerable)
             string str when str.StartsWith("<binary data:") => str,
-            string str => str,
+            string str => EscapeString(str),
 
             // Handle arrays and enumerables
             IEnumerable<object> enumerable when enumerable.Any() => FormatArray(enumerable.ToArray(), indent),
@@ -32,6 +35,11 @@ public static class HeaderValueFormatter
             // Handle primitives
             _ => value.ToString() ?? "-"
         };
+    }
+    
+    private static string EscapeString(string str)
+    {
+        return str.Replace("\n", "\\n").Replace("\r", "\\r").Replace("\t", "\\t");
     }
 
     /// <summary>
@@ -57,20 +65,7 @@ public static class HeaderValueFormatter
         foreach (var kvp in dict)
         {
             var formattedValue = FormatValue(kvp.Value, indent + 1);
-            // Check if value is multi-line
-            if (formattedValue.Contains("\n"))
-            {
-                lines.Add($"{indentStr}{kvp.Key}:");
-                // Add each line of the value with proper indentation
-                foreach (var line in formattedValue.Split('\n'))
-                {
-                    lines.Add($"{indentStr}{line}");
-                }
-            }
-            else
-            {
-                lines.Add($"{indentStr}{kvp.Key}: {formattedValue}");
-            }
+            lines.Add($"{indentStr}{kvp.Key}: {formattedValue}");
         }
         lines.Add(new string(' ', indent * 2) + "}");
         return string.Join("\n", lines);
@@ -98,18 +93,7 @@ public static class HeaderValueFormatter
         foreach (var item in items)
         {
             var formattedItem = FormatValue(item, indent + 1);
-            // Check if item is multi-line
-            if (formattedItem.Contains("\n"))
-            {
-                foreach (var line in formattedItem.Split('\n'))
-                {
-                    lines.Add($"{indentStr}{line}");
-                }
-            }
-            else
-            {
-                lines.Add($"{indentStr}{formattedItem}");
-            }
+            lines.Add($"{indentStr}{formattedItem}");
         }
         lines.Add(new string(' ', indent * 2) + "]");
         return string.Join("\n", lines);

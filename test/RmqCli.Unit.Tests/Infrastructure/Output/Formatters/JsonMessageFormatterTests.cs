@@ -287,6 +287,243 @@ public class JsonMessageFormatterTests
             headers.GetProperty("x-custom").GetString().Should().Be("custom-value");
             headers.GetProperty("x-number").GetInt32().Should().Be(42);
         }
+
+        [Fact]
+        public void OmitsNullHeaderValues()
+        {
+            // Arrange - RabbitMQ filters out null header values
+            var props = Substitute.For<IReadOnlyBasicProperties>();
+            props.IsHeadersPresent().Returns(true);
+            props.Headers.Returns(new Dictionary<string, object?>
+            {
+                ["x-valid"] = "value"
+                // null values are not stored in RabbitMQ headers
+            });
+
+            var message = CreateRabbitMessage("test", props: props);
+
+            // Act
+            var result = JsonMessageFormatter.FormatMessage(message);
+
+            // Assert
+            var json = JsonDocument.Parse(result);
+            var headers = json.RootElement.GetProperty("properties").GetProperty("headers");
+            headers.TryGetProperty("x-valid", out var validProp).Should().BeTrue();
+            validProp.GetString().Should().Be("value");
+            headers.TryGetProperty("x-null", out _).Should().BeFalse();
+        }
+
+        [Fact]
+        public void FormatsBooleanHeaderValue()
+        {
+            // Arrange
+            var props = Substitute.For<IReadOnlyBasicProperties>();
+            props.IsHeadersPresent().Returns(true);
+            props.Headers.Returns(new Dictionary<string, object?>
+            {
+                ["x-enabled"] = true,
+                ["x-disabled"] = false
+            });
+
+            var message = CreateRabbitMessage("test", props: props);
+
+            // Act
+            var result = JsonMessageFormatter.FormatMessage(message);
+
+            // Assert
+            var json = JsonDocument.Parse(result);
+            var headers = json.RootElement.GetProperty("properties").GetProperty("headers");
+            headers.GetProperty("x-enabled").GetBoolean().Should().BeTrue();
+            headers.GetProperty("x-disabled").GetBoolean().Should().BeFalse();
+        }
+
+        [Fact]
+        public void FormatsArrayHeaderValue()
+        {
+            // Arrange
+            var props = Substitute.For<IReadOnlyBasicProperties>();
+            props.IsHeadersPresent().Returns(true);
+            props.Headers.Returns(new Dictionary<string, object?>
+            {
+                ["x-tags"] = new object[] { "tag1", "tag2", "tag3" }
+            });
+
+            var message = CreateRabbitMessage("test", props: props);
+
+            // Act
+            var result = JsonMessageFormatter.FormatMessage(message);
+
+            // Assert
+            var json = JsonDocument.Parse(result);
+            var tags = json.RootElement.GetProperty("properties").GetProperty("headers").GetProperty("x-tags");
+            tags.ValueKind.Should().Be(JsonValueKind.Array);
+            tags.GetArrayLength().Should().Be(3);
+            tags[0].GetString().Should().Be("tag1");
+            tags[1].GetString().Should().Be("tag2");
+            tags[2].GetString().Should().Be("tag3");
+        }
+
+        [Fact]
+        public void FormatsNestedDictionaryHeaderValue()
+        {
+            // Arrange
+            var props = Substitute.For<IReadOnlyBasicProperties>();
+            props.IsHeadersPresent().Returns(true);
+            props.Headers.Returns(new Dictionary<string, object?>
+            {
+                ["x-metadata"] = new Dictionary<string, object>
+                {
+                    ["region"] = "us-west",
+                    ["datacenter"] = "dc1",
+                    ["rack"] = 42
+                }
+            });
+
+            var message = CreateRabbitMessage("test", props: props);
+
+            // Act
+            var result = JsonMessageFormatter.FormatMessage(message);
+
+            // Assert
+            var json = JsonDocument.Parse(result);
+            var metadata = json.RootElement.GetProperty("properties").GetProperty("headers").GetProperty("x-metadata");
+            metadata.ValueKind.Should().Be(JsonValueKind.Object);
+            metadata.GetProperty("region").GetString().Should().Be("us-west");
+            metadata.GetProperty("datacenter").GetString().Should().Be("dc1");
+            metadata.GetProperty("rack").GetInt32().Should().Be(42);
+        }
+
+        [Fact]
+        public void FormatsDeeplyNestedHeaderStructure()
+        {
+            // Arrange
+            var props = Substitute.For<IReadOnlyBasicProperties>();
+            props.IsHeadersPresent().Returns(true);
+            props.Headers.Returns(new Dictionary<string, object?>
+            {
+                ["x-deep"] = new Dictionary<string, object>
+                {
+                    ["level1"] = new Dictionary<string, object>
+                    {
+                        ["level2"] = new Dictionary<string, object>
+                        {
+                            ["level3"] = "deep-value"
+                        }
+                    }
+                }
+            });
+
+            var message = CreateRabbitMessage("test", props: props);
+
+            // Act
+            var result = JsonMessageFormatter.FormatMessage(message);
+
+            // Assert
+            var json = JsonDocument.Parse(result);
+            var deepValue = json.RootElement
+                .GetProperty("properties")
+                .GetProperty("headers")
+                .GetProperty("x-deep")
+                .GetProperty("level1")
+                .GetProperty("level2")
+                .GetProperty("level3")
+                .GetString();
+            deepValue.Should().Be("deep-value");
+        }
+
+        [Fact]
+        public void FormatsArrayOfObjectsHeaderValue()
+        {
+            // Arrange
+            var props = Substitute.For<IReadOnlyBasicProperties>();
+            props.IsHeadersPresent().Returns(true);
+            props.Headers.Returns(new Dictionary<string, object?>
+            {
+                ["x-users"] = new object[]
+                {
+                    new Dictionary<string, object> { ["name"] = "Alice", ["age"] = 30 },
+                    new Dictionary<string, object> { ["name"] = "Bob", ["age"] = 25 }
+                }
+            });
+
+            var message = CreateRabbitMessage("test", props: props);
+
+            // Act
+            var result = JsonMessageFormatter.FormatMessage(message);
+
+            // Assert
+            var json = JsonDocument.Parse(result);
+            var users = json.RootElement.GetProperty("properties").GetProperty("headers").GetProperty("x-users");
+            users.ValueKind.Should().Be(JsonValueKind.Array);
+            users.GetArrayLength().Should().Be(2);
+            users[0].GetProperty("name").GetString().Should().Be("Alice");
+            users[0].GetProperty("age").GetInt32().Should().Be(30);
+            users[1].GetProperty("name").GetString().Should().Be("Bob");
+            users[1].GetProperty("age").GetInt32().Should().Be(25);
+        }
+
+        [Fact]
+        public void FormatsMixedTypeHeaderValues()
+        {
+            // Arrange - RabbitMQ filters out null values
+            var props = Substitute.For<IReadOnlyBasicProperties>();
+            props.IsHeadersPresent().Returns(true);
+            props.Headers.Returns(new Dictionary<string, object?>
+            {
+                ["x-string"] = "text",
+                ["x-int"] = 123,
+                ["x-long"] = 9876543210L,
+                ["x-double"] = 3.14,
+                ["x-bool"] = true,
+                ["x-array"] = new object[] { 1, "two", 3.0 }
+            });
+
+            var message = CreateRabbitMessage("test", props: props);
+
+            // Act
+            var result = JsonMessageFormatter.FormatMessage(message);
+
+            // Assert
+            var json = JsonDocument.Parse(result);
+            var headers = json.RootElement.GetProperty("properties").GetProperty("headers");
+            headers.GetProperty("x-string").GetString().Should().Be("text");
+            headers.GetProperty("x-int").GetInt32().Should().Be(123);
+            headers.GetProperty("x-long").GetInt64().Should().Be(9876543210L);
+            headers.GetProperty("x-double").GetDouble().Should().BeApproximately(3.14, 0.001);
+            headers.GetProperty("x-bool").GetBoolean().Should().BeTrue();
+            headers.GetProperty("x-array").GetArrayLength().Should().Be(3);
+        }
+
+        [Fact]
+        public void IncludesBodySize_InBytesAndFormatted()
+        {
+            // Arrange
+            var message = CreateRabbitMessage("Hello, World!");
+
+            // Act
+            var result = JsonMessageFormatter.FormatMessage(message);
+
+            // Assert
+            var json = JsonDocument.Parse(result);
+            json.RootElement.GetProperty("bodySizeBytes").GetInt32().Should().Be(13);
+            json.RootElement.GetProperty("bodySize").GetString().Should().Be("13 bytes");
+        }
+
+        [Fact]
+        public void IncludesBodySize_ForLargerMessages()
+        {
+            // Arrange
+            var largeBody = new string('a', 2048);
+            var message = CreateRabbitMessage(largeBody);
+
+            // Act
+            var result = JsonMessageFormatter.FormatMessage(message);
+
+            // Assert
+            var json = JsonDocument.Parse(result);
+            json.RootElement.GetProperty("bodySizeBytes").GetInt32().Should().Be(2048);
+            json.RootElement.GetProperty("bodySize").GetString().Should().Be("2 KB");
+        }
     }
 
     #endregion
