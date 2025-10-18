@@ -77,7 +77,7 @@ public class ConsoleOutput : MessageOutput
         {
             OutputFormat.Plain => TextMessageFormatter.FormatMessage(message),
             OutputFormat.Json => JsonMessageFormatter.FormatMessage(message),
-            OutputFormat.Table => throw new NotImplementedException("Table format is not yet implemented"),
+            OutputFormat.Table => TableMessageFormatter.FormatMessage(message, compact: _compact),
             _ => throw new UnreachableException($"Unexpected OutputFormat: {_format}")
         };
     }
