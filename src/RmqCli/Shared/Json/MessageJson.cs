@@ -5,6 +5,7 @@ namespace RmqCli.Shared.Json;
 public record MessageJson(
     string Exchange,
     string RoutingKey,
+    string Queue,
     ulong DeliveryTag,
     bool Redelivered,
     [property: JsonConverter(typeof(BodyJsonConverter))]

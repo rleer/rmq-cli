@@ -222,6 +222,7 @@ public class ConsumeService : IConsumeService
             var message = new RabbitMessage(
                 ea.Exchange,
                 ea.RoutingKey,
+                _consumeOptions.Queue,
                 System.Text.Encoding.UTF8.GetString(ea.Body.ToArray()),
                 ea.DeliveryTag,
                 ea.BasicProperties,

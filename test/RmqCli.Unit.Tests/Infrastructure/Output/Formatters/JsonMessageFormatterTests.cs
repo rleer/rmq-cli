@@ -2,6 +2,7 @@ using System.Text.Json;
 using RabbitMQ.Client;
 using RmqCli.Commands.Consume;
 using RmqCli.Infrastructure.Output.Formatters;
+using RmqCli.Unit.Tests.Helpers;
 
 namespace RmqCli.Unit.Tests.Infrastructure.Output.Formatters;
 
@@ -100,6 +101,41 @@ public class JsonMessageFormatterTests
         }
 
         [Fact]
+        public void IncludesQueue()
+        {
+            // Arrange
+            var message = CreateRabbitMessage("Test message body", routingKey: "test.queue");
+
+            // Act
+            var result = JsonMessageFormatter.FormatMessage(message);
+
+            // Assert
+            var json = JsonDocument.Parse(result);
+            json.RootElement.GetProperty("queue").GetString().Should().Be("test-queue");
+        }
+
+        [Fact]
+        public void DistinguishesQueueFromRoutingKey()
+        {
+            // Arrange - Queue and routing key should be different
+            var message = CreateRabbitMessage(
+                "Test message body",
+                exchange: "amq.direct",
+                routingKey: "user.created",
+                queue: "notifications-queue");
+
+            // Act
+            var result = JsonMessageFormatter.FormatMessage(message);
+
+            // Assert
+            var json = JsonDocument.Parse(result);
+            json.RootElement.GetProperty("queue").GetString().Should().Be("notifications-queue");
+            json.RootElement.GetProperty("routingKey").GetString().Should().Be("user.created");
+            // Verify they are not the same
+            json.RootElement.GetProperty("queue").GetString().Should().NotBe(json.RootElement.GetProperty("routingKey").GetString());
+        }
+
+        [Fact]
         public void IncludesBody()
         {
             // Arrange
@@ -170,7 +206,7 @@ public class JsonMessageFormatterTests
         public void IncludesAllProperties_WhenAllPresent()
         {
             // Arrange
-            var props = CreateFullyPopulatedProperties();
+            var props = RabbitMessageTestHelper.CreateFullyPopulatedProperties();
             var message = CreateRabbitMessage("test", props: props);
 
             // Act
@@ -380,77 +416,12 @@ public class JsonMessageFormatterTests
         string body,
         string exchange = "exchange",
         string routingKey = "routing.key",
+        string queue = "test-queue",
         ulong deliveryTag = 1,
         IReadOnlyBasicProperties? props = null,
         bool redelivered = false)
     {
-        return new RabbitMessage(exchange, routingKey, body, deliveryTag, props, redelivered);
-    }
-
-    /// <summary>
-    /// Creates a mock IReadOnlyBasicProperties with ALL properties populated.
-    /// Matches all 13 properties that JsonMessageFormatter.ConvertToJsonProperties checks.
-    /// </summary>
-    private static IReadOnlyBasicProperties CreateFullyPopulatedProperties()
-    {
-        var props = Substitute.For<IReadOnlyBasicProperties>();
-
-        // 1. Type
-        props.IsTypePresent().Returns(true);
-        props.Type.Returns("test.type");
-
-        // 2. MessageId
-        props.IsMessageIdPresent().Returns(true);
-        props.MessageId.Returns("msg-001");
-
-        // 3. AppId
-        props.IsAppIdPresent().Returns(true);
-        props.AppId.Returns("test-app");
-
-        // 4. ClusterId
-        props.IsClusterIdPresent().Returns(true);
-        props.ClusterId.Returns("cluster-1");
-
-        // 5. ContentType
-        props.IsContentTypePresent().Returns(true);
-        props.ContentType.Returns("application/json");
-
-        // 6. ContentEncoding
-        props.IsContentEncodingPresent().Returns(true);
-        props.ContentEncoding.Returns("utf-8");
-
-        // 7. CorrelationId
-        props.IsCorrelationIdPresent().Returns(true);
-        props.CorrelationId.Returns("corr-123");
-
-        // 8. DeliveryMode
-        props.IsDeliveryModePresent().Returns(true);
-        props.DeliveryMode.Returns(DeliveryModes.Persistent);
-
-        // 9. Expiration
-        props.IsExpirationPresent().Returns(true);
-        props.Expiration.Returns("60000");
-
-        // 10. Priority
-        props.IsPriorityPresent().Returns(true);
-        props.Priority.Returns((byte)5);
-
-        // 11. ReplyTo
-        props.IsReplyToPresent().Returns(true);
-        props.ReplyTo.Returns("reply-queue");
-
-        // 12. Timestamp
-        props.IsTimestampPresent().Returns(true);
-        props.Timestamp.Returns(new AmqpTimestamp(DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
-
-        // 13. Headers
-        props.IsHeadersPresent().Returns(true);
-        props.Headers.Returns(new Dictionary<string, object?>
-        {
-            ["x-custom"] = "custom-value"
-        });
-
-        return props;
+        return new RabbitMessage(exchange, routingKey, queue, body, deliveryTag, props, redelivered);
     }
 
     #endregion

@@ -54,7 +54,7 @@ public class FileOutputTests
             // Add messages
             for (int i = 1; i <= 5; i++)
             {
-                await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", $"Message {i}", (ulong)i, null, false));
+                await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "test-queue", $"Message {i}", (ulong)i, null, false));
             }
             messageChannel.Writer.Complete();
 
@@ -90,9 +90,9 @@ public class FileOutputTests
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
 
-            await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "Message 1", 1, null, false));
-            await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "Message 2", 2, null, false));
-            await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "Message 3", 3, null, false));
+            await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "test-queue", "Message 1", 1, null, false));
+            await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "test-queue", "Message 2", 2, null, false));
+            await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "test-queue", "Message 3", 3, null, false));
             messageChannel.Writer.Complete();
 
             // Act
@@ -104,7 +104,8 @@ public class FileOutputTests
 
             // Assert
             var content = await File.ReadAllTextAsync(outputFile.FullName);
-            var delimiterCount = content.Split("---").Length - 1;
+            // Count only standalone "---" delimiters (on their own line), not section separators like "==="
+            var delimiterCount = content.Split(new[] { "\n---\n", "\r\n---\r\n" }, StringSplitOptions.None).Length - 1;
             delimiterCount.Should().Be(2); // 2 delimiters between 3 messages
         }
 
@@ -120,8 +121,8 @@ public class FileOutputTests
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
 
-            await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "Message 1", 1, null, false));
-            await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "Message 2", 2, null, false));
+            await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "test-queue", "Message 1", 1, null, false));
+            await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "test-queue", "Message 2", 2, null, false));
             messageChannel.Writer.Complete();
 
             // Act
@@ -179,8 +180,8 @@ public class FileOutputTests
             var expectedBytes = System.Text.Encoding.UTF8.GetByteCount(body1)
                               + System.Text.Encoding.UTF8.GetByteCount(body2);
 
-            await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", body1, 1, null, false));
-            await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", body2, 2, null, false));
+            await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "test-queue", body1, 1, null, false));
+            await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "test-queue", body2, 2, null, false));
             messageChannel.Writer.Complete();
 
             // Act
@@ -232,7 +233,7 @@ public class FileOutputTests
             // Add 5 messages (should create 3 files: 2+2+1)
             for (int i = 1; i <= 5; i++)
             {
-                await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", $"Message {i}", (ulong)i, null, false));
+                await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "test-queue", $"Message {i}", (ulong)i, null, false));
             }
             messageChannel.Writer.Complete();
 
@@ -266,7 +267,7 @@ public class FileOutputTests
             // Add 5 messages
             for (int i = 1; i <= 5; i++)
             {
-                await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", $"Message {i}", (ulong)i, null, false));
+                await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "test-queue", $"Message {i}", (ulong)i, null, false));
             }
             messageChannel.Writer.Complete();
 
@@ -299,7 +300,7 @@ public class FileOutputTests
 
             for (int i = 1; i <= 6; i++)
             {
-                await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", $"Message {i}", (ulong)i, null, false));
+                await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "test-queue", $"Message {i}", (ulong)i, null, false));
             }
             messageChannel.Writer.Complete();
 
@@ -332,7 +333,7 @@ public class FileOutputTests
 
             for (int i = 1; i <= 3; i++)
             {
-                await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", $"Message {i}", (ulong)i, null, false));
+                await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "test-queue", $"Message {i}", (ulong)i, null, false));
             }
             messageChannel.Writer.Complete();
 
@@ -367,7 +368,7 @@ public class FileOutputTests
 
             for (int i = 1; i <= 6; i++)
             {
-                await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", $"Message {i}", (ulong)i, null, false));
+                await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "test-queue", $"Message {i}", (ulong)i, null, false));
             }
             messageChannel.Writer.Complete();
 
@@ -380,11 +381,13 @@ public class FileOutputTests
 
             // Assert
             var file1Content = await File.ReadAllTextAsync(Path.Combine(_tempDir, "delimited.0.txt"));
-            var file1DelimiterCount = file1Content.Split("---").Length - 1;
+            // Count only standalone "---" delimiters (on their own line), not section separators like "==="
+            var file1DelimiterCount = file1Content.Split(new[] { "\n---\n", "\r\n---\r\n" }, StringSplitOptions.None).Length - 1;
             file1DelimiterCount.Should().Be(2); // 2 delimiters between 3 messages in first file
 
             var file2Content = await File.ReadAllTextAsync(Path.Combine(_tempDir, "delimited.1.txt"));
-            var file2DelimiterCount = file2Content.Split("---").Length - 1;
+            // Count only standalone "---" delimiters (on their own line), not section separators like "==="
+            var file2DelimiterCount = file2Content.Split(new[] { "\n---\n", "\r\n---\r\n" }, StringSplitOptions.None).Length - 1;
             file2DelimiterCount.Should().Be(2); // 2 delimiters between 3 messages in second file
         }
 
@@ -402,7 +405,7 @@ public class FileOutputTests
 
             for (int i = 1; i <= 4; i++)
             {
-                await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", $"Message {i}", (ulong)i, null, false));
+                await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "test-queue", $"Message {i}", (ulong)i, null, false));
             }
             messageChannel.Writer.Complete();
 
@@ -459,7 +462,7 @@ public class FileOutputTests
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
 
-            await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "Test", 42, null, false));
+            await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "test-queue", "Test", 42, null, false));
             messageChannel.Writer.Complete();
 
             // Act
@@ -491,7 +494,7 @@ public class FileOutputTests
             props.IsMessageIdPresent().Returns(true);
             props.MessageId.Returns("msg-123");
 
-            await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "Test", 1, props, false));
+            await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "test-queue", "Test", 1, props, false));
             messageChannel.Writer.Complete();
 
             // Act
@@ -539,7 +542,7 @@ public class FileOutputTests
                     if (cts.Token.IsCancellationRequested)
                         break;
 
-                    await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", $"Message {i}", (ulong)i, null, false));
+                    await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "test-queue", $"Message {i}", (ulong)i, null, false));
 
                     // Cancel after some messages have been written
                     if (i == 1000)

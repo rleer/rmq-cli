@@ -1,6 +1,7 @@
 using RabbitMQ.Client;
 using RmqCli.Commands.Consume;
 using RmqCli.Infrastructure.Output.Formatters;
+using RmqCli.Unit.Tests.Helpers;
 
 namespace RmqCli.Unit.Tests.Infrastructure.Output.Formatters;
 
@@ -73,6 +74,39 @@ public class TextMessageFormatterTests
 
             // Assert
             result.Should().Contain("Routing Key: test.routingKey");
+        }
+        
+        [Fact]
+        public void IncludesQueue()
+        {
+            // Arrange
+            var message = CreateRabbitMessage("Test message body", queue: "queue-name");
+
+            // Act
+            var result = TextMessageFormatter.FormatMessage(message);
+
+            // Assert
+            result.Should().Contain("Queue: queue-name");
+        }
+
+        [Fact]
+        public void DistinguishesQueueFromRoutingKey()
+        {
+            // Arrange - Queue and routing key should be different
+            var message = CreateRabbitMessage(
+                "Test message body",
+                exchange: "amq.direct",
+                routingKey: "user.created",
+                queue: "notifications-queue");
+
+            // Act
+            var result = TextMessageFormatter.FormatMessage(message);
+
+            // Assert
+            result.Should().Contain("Queue: notifications-queue");
+            result.Should().Contain("Routing Key: user.created");
+            // Verify they are not the same
+            result.IndexOf("Queue: notifications-queue", StringComparison.Ordinal).Should().NotBe(result.IndexOf("Routing Key: user.created", StringComparison.Ordinal));
         }
 
         [Fact]
@@ -155,7 +189,7 @@ public class TextMessageFormatterTests
         public void IncludesAllProperties_WhenAllPresent()
         {
             // Arrange
-            var props = CreateFullyPopulatedProperties();
+            var props = RabbitMessageTestHelper.CreateFullyPopulatedProperties();
             var message = CreateRabbitMessage("test", props: props);
 
             // Act
@@ -408,63 +442,12 @@ public class TextMessageFormatterTests
         string body,
         string exchange = "exchange",
         string routingKey = "routing.key",
+        string queue = "test-queue",
         ulong deliveryTag = 1,
         IReadOnlyBasicProperties? props = null,
         bool redelivered = false)
     {
-        return new RabbitMessage(exchange, routingKey, body, deliveryTag, props, redelivered);
-    }
-
-    /// <summary>
-    /// Creates a mock IReadOnlyBasicProperties with ALL properties populated.
-    /// </summary>
-    private static IReadOnlyBasicProperties CreateFullyPopulatedProperties()
-    {
-        var props = Substitute.For<IReadOnlyBasicProperties>();
-
-        props.IsTypePresent().Returns(true);
-        props.Type.Returns("test.type");
-
-        props.IsMessageIdPresent().Returns(true);
-        props.MessageId.Returns("msg-001");
-
-        props.IsAppIdPresent().Returns(true);
-        props.AppId.Returns("test-app");
-
-        props.IsClusterIdPresent().Returns(true);
-        props.ClusterId.Returns("cluster-1");
-
-        props.IsContentTypePresent().Returns(true);
-        props.ContentType.Returns("application/json");
-
-        props.IsContentEncodingPresent().Returns(true);
-        props.ContentEncoding.Returns("utf-8");
-
-        props.IsCorrelationIdPresent().Returns(true);
-        props.CorrelationId.Returns("corr-123");
-
-        props.IsDeliveryModePresent().Returns(true);
-        props.DeliveryMode.Returns(DeliveryModes.Persistent);
-
-        props.IsExpirationPresent().Returns(true);
-        props.Expiration.Returns("60000");
-
-        props.IsPriorityPresent().Returns(true);
-        props.Priority.Returns((byte)5);
-
-        props.IsReplyToPresent().Returns(true);
-        props.ReplyTo.Returns("reply-queue");
-
-        props.IsTimestampPresent().Returns(true);
-        props.Timestamp.Returns(new AmqpTimestamp(DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
-
-        props.IsHeadersPresent().Returns(true);
-        props.Headers.Returns(new Dictionary<string, object?>
-        {
-            ["x-custom"] = "custom-value"
-        });
-
-        return props;
+        return new RabbitMessage(exchange, routingKey, queue, body, deliveryTag, props, redelivered);
     }
 
     #endregion

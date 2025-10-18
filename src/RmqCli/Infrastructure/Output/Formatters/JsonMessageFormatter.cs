@@ -1,5 +1,7 @@
+using System.Text;
 using System.Text.Json;
 using RmqCli.Commands.Consume;
+using RmqCli.Shared;
 using RmqCli.Shared.Json;
 
 namespace RmqCli.Infrastructure.Output.Formatters;
@@ -27,6 +29,7 @@ public static class JsonMessageFormatter
         return new MessageJson(
             message.Exchange,
             message.RoutingKey,
+            message.Queue,
             message.DeliveryTag,
             message.Redelivered,
             message.Body,

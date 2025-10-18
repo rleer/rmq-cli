@@ -21,7 +21,7 @@ public static class TextMessageFormatter
 
         // Routing Information
         sb.AppendLine($"== Message #{message.DeliveryTag} ==");
-        sb.AppendLine($"Queue: {message.RoutingKey}");
+        sb.AppendLine($"Queue: {message.Queue}");
         sb.AppendLine($"Routing Key: {message.RoutingKey}");
         sb.AppendLine($"Exchange: {(string.IsNullOrEmpty(message.Exchange) ? "-" : message.Exchange)}");
         sb.AppendLine($"Redelivered: {(message.Redelivered ? "Yes" : "No")}");

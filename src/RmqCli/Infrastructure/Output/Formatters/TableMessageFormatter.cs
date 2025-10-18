@@ -121,7 +121,7 @@ public static class TableMessageFormatter
 
     private static void AddRoutingRows(Table table, RabbitMessage message)
     {
-        table.AddRow(new Markup("Queue"), new Markup(Markup.Escape(message.RoutingKey)));
+        table.AddRow(new Markup("Queue"), new Markup(Markup.Escape(message.Queue)));
         table.AddRow(new Markup("Routing Key"), new Markup(Markup.Escape(message.RoutingKey)));
         table.AddRow(new Markup("Exchange"), new Markup(Markup.Escape(string.IsNullOrEmpty(message.Exchange) ? "-" : message.Exchange)));
 
