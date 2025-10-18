@@ -29,10 +29,13 @@ public class ConsumeOutputService : IConsumeOutputService
             return;
 
         if (_outputOptions.Format == OutputFormat.Json)
+        {
             WriteConsumeResultInJsonFormat(response);
-
-        if (_outputOptions.Format == OutputFormat.Plain)
+        }
+        else
+        {
             WriteConsumeResultInPlainFormat(response);
+        }
     }
 
     private void WriteConsumeResultInJsonFormat(ConsumeResponse response)
@@ -45,27 +48,27 @@ public class ConsumeOutputService : IConsumeOutputService
     {
         if (response.Queue is not null)
         {
-            _console.MarkupLineInterpolated($"  Queue:      {response.Queue}");
+            _console.MarkupLineInterpolated($"  [dim]Queue:      {response.Queue}[/]");
         }
 
         if (response.Result is { } result)
         {
-            _console.MarkupLineInterpolated($"  Ack Mode:   {result.AckMode}");
-            _console.MarkupLineInterpolated($"  Received:   {FormatMessageCount(result.MessagesReceived)}");
+            _console.MarkupLineInterpolated($"  [dim]Ack Mode:   {result.AckMode}[/]");
+            _console.MarkupLineInterpolated($"  [dim]Received:   {FormatMessageCount(result.MessagesReceived)}[/]");
 
             // Show processed count with skipped messages if applicable
             if (result.MessagesSkipped > 0)
             {
                 _console.MarkupLineInterpolated(
-                    $"  Processed:  {FormatMessageCount(result.MessagesProcessed)} ({result.MessagesSkipped} skipped, requeued by RabbitMQ)");
+                    $"  [dim]Processed:  {FormatMessageCount(result.MessagesProcessed)} ({result.MessagesSkipped} skipped & requeued by RabbitMQ)[/]");
             }
             else
             {
-                _console.MarkupLineInterpolated($"  Processed:  {FormatMessageCount(result.MessagesProcessed)}");
+                _console.MarkupLineInterpolated($"  [dim]Processed:  {FormatMessageCount(result.MessagesProcessed)}[/]");
             }
 
-            _console.MarkupLineInterpolated($"  Output:     {result.OutputDestination} ({result.OutputFormat} format)");
-            _console.MarkupLineInterpolated($"  Total size: {result.TotalSize}");
+            _console.MarkupLineInterpolated($"  [dim]Output:     {result.OutputDestination} ({result.OutputFormat} format)[/]");
+            _console.MarkupLineInterpolated($"  [dim]Total size: {result.TotalSize}[/]");
         }
     }
 
