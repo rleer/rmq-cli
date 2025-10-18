@@ -17,12 +17,10 @@ public static class TableMessageFormatter
     /// Formats a single message as a table panel.
     /// </summary>
     /// <param name="message">The message to format</param>
-    /// <param name="messageNumber">The current message number</param>
-    /// <param name="totalMessages">The total number of messages</param>
     /// <param name="compact">If true, only show properties with values. If false, show all properties with "-" for empty values.</param>
-    public static string FormatMessage(RabbitMessage message, int messageNumber = 1, int totalMessages = 1, bool compact = false)
+    public static string FormatMessage(RabbitMessage message, bool compact = false)
     {
-        var panel = CreateMessagePanel(message, messageNumber, totalMessages, compact);
+        var panel = CreateMessagePanel(message, compact);
 
         // Render to string using AnsiConsole
         var stringWriter = new StringWriter();
@@ -43,7 +41,6 @@ public static class TableMessageFormatter
     public static string FormatMessages(IEnumerable<RabbitMessage> messages, bool compact = false)
     {
         var messageList = messages.ToList();
-        var totalMessages = messageList.Count;
         var sb = new StringBuilder();
 
         for (int i = 0; i < messageList.Count; i++)
@@ -52,20 +49,20 @@ public static class TableMessageFormatter
             {
                 sb.AppendLine(); // Blank line between messages
             }
-            sb.Append(FormatMessage(messageList[i], i + 1, totalMessages, compact));
+            sb.Append(FormatMessage(messageList[i], compact));
         }
 
         return sb.ToString();
     }
 
-    private static Panel CreateMessagePanel(RabbitMessage message, int messageNumber, int totalMessages, bool compact)
+    private static Panel CreateMessagePanel(RabbitMessage message, bool compact)
     {
         var props = MessagePropertyExtractor.ExtractProperties(message.Props);
         var content = CreateMessageContent(message, props, compact);
 
         var panel = new Panel(content)
         {
-            Header = new PanelHeader($" Message {messageNumber}/{totalMessages} ", Justify.Left),
+            Header = new PanelHeader($" Message #{message.DeliveryTag} ", Justify.Left),
             Border = BoxBorder.Rounded,
             Padding = new Padding(1, 0, 1, 0)
         };
