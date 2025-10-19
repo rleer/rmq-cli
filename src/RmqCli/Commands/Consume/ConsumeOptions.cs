@@ -8,4 +8,5 @@ public class ConsumeOptions
     public required string Queue { get; init; }
     public AckModes AckMode { get; init; }
     public int MessageCount { get; init; }
+    public ushort PrefetchCount { get; init; }
 }

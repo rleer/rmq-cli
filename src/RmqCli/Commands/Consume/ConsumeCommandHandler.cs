@@ -15,9 +15,11 @@ public class ConsumeCommandHandler : ICommandHandler
     public void Configure(RootCommand rootCommand)
     {
         var description = """
-                          Consume messages from a queue. Warning: getting messages from a queue is a destructive action!
+                          Consume messages from a queue.
 
                           By default, messages are acknowledged after they are consumed. You can change the acknowledgment mode using the --ack-mode option.
+
+                          Note: Un'acknowledged messages will be marked as redelivered by RabbitMQ!
 
                           Consumed messages can be printed to standard output (STDOUT) or saved to a file using the --to-file option.
 
@@ -51,6 +53,13 @@ public class ConsumeCommandHandler : ICommandHandler
             DefaultValueFactory = _ => -1
         };
 
+        var prefetchCountOption = new Option<ushort?>("--prefetch-count")
+        {
+            Description =
+                "Number of unacknowledged messages the consumer can receive at once (QoS). Default: 100. Automatically set to 0 (unlimited) when using --ack-mode requeue.",
+            Aliases = { "-p" }
+        };
+
         var outputFormatOption = new Option<OutputFormat>("--output")
         {
             Description = "Output format",
@@ -73,6 +82,7 @@ public class ConsumeCommandHandler : ICommandHandler
         consumeCommand.Options.Add(queueOption);
         consumeCommand.Options.Add(ackModeOption);
         consumeCommand.Options.Add(countOption);
+        consumeCommand.Options.Add(prefetchCountOption);
         consumeCommand.Options.Add(outputFileOption);
         consumeCommand.Options.Add(compactOption);
         consumeCommand.Options.Add(outputFormatOption);
@@ -87,6 +97,16 @@ public class ConsumeCommandHandler : ICommandHandler
             if (result.GetValue(outputFileOption) is { } filePath && !PathValidator.IsValidFilePath(filePath))
             {
                 result.AddError($"The specified output file '{filePath}' is not valid.");
+            }
+
+            // Reject explicit prefetch-count with ack-mode requeue
+            if (result.GetValue(ackModeOption) == AckModes.Requeue &&
+                result.GetValue(prefetchCountOption).HasValue)
+            {
+                result.AddError("Cannot use --prefetch-count with --ack-mode requeue. " +
+                                "This combination causes an infinite loop as requeued messages are immediately re-delivered. " +
+                                "If you want to inspect messages without removing them, omit --prefetch-count (it will be set to 0 automatically) " +
+                                "or use 'rmq peek' command instead.");
             }
         });
 

@@ -38,11 +38,33 @@ public class ServiceFactory
     /// </summary>
     private static ConsumeOptions CreateConsumeOptions(ParseResult parseResult)
     {
+        var ackMode = parseResult.GetValue<AckModes>("--ack-mode");
+        var prefetchCountFromUser = parseResult.GetValue<ushort?>("--prefetch-count");
+
+        // Resolve prefetch count:
+        // - If requeue mode and user didn't specify: set to 0 (unlimited) to avoid infinite loop
+        // - If user didn't specify: use default of 100
+        // - Otherwise: use user-provided value
+        ushort prefetchCount;
+        if (ackMode == AckModes.Requeue && !prefetchCountFromUser.HasValue)
+        {
+            prefetchCount = 0; // Unlimited - avoid prefetch with requeue
+        }
+        else if (!prefetchCountFromUser.HasValue)
+        {
+            prefetchCount = 100; // Default for normal consumption
+        }
+        else
+        {
+            prefetchCount = prefetchCountFromUser.Value;
+        }
+
         return new ConsumeOptions
         {
             Queue = parseResult.GetRequiredValue<string>("--queue"),
-            AckMode = parseResult.GetValue<AckModes>("--ack-mode"),
-            MessageCount = parseResult.GetValue<int>("--count")
+            AckMode = ackMode,
+            MessageCount = parseResult.GetValue<int>("--count"),
+            PrefetchCount = prefetchCount
         };
     }
 
