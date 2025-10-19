@@ -60,8 +60,13 @@ public class ConsumeService : IConsumeService
 
         await using var channel = await _rabbitChannelFactory.GetChannelAsync();
 
-        if (!await ValidateQueueExists(channel, queue, userCancellationToken))
-            return 1;
+        if (await ValidateQueueExists(channel, queue, userCancellationToken) is null)
+        {
+            // Queue does not exist, error already logged
+            return 1; 
+        }
+
+        await ConfigureChannelQoS(channel, userCancellationToken);
 
         var (messageLimitCts, combinedCts) = CreateCombinedCancellationToken(userCancellationToken);
         var (receiveChan, ackChan) = CreateMessageChannels();
@@ -98,6 +103,25 @@ public class ConsumeService : IConsumeService
         return 0;
     }
 
+    private async Task ConfigureChannelQoS(IChannel channel, CancellationToken userCancellationToken)
+    {
+        // Configure QoS with prefetch count
+        await channel.BasicQosAsync(
+            prefetchSize: 0,
+            prefetchCount: _consumeOptions.PrefetchCount,
+            global: false,
+            userCancellationToken);
+
+        _logger.LogDebug("Configured QoS with prefetch count: {PrefetchCount}", _consumeOptions.PrefetchCount);
+
+        // Show warning if using requeue mode with unlimited prefetch
+        if (_consumeOptions.AckMode == AckModes.Requeue && _consumeOptions.MessageCount <= 0)
+        {
+            _statusOutput.ShowWarning(
+                "Using requeue mode without a message count may lead to memory issues due to unacknowledged messages accumulating (unbound buffer growth).");
+        }
+    }
+
     private async Task HandleAcks(Channel<(ulong deliveryTag, AckModes ackMode)> ackChan, IChannel rmqChannel)
     {
         _logger.LogDebug("Starting acknowledgment dispatcher");
@@ -123,12 +147,14 @@ public class ConsumeService : IConsumeService
         _logger.LogDebug("Acknowledgement dispatcher finished");
     }
 
-    private async Task<bool> ValidateQueueExists(IChannel channel, string queue, CancellationToken userCancellationToken)
+    private async Task<QueueInfo?> ValidateQueueExists(IChannel channel, string queue, CancellationToken userCancellationToken)
     {
         try
         {
-            await channel.QueueDeclarePassiveAsync(queue, userCancellationToken);
-            return true;
+            var queueDeclareOk = await channel.QueueDeclarePassiveAsync(queue, userCancellationToken);
+            _logger.LogDebug("Queue '{Queue}' exists with {MessageCount} messages and {ConsumerCount} consumers",
+                queueDeclareOk.QueueName, queueDeclareOk.MessageCount, queueDeclareOk.ConsumerCount);
+            return QueueInfo.Create(queueDeclareOk);
         }
         catch (OperationInterruptedException ex)
         {
@@ -138,7 +164,7 @@ public class ConsumeService : IConsumeService
             var queueNotFoundError = ConsumeErrorInfoFactory.QueueNotFoundErrorInfo(queue);
             _statusOutput.ShowError("Failed to consume from queue", queueNotFoundError);
 
-            return false;
+            return null;
         }
     }
 
@@ -218,7 +244,8 @@ public class ConsumeService : IConsumeService
             }
 
             _logger.LogTrace("Received message #{DeliveryTag}", ea.DeliveryTag);
-            
+
+            await Task.Delay(TimeSpan.FromSeconds(2), combinedCancellationToken);
             var message = new RabbitMessage(
                 ea.Exchange,
                 ea.RoutingKey,
