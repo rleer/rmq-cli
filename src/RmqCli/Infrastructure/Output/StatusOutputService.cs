@@ -86,6 +86,7 @@ public class StatusOutputService : IStatusOutputService
     {
         switch (_outputOptions.Format)
         {
+            case OutputFormat.Table:
             case OutputFormat.Plain:
             {
                 _console.MarkupLine($"{Constants.ErrorSymbol} {message}");
@@ -101,7 +102,6 @@ public class StatusOutputService : IStatusOutputService
 
                 break;
             }
-            case OutputFormat.Table:
             case OutputFormat.Json when errorInfo is null:
                 return;
             case OutputFormat.Json:
