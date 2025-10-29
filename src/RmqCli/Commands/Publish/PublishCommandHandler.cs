@@ -1,4 +1,5 @@
 using System.CommandLine;
+using RabbitMQ.Client.Exceptions;
 using RmqCli.Shared;
 
 namespace RmqCli.Commands.Publish;
@@ -176,14 +177,20 @@ public class PublishCommandHandler : ICommandHandler
                 options.BurstCount,
                 cts.Token);
         }
-        catch (OperationCanceledException)
+        catch (Exception e)
         {
-            // Cancellation already handled
-            return 0;
-        }
-        catch (Exception)
-        {
-            return 1;
+            switch (e)
+            {
+                case OperationCanceledException:
+                    // Cancellation already handled
+                    return 0;
+                case BrokerUnreachableException or RabbitMQClientException:
+                    // RabbitMQ connection issues already handled
+                    return 1;
+                default:
+                    Console.Error.WriteLine(e);
+                    return 1;
+            }
         }
     }
 }
