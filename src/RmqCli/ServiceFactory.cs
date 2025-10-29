@@ -1,6 +1,7 @@
 using System.CommandLine;
 using Microsoft.Extensions.DependencyInjection;
 using RmqCli.Commands.Consume;
+using RmqCli.Commands.Peek;
 using RmqCli.Commands.Publish;
 using RmqCli.DependencyInjection;
 using RmqCli.Infrastructure.Output;
@@ -65,6 +66,37 @@ public class ServiceFactory
             AckMode = ackMode,
             MessageCount = parseResult.GetValue<int>("--count"),
             PrefetchCount = prefetchCount
+        };
+    }
+
+    /// <summary>
+    /// Creates a configured peek service with all required dependencies.
+    /// Extracts options from ParseResult and registers them in the DI container.
+    /// </summary>
+    /// <param name="parseResult">The parse result containing CLI options.</param>
+    /// <returns>A configured peek service instance.</returns>
+    public IPeekService CreatePeekService(ParseResult parseResult)
+    {
+        // Extract command-specific options from ParseResult
+        var peekOptions = CreatePeekOptions(parseResult);
+        var outputOptions = CreateOutputOptions(parseResult);
+
+        var services = new ServiceCollection();
+        services.AddRmqPeek(parseResult, peekOptions, outputOptions);
+
+        var serviceProvider = services.BuildServiceProvider();
+        return serviceProvider.GetRequiredService<IPeekService>();
+    }
+
+    /// <summary>
+    /// Creates PeekOptions from ParseResult.
+    /// </summary>
+    private static PeekOptions CreatePeekOptions(ParseResult parseResult)
+    {
+        return new PeekOptions
+        {
+            Queue = parseResult.GetRequiredValue<string>("--queue"),
+            MessageCount = parseResult.GetValue<int>("--count")
         };
     }
 
