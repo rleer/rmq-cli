@@ -1,4 +1,5 @@
 using System.CommandLine;
+using RabbitMQ.Client.Exceptions;
 using RmqCli.Shared;
 
 namespace RmqCli.Commands.Consume;
@@ -126,15 +127,20 @@ public class ConsumeCommandHandler : ICommandHandler
         {
             return await consumeService.ConsumeMessages(cts.Token);
         }
-        catch (OperationCanceledException)
-        {
-            // Cancellation already handled
-            return 0;
-        }
         catch (Exception e)
         {
-            Console.Error.WriteLine(e);
-            return 1;
+            switch (e)
+            {
+                case OperationCanceledException:
+                    // Cancellation already handled
+                    return 0;
+                case BrokerUnreachableException or RabbitMQClientException:
+                    // RabbitMQ connection issues already handled
+                    return 1;
+                default:
+                    Console.Error.WriteLine(e);
+                    return 1;
+            }
         }
     }
 }
