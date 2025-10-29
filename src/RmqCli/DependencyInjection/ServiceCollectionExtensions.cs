@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using RmqCli.Commands.Consume;
+using RmqCli.Commands.Peek;
 using RmqCli.Commands.Publish;
 using RmqCli.Core.Services;
 using RmqCli.Infrastructure.Configuration;
@@ -121,6 +122,19 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Adds peek command services to the service collection.
+    /// </summary>
+    /// <param name="services">The service collection to add services to.</param>
+    /// <returns>The service collection for chaining.</returns>
+    public static IServiceCollection AddPeekServices(this IServiceCollection services)
+    {
+        services.AddSingleton<IPeekOutputService, PeekOutputService>();
+        services.AddSingleton<IPeekService, PeekService>();
+
+        return services;
+    }
+
+    /// <summary>
     /// Adds all RmqCli services required for publish command to the service collection.
     /// This is a convenience method that calls all required registration methods.
     /// </summary>
@@ -169,6 +183,34 @@ public static class ServiceCollectionExtensions
 
         services.AddRmqCoreServices();
         services.AddConsumeServices();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Adds all RmqCli services required for peek command to the service collection.
+    /// This is a convenience method that calls all required registration methods.
+    /// </summary>
+    /// <param name="services">The service collection to add services to.</param>
+    /// <param name="parseResult">The parse result containing CLI options.</param>
+    /// <param name="peekOptions">Peek-specific options.</param>
+    /// <param name="outputOptions">Output formatting options.</param>
+    /// <returns>The service collection for chaining.</returns>
+    public static IServiceCollection AddRmqPeek(
+        this IServiceCollection services,
+        ParseResult parseResult,
+        PeekOptions peekOptions,
+        OutputOptions outputOptions)
+    {
+        services.AddRmqLogging(outputOptions.Verbose);
+        services.AddRmqConfiguration(parseResult);
+
+        // Register command-specific options as singletons
+        services.AddSingleton(peekOptions);
+        services.AddSingleton(outputOptions);
+
+        services.AddRmqCoreServices();
+        services.AddPeekServices();
 
         return services;
     }
