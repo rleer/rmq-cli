@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using RabbitMQ.Client.Exceptions;
+using RmqCli.Core.Models;
 using RmqCli.Core.Services;
 using RmqCli.Infrastructure.Configuration.Models;
 using RmqCli.Infrastructure.Output;
