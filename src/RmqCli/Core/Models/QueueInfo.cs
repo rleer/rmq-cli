@@ -1,6 +1,6 @@
 using RabbitMQ.Client;
 
-namespace RmqCli.Commands.Consume;
+namespace RmqCli.Core.Models;
 
 public class QueueInfo
 {

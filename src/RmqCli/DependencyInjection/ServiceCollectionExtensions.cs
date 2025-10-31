@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using RmqCli.Commands.Consume;
+using RmqCli.Commands.MessageRetrieval;
 using RmqCli.Commands.Peek;
 using RmqCli.Commands.Publish;
 using RmqCli.Core.Services;
@@ -91,6 +92,9 @@ public static class ServiceCollectionExtensions
     {
         services.AddSingleton<IRabbitChannelFactory, RabbitChannelFactory>();
         services.AddSingleton<IStatusOutputService, StatusOutputService>();
+        services.AddSingleton<QueueValidator>();
+        services.AddSingleton<AckHandler>();
+        services.AddSingleton<MessagePipeline>();
 
         return services;
     }
