@@ -1,6 +1,6 @@
-using RmqCli.Infrastructure.RabbitMq;
+using RmqCli.Shared.Factories;
 
-namespace RmqCli.Unit.Tests.Infrastructure.RabbitMq;
+namespace RmqCli.Unit.Tests.Shared.Factories;
 
 public class PublishErrorInfoFactoryTests
 {
