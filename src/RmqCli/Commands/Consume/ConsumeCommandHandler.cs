@@ -21,7 +21,7 @@ public class ConsumeCommandHandler : ICommandHandler
 
                           By default, messages are acknowledged after they are consumed. You can change the acknowledgment mode using the --ack-mode option.
 
-                          Note: Un'acknowledged messages will be marked as redelivered by RabbitMQ!
+                          Note: Unacknowledged messages will be marked as redelivered by RabbitMQ!
 
                           Consumed messages can be printed to standard output (STDOUT) or saved to a file using the --to-file option.
 

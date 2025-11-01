@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Configuration;
 using RmqCli.Infrastructure.Configuration;
 
 namespace RmqCli.Integration.Tests.Infrastructure.Configuration;
