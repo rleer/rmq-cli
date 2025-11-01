@@ -1,6 +1,5 @@
 using System.CommandLine;
 using RabbitMQ.Client.Exceptions;
-using RmqCli.Commands.Consume;
 using RmqCli.Shared;
 
 namespace RmqCli.Commands.Peek;
