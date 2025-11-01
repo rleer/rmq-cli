@@ -24,8 +24,7 @@ public class ConsoleOutput : MessageOutput
 
     public override async Task<MessageOutputResult> WriteMessagesAsync(
         Channel<RabbitMessage> messageChannel,
-        Channel<(ulong deliveryTag, AckModes ackMode)> ackChannel,
-        AckModes ackMode,
+        Channel<(ulong deliveryTag, bool success)> ackChannel,
         CancellationToken cancellationToken = default)
     {
         _logger.LogDebug("Starting console message output");
@@ -40,7 +39,7 @@ public class ConsoleOutput : MessageOutput
                 var formattedMessage = FormatMessage(message);
                 await System.Console.Out.WriteLineAsync(formattedMessage);
 
-                await ackChannel.Writer.WriteAsync((message.DeliveryTag, ackMode), CancellationToken.None);
+                await ackChannel.Writer.WriteAsync((message.DeliveryTag, true), CancellationToken.None);
                 _logger.LogTrace("Message #{DeliveryTag} written to console", message.DeliveryTag);
 
                 // Track metrics
@@ -56,10 +55,12 @@ public class ConsoleOutput : MessageOutput
             }
             catch (Exception ex)
             {
+                // TODO: Notify Rabbit consumer about the failure to stop further retrieval
                 _logger.LogError(ex, "Failed to write message #{DeliveryTag}: {Message}",
                     message.DeliveryTag, ex.Message);
                 // Requeue on error
-                await ackChannel.Writer.WriteAsync((message.DeliveryTag, AckModes.Requeue), CancellationToken.None);
+                await ackChannel.Writer.WriteAsync((message.DeliveryTag, false), CancellationToken.None);
+                break;
             }
         }
 

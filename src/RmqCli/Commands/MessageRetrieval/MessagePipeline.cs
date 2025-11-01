@@ -21,12 +21,11 @@ public class MessagePipeline
         _ackHandler = ackHandler;
     }
 
-    public async Task<MessageOutputResult> ProcessMessagesAsync(
+    public (Task<MessageOutputResult> writerTask, Task ackTask) StartPipeline(
         Channel<RabbitMessage> receiveChan,
-        Channel<(ulong, AckModes)> ackChan,
+        Channel<(ulong deliveryTag, bool success)> ackChan,
         IChannel channel,
         OutputOptions outputOptions,
-        AckModes ackMode,
         int messageCount,
         CancellationToken cancellationToken)
     {
@@ -39,12 +38,11 @@ public class MessagePipeline
 
         // Start message writer task
         var writerTask = Task.Run(() =>
-            messageOutput.WriteMessagesAsync(receiveChan, ackChan, ackMode, cancellationToken), CancellationToken.None);
+            messageOutput.WriteMessagesAsync(receiveChan, ackChan, cancellationToken), CancellationToken.None);
 
         // Start acknowledgment dispatcher
         var ackTask = Task.Run(() => _ackHandler.DispatchAcknowledgments(ackChan, channel), CancellationToken.None);
 
-        await Task.WhenAll(writerTask, ackTask);
-        return writerTask.Result; 
+        return (writerTask, ackTask);
     }
 }
