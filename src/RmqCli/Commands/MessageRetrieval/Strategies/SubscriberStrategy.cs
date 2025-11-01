@@ -67,12 +67,10 @@ public class SubscriberStrategy : IMessageRetrievalStrategy
 
             _logger.LogTrace("Received message #{DeliveryTag}", ea.DeliveryTag);
 
-            // await Task.Delay(TimeSpan.FromSeconds(2), combinedCancellationToken);
             var message = new RabbitMessage(ea.Exchange, ea.RoutingKey, queue, System.Text.Encoding.UTF8.GetString(ea.Body.ToArray()), ea.DeliveryTag,
                 ea.BasicProperties, ea.Redelivered);
 
             await receiveChan.Writer.WriteAsync(message, CancellationToken.None);
-            _logger.LogTrace("Message #{DeliveryTag} written to receive channel", ea.DeliveryTag);
 
             // Check if we reached the message count limit
             if (counter.Increment() == messageCount)

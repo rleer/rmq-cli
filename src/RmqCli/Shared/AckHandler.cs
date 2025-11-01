@@ -11,7 +11,7 @@ public class AckHandler
     private readonly ILogger<AckHandler> _logger;
     private readonly MessageRetrievalOptions _options;
 
-    private const int MaxBatchSize = 100;
+    private const ulong MaxBatchSize = 100;
 
     public AckHandler(ILogger<AckHandler> logger, MessageRetrievalOptions options)
     {
@@ -30,47 +30,46 @@ public class AckHandler
             return;
         }
 
-        // TODO: Implement batch acknowledgements based on batchSize
         ulong lastDeliveryTag = 0;
         ulong lastReportedDeliveryTag = 0;
-        int batchSize = _options.PrefetchCount <= 0 ? MaxBatchSize : _options.PrefetchCount;
+        var batchSize = _options.PrefetchCount <= 0 ? MaxBatchSize : _options.PrefetchCount;
 
         await foreach (var (deliveryTag, success) in ackChan.Reader.ReadAllAsync())
         {
-            lastDeliveryTag = deliveryTag;
-            if (success)
+            if (success && lastDeliveryTag - lastReportedDeliveryTag >= batchSize)
             {
-                await PerformAckAsync(rmqChannel, deliveryTag);
+                await PerformAckAsync(rmqChannel, lastDeliveryTag, multiple: true);
+                lastReportedDeliveryTag = lastDeliveryTag;
             }
-            else
+            else if (!success)
             {
                 _logger.LogTrace("Requeue message #{DeliveryTag}", deliveryTag);
                 await rmqChannel.BasicNackAsync(deliveryTag, multiple: false, requeue: true);
+                break;
             }
-
-            lastReportedDeliveryTag = lastDeliveryTag;
+            lastDeliveryTag = deliveryTag;
         }
 
         if (lastReportedDeliveryTag < lastDeliveryTag)
         {
             _logger.LogTrace("Final batch acknowledgment up to message #{DeliveryTag}", lastDeliveryTag);
-            await rmqChannel.BasicAckAsync(lastDeliveryTag, multiple: true);
+            await PerformAckAsync(rmqChannel, lastDeliveryTag, multiple: true);
         }
 
         _logger.LogDebug("Acknowledgement dispatcher finished");
     }
 
-    private async Task PerformAckAsync(IChannel rmqChannel, ulong deliveryTag)
+    private async Task PerformAckAsync(IChannel rmqChannel, ulong deliveryTag, bool multiple = true)
     {
         switch (_options.AckMode)
         {
             case AckModes.Ack:
-                _logger.LogTrace("Acknowledging message #{DeliveryTag}", deliveryTag);
-                await rmqChannel.BasicAckAsync(deliveryTag, multiple: false);
+                _logger.LogTrace("Acknowledging message #{DeliveryTag}{BatchAck}", deliveryTag, multiple ? " (batched)" : string.Empty);
+                await rmqChannel.BasicAckAsync(deliveryTag, multiple: multiple);
                 break;
             case AckModes.Reject:
-                _logger.LogTrace("Rejecting message #{DeliveryTag} without requeue", deliveryTag);
-                await rmqChannel.BasicNackAsync(deliveryTag, multiple: false, requeue: false);
+                _logger.LogTrace("Rejecting message #{DeliveryTag} without requeue{BatchAck}", deliveryTag, multiple ? " (batched)" : string.Empty);
+                await rmqChannel.BasicNackAsync(deliveryTag, multiple: multiple, requeue: false);
                 break;
         }
     }
