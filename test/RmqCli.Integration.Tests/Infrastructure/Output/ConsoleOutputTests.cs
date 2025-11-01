@@ -31,7 +31,7 @@ public class ConsoleOutputTests
                 new OutputOptions { Format = OutputFormat.Plain, OutputFile = null, Compact = false, Quiet = false, Verbose = false, NoColor = false });
 
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
-            var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
+            var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
 
             // Add test messages
             var message1 = new RabbitMessage("exchange", "routing-key", "test-queue", "Test message 1", 1, null, false);
@@ -45,7 +45,6 @@ public class ConsoleOutputTests
             var result = await output.WriteMessagesAsync(
                 messageChannel,
                 ackChannel,
-                AckModes.Ack,
                 CancellationToken.None);
 
             // Assert
@@ -56,11 +55,11 @@ public class ConsoleOutputTests
             // Verify acks were sent
             ackChannel.Reader.TryRead(out var ack1).Should().BeTrue();
             ack1.Item1.Should().Be(1);
-            ack1.Item2.Should().Be(AckModes.Ack);
+            ack1.Item2.Should().Be(true);
 
             ackChannel.Reader.TryRead(out var ack2).Should().BeTrue();
             ack2.Item1.Should().Be(2);
-            ack2.Item2.Should().Be(AckModes.Ack);
+            ack2.Item2.Should().Be(true);
         }
 
         [Fact]
@@ -72,7 +71,7 @@ public class ConsoleOutputTests
                 new OutputOptions { Format = OutputFormat.Json, OutputFile = null, Compact = false, Quiet = false, Verbose = false, NoColor = false });
 
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
-            var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
+            var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
 
             var message = new RabbitMessage("exchange", "routing-key", "test-queue", "Test message", 1, null, false);
             await messageChannel.Writer.WriteAsync(message);
@@ -82,7 +81,6 @@ public class ConsoleOutputTests
             var result = await output.WriteMessagesAsync(
                 messageChannel,
                 ackChannel,
-                AckModes.Ack,
                 CancellationToken.None);
 
             // Assert
@@ -100,7 +98,7 @@ public class ConsoleOutputTests
                 new OutputOptions { Format = OutputFormat.Plain, OutputFile = null, Compact = false, Quiet = false, Verbose = false, NoColor = false });
 
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
-            var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
+            var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
 
             messageChannel.Writer.Complete(); // No messages
 
@@ -108,7 +106,6 @@ public class ConsoleOutputTests
             var result = await output.WriteMessagesAsync(
                 messageChannel,
                 ackChannel,
-                AckModes.Ack,
                 CancellationToken.None);
 
             // Assert
@@ -127,7 +124,7 @@ public class ConsoleOutputTests
 
             // Use bounded channel to control message flow rate
             var messageChannel = Channel.CreateBounded<RabbitMessage>(500);
-            var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
+            var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
 
             const int totalMessages = 100000;
             using var cts = new CancellationTokenSource();
@@ -136,7 +133,6 @@ public class ConsoleOutputTests
             var processingTask = output.WriteMessagesAsync(
                 messageChannel,
                 ackChannel,
-                AckModes.Ack,
                 cts.Token);
 
             // Writer task that adds messages concurrently
@@ -181,7 +177,7 @@ public class ConsoleOutputTests
                 new OutputOptions { Format = OutputFormat.Plain, OutputFile = null, Compact = false, Quiet = false, Verbose = false, NoColor = false });
 
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
-            var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
+            var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
 
             var message = new RabbitMessage("exchange", "routing-key", "test-queue", "Test", 42, null, false);
             await messageChannel.Writer.WriteAsync(message);
@@ -191,13 +187,12 @@ public class ConsoleOutputTests
             await output.WriteMessagesAsync(
                 messageChannel,
                 ackChannel,
-                AckModes.Reject, // Use Reject mode
                 CancellationToken.None);
 
             // Assert
             ackChannel.Reader.TryRead(out var ack).Should().BeTrue();
             ack.Item1.Should().Be(42);
-            ack.Item2.Should().Be(AckModes.Reject);
+            ack.Item2.Should().Be(true);
         }
 
         [Fact]
@@ -209,7 +204,7 @@ public class ConsoleOutputTests
                 new OutputOptions { Format = OutputFormat.Plain, OutputFile = null, Compact = false, Quiet = false, Verbose = false, NoColor = false });
 
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
-            var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
+            var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
 
             var body1 = "Message 1";
             var body2 = "Message 2 - longer";
@@ -224,7 +219,6 @@ public class ConsoleOutputTests
             var result = await output.WriteMessagesAsync(
                 messageChannel,
                 ackChannel,
-                AckModes.Ack,
                 CancellationToken.None);
 
             // Assert
@@ -240,7 +234,7 @@ public class ConsoleOutputTests
                 new OutputOptions { Format = OutputFormat.Plain, OutputFile = null, Compact = false, Quiet = false, Verbose = false, NoColor = false });
 
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
-            var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
+            var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
 
             var props = Substitute.For<IReadOnlyBasicProperties>();
             props.IsMessageIdPresent().Returns(true);
@@ -254,7 +248,6 @@ public class ConsoleOutputTests
             var result = await output.WriteMessagesAsync(
                 messageChannel,
                 ackChannel,
-                AckModes.Ack,
                 CancellationToken.None);
 
             // Assert
@@ -270,7 +263,7 @@ public class ConsoleOutputTests
                 new OutputOptions { Format = OutputFormat.Plain, OutputFile = null, Compact = false, Quiet = false, Verbose = false, NoColor = false });
 
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
-            var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
+            var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
 
             var message = new RabbitMessage("exchange", "routing-key", "test-queue", "Redelivered message", 1, null, Redelivered: true);
             await messageChannel.Writer.WriteAsync(message);
@@ -280,40 +273,10 @@ public class ConsoleOutputTests
             var result = await output.WriteMessagesAsync(
                 messageChannel,
                 ackChannel,
-                AckModes.Ack,
                 CancellationToken.None);
 
             // Assert
             result.ProcessedCount.Should().Be(1);
-        }
-
-        [Theory]
-        [InlineData(AckModes.Ack)]
-        [InlineData(AckModes.Reject)]
-        [InlineData(AckModes.Requeue)]
-        public async Task HandlesAllAckModes(AckModes ackMode)
-        {
-            // Arrange
-            var logger = new NullLogger<ConsoleOutput>();
-            var output = new ConsoleOutput(logger,
-                new OutputOptions { Format = OutputFormat.Plain, OutputFile = null, Compact = false, Quiet = false, Verbose = false, NoColor = false });
-
-            var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
-            var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
-
-            await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "test-queue", "Test", 1, null, false));
-            messageChannel.Writer.Complete();
-
-            // Act
-            await output.WriteMessagesAsync(
-                messageChannel,
-                ackChannel,
-                ackMode,
-                CancellationToken.None);
-
-            // Assert
-            ackChannel.Reader.TryRead(out var ack).Should().BeTrue();
-            ack.Item2.Should().Be(ackMode);
         }
     }
 

@@ -49,7 +49,7 @@ public class FileOutputTests
             var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 5);
 
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
-            var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
+            var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
 
             // Add messages
             for (int i = 1; i <= 5; i++)
@@ -62,7 +62,6 @@ public class FileOutputTests
             var result = await output.WriteMessagesAsync(
                 messageChannel,
                 ackChannel,
-                AckModes.Ack,
                 CancellationToken.None);
 
             // Assert
@@ -88,7 +87,7 @@ public class FileOutputTests
             var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 3);
 
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
-            var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
+            var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
 
             await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "test-queue", "Message 1", 1, null, false));
             await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "test-queue", "Message 2", 2, null, false));
@@ -99,7 +98,6 @@ public class FileOutputTests
             await output.WriteMessagesAsync(
                 messageChannel,
                 ackChannel,
-                AckModes.Ack,
                 CancellationToken.None);
 
             // Assert
@@ -119,7 +117,7 @@ public class FileOutputTests
             var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Json, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 2);
 
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
-            var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
+            var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
 
             await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "test-queue", "Message 1", 1, null, false));
             await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "test-queue", "Message 2", 2, null, false));
@@ -129,7 +127,6 @@ public class FileOutputTests
             await output.WriteMessagesAsync(
                 messageChannel,
                 ackChannel,
-                AckModes.Ack,
                 CancellationToken.None);
 
             // Assert
@@ -148,14 +145,13 @@ public class FileOutputTests
             var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 10);
 
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
-            var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
+            var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
             messageChannel.Writer.Complete();
 
             // Act
             var result = await output.WriteMessagesAsync(
                 messageChannel,
                 ackChannel,
-                AckModes.Ack,
                 CancellationToken.None);
 
             // Assert
@@ -173,7 +169,7 @@ public class FileOutputTests
             var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 2);
 
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
-            var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
+            var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
 
             var body1 = "Test message 1";
             var body2 = "Test message 2 - longer";
@@ -188,7 +184,6 @@ public class FileOutputTests
             var result = await output.WriteMessagesAsync(
                 messageChannel,
                 ackChannel,
-                AckModes.Ack,
                 CancellationToken.None);
 
             // Assert
@@ -228,7 +223,7 @@ public class FileOutputTests
             var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 5);
 
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
-            var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
+            var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
 
             // Add 5 messages (should create 3 files: 2+2+1)
             for (int i = 1; i <= 5; i++)
@@ -241,7 +236,6 @@ public class FileOutputTests
             var result = await output.WriteMessagesAsync(
                 messageChannel,
                 ackChannel,
-                AckModes.Ack,
                 CancellationToken.None);
 
             // Assert
@@ -262,7 +256,7 @@ public class FileOutputTests
             var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: -1); // Unlimited
 
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
-            var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
+            var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
 
             // Add 5 messages
             for (int i = 1; i <= 5; i++)
@@ -275,7 +269,6 @@ public class FileOutputTests
             var result = await output.WriteMessagesAsync(
                 messageChannel,
                 ackChannel,
-                AckModes.Ack,
                 CancellationToken.None);
 
             // Assert
@@ -296,7 +289,7 @@ public class FileOutputTests
             var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 10); // 10 > 3
 
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
-            var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
+            var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
 
             for (int i = 1; i <= 6; i++)
             {
@@ -308,7 +301,6 @@ public class FileOutputTests
             var result = await output.WriteMessagesAsync(
                 messageChannel,
                 ackChannel,
-                AckModes.Ack,
                 CancellationToken.None);
 
             // Assert
@@ -329,7 +321,7 @@ public class FileOutputTests
             var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 3);
 
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
-            var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
+            var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
 
             for (int i = 1; i <= 3; i++)
             {
@@ -341,7 +333,6 @@ public class FileOutputTests
             await output.WriteMessagesAsync(
                 messageChannel,
                 ackChannel,
-                AckModes.Ack,
                 CancellationToken.None);
 
             // Assert
@@ -364,7 +355,7 @@ public class FileOutputTests
             var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 6);
 
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
-            var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
+            var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
 
             for (int i = 1; i <= 6; i++)
             {
@@ -376,7 +367,6 @@ public class FileOutputTests
             await output.WriteMessagesAsync(
                 messageChannel,
                 ackChannel,
-                AckModes.Ack,
                 CancellationToken.None);
 
             // Assert
@@ -401,7 +391,7 @@ public class FileOutputTests
             var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Json, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 4);
 
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
-            var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
+            var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
 
             for (int i = 1; i <= 4; i++)
             {
@@ -413,7 +403,6 @@ public class FileOutputTests
             await output.WriteMessagesAsync(
                 messageChannel,
                 ackChannel,
-                AckModes.Ack,
                 CancellationToken.None);
 
             // Assert
@@ -460,7 +449,7 @@ public class FileOutputTests
             var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 1);
 
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
-            var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
+            var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
 
             await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "test-queue", "Test", 42, null, false));
             messageChannel.Writer.Complete();
@@ -469,13 +458,12 @@ public class FileOutputTests
             await output.WriteMessagesAsync(
                 messageChannel,
                 ackChannel,
-                AckModes.Reject,
                 CancellationToken.None);
 
             // Assert
             ackChannel.Reader.TryRead(out var ack).Should().BeTrue();
             ack.Item1.Should().Be(42);
-            ack.Item2.Should().Be(AckModes.Reject);
+            ack.Item2.Should().Be(true);
         }
 
         [Fact]
@@ -488,7 +476,7 @@ public class FileOutputTests
             var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 1);
 
             var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
-            var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
+            var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
 
             var props = Substitute.For<IReadOnlyBasicProperties>();
             props.IsMessageIdPresent().Returns(true);
@@ -501,7 +489,6 @@ public class FileOutputTests
             var result = await output.WriteMessagesAsync(
                 messageChannel,
                 ackChannel,
-                AckModes.Ack,
                 CancellationToken.None);
 
             // Assert
@@ -521,7 +508,7 @@ public class FileOutputTests
 
             // Use bounded channel to control message flow rate
             var messageChannel = Channel.CreateBounded<RabbitMessage>(500);
-            var ackChannel = Channel.CreateUnbounded<(ulong, AckModes)>();
+            var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
 
             const int totalMessages = 100000;
             using var cts = new CancellationTokenSource();
@@ -530,7 +517,6 @@ public class FileOutputTests
             var processingTask = output.WriteMessagesAsync(
                 messageChannel,
                 ackChannel,
-                AckModes.Ack,
                 cts.Token);
 
             // Writer task that adds messages concurrently

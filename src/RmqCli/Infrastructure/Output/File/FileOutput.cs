@@ -36,8 +36,7 @@ public class FileOutput : MessageOutput
 
     public override async Task<MessageOutputResult> WriteMessagesAsync(
         Channel<RabbitMessage> messageChannel,
-        Channel<(ulong deliveryTag, AckModes ackMode)> ackChannel,
-        AckModes ackMode,
+        Channel<(ulong deliveryTag, bool success)> ackChannel,
         CancellationToken cancellationToken = default)
     {
         _logger.LogDebug("Starting file message output (rotating: {UseRotating})", _useRotatingFiles);
@@ -47,11 +46,11 @@ public class FileOutput : MessageOutput
         {
             if (_useRotatingFiles)
             {
-                result = await WriteRotatingFilesAsync(messageChannel, ackChannel, ackMode, cancellationToken);
+                result = await WriteRotatingFilesAsync(messageChannel, ackChannel, cancellationToken);
             }
             else
             {
-                result = await WriteSingleFileAsync(messageChannel, ackChannel, ackMode, cancellationToken);
+                result = await WriteSingleFileAsync(messageChannel, ackChannel, cancellationToken);
             }
         }
         finally
@@ -65,8 +64,7 @@ public class FileOutput : MessageOutput
 
     private async Task<MessageOutputResult> WriteSingleFileAsync(
         Channel<RabbitMessage> messageChannel,
-        Channel<(ulong deliveryTag, AckModes ackMode)> ackChannel,
-        AckModes ackMode,
+        Channel<(ulong deliveryTag, bool success)> ackChannel,
         CancellationToken cancellationToken)
     {
         await using var fileStream = _outputOptions.OutputFile!.OpenWrite();
@@ -90,7 +88,7 @@ public class FileOutput : MessageOutput
                 var formattedMessage = FormatMessage(message);
                 await writer.WriteLineAsync(formattedMessage);
 
-                await ackChannel.Writer.WriteAsync((message.DeliveryTag, ackMode), CancellationToken.None);
+                await ackChannel.Writer.WriteAsync((message.DeliveryTag, true), CancellationToken.None);
                 _logger.LogTrace("Message #{DeliveryTag} written to file", message.DeliveryTag);
 
                 // Track metrics
@@ -106,9 +104,12 @@ public class FileOutput : MessageOutput
             }
             catch (Exception ex)
             {
+                // TODO: Notify Rabbit consumer about the failure to stop further retrieval
                 _logger.LogError(ex, "Failed to write message #{DeliveryTag}: {Message}",
                     message.DeliveryTag, ex.Message);
-                throw;
+                // Requeue on error
+                await ackChannel.Writer.WriteAsync((message.DeliveryTag, false), CancellationToken.None);
+                break;
             }
         }
 
@@ -118,8 +119,7 @@ public class FileOutput : MessageOutput
 
     private async Task<MessageOutputResult> WriteRotatingFilesAsync(
         Channel<RabbitMessage> messageChannel,
-        Channel<(ulong deliveryTag, AckModes ackMode)> ackChannel,
-        AckModes ackMode,
+        Channel<(ulong deliveryTag, bool success)> ackChannel,
         CancellationToken cancellationToken)
     {
         StreamWriter? writer = null;
@@ -165,7 +165,7 @@ public class FileOutput : MessageOutput
                     await writer.WriteLineAsync(formattedMessage);
                     messagesInCurrentFile++;
 
-                    await ackChannel.Writer.WriteAsync((message.DeliveryTag, ackMode), CancellationToken.None);
+                    await ackChannel.Writer.WriteAsync((message.DeliveryTag, true), CancellationToken.None);
                     _logger.LogTrace("Message #{DeliveryTag} written to rotating file", message.DeliveryTag);
 
                     // Track metrics
@@ -183,7 +183,9 @@ public class FileOutput : MessageOutput
                 {
                     _logger.LogError(ex, "Failed to write message #{DeliveryTag}: {Message}",
                         message.DeliveryTag, ex.Message);
-                    throw;
+                    // Requeue on error
+                    await ackChannel.Writer.WriteAsync((message.DeliveryTag, false), CancellationToken.None);
+                    break;
                 }
             }
         }
