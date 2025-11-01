@@ -1,6 +1,7 @@
 using System.CommandLine;
 using Microsoft.Extensions.DependencyInjection;
 using RmqCli.Commands.Consume;
+using RmqCli.Commands.MessageRetrieval;
 using RmqCli.Commands.Peek;
 using RmqCli.Commands.Publish;
 using RmqCli.Core.Models;
@@ -38,7 +39,7 @@ public class ServiceFactory
     /// <summary>
     /// Creates ConsumeOptions from ParseResult.
     /// </summary>
-    private static ConsumeOptions CreateConsumeOptions(ParseResult parseResult)
+    private static MessageRetrievalOptions CreateConsumeOptions(ParseResult parseResult)
     {
         var ackMode = parseResult.GetValue<AckModes>("--ack-mode");
         var prefetchCountFromUser = parseResult.GetValue<ushort?>("--prefetch-count");
@@ -61,7 +62,7 @@ public class ServiceFactory
             prefetchCount = prefetchCountFromUser.Value;
         }
 
-        return new ConsumeOptions
+        return new MessageRetrievalOptions
         {
             Queue = parseResult.GetRequiredValue<string>("--queue"),
             AckMode = ackMode,
@@ -92,12 +93,14 @@ public class ServiceFactory
     /// <summary>
     /// Creates PeekOptions from ParseResult.
     /// </summary>
-    private static PeekOptions CreatePeekOptions(ParseResult parseResult)
+    private static MessageRetrievalOptions CreatePeekOptions(ParseResult parseResult)
     {
-        return new PeekOptions
+        return new MessageRetrievalOptions
         {
             Queue = parseResult.GetRequiredValue<string>("--queue"),
-            MessageCount = parseResult.GetValue<int>("--count")
+            MessageCount = parseResult.GetValue<int>("--count"),
+            AckMode = AckModes.Requeue,
+            PrefetchCount = 0
         };
     }
 
@@ -162,7 +165,7 @@ public class ServiceFactory
             inputFile = new FileInfo(Path.GetFullPath(filePath, Environment.CurrentDirectory));
         }
 
-        var destination = new Core.Models.DestinationInfo
+        var destination = new DestinationInfo
         {
             Exchange = exchangeName,
             Queue = queueName,
