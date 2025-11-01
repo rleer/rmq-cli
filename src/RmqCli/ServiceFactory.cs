@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using RmqCli.Commands.Consume;
 using RmqCli.Commands.Peek;
 using RmqCli.Commands.Publish;
+using RmqCli.Core.Models;
 using RmqCli.DependencyInjection;
 using RmqCli.Infrastructure.Output;
 using RmqCli.Shared;

@@ -1,6 +1,6 @@
 using System.Text;
 using System.Text.Json;
-using RmqCli.Commands.Consume;
+using RmqCli.Core.Models;
 using RmqCli.Shared;
 using RmqCli.Shared.Json;
 

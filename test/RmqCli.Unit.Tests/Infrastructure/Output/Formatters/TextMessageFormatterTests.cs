@@ -1,6 +1,6 @@
 using System.Globalization;
 using RabbitMQ.Client;
-using RmqCli.Commands.Consume;
+using RmqCli.Core.Models;
 using RmqCli.Infrastructure.Output.Formatters;
 using RmqCli.Unit.Tests.Helpers;
 

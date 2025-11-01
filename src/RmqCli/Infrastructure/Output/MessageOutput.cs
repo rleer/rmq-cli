@@ -1,5 +1,5 @@
 using System.Threading.Channels;
-using RmqCli.Commands.Consume;
+using RmqCli.Core.Models;
 
 namespace RmqCli.Infrastructure.Output;
 
