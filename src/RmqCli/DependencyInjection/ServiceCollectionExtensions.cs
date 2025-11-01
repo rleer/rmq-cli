@@ -1,5 +1,4 @@
 using System.CommandLine;
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -27,7 +26,7 @@ public static class ServiceCollectionExtensions
     /// <param name="services">The service collection to add services to.</param>
     /// <param name="parseResult">The parse result containing CLI options including custom config path.</param>
     /// <returns>The service collection for chaining.</returns>
-    public static IServiceCollection AddRmqConfiguration(this IServiceCollection services, ParseResult parseResult)
+    private static IServiceCollection AddRmqConfiguration(this IServiceCollection services, ParseResult parseResult)
     {
         var customConfigPath = parseResult.GetValue<string>("--config");
 
@@ -57,9 +56,9 @@ public static class ServiceCollectionExtensions
     /// <param name="services">The service collection to add services to.</param>
     /// <param name="verbose">Whether to enable verbose (Debug level) logging.</param>
     /// <returns>The service collection for chaining.</returns>
-    public static IServiceCollection AddRmqLogging(this IServiceCollection services, bool verbose)
+    private static IServiceCollection AddRmqLogging(this IServiceCollection services, bool verbose)
     {
-        var logLevel = verbose ? LogLevel.Debug : LogLevel.None;
+        var logLevel = verbose ? LogLevel.Trace : LogLevel.None;
 
         services.AddLogging(builder =>
         {
@@ -88,7 +87,7 @@ public static class ServiceCollectionExtensions
     /// </summary>
     /// <param name="services">The service collection to add services to.</param>
     /// <returns>The service collection for chaining.</returns>
-    public static IServiceCollection AddRmqCoreServices(this IServiceCollection services)
+    private static IServiceCollection AddRmqCoreServices(this IServiceCollection services)
     {
         services.AddSingleton<IRabbitChannelFactory, RabbitChannelFactory>();
         services.AddSingleton<IStatusOutputService, StatusOutputService>();
@@ -101,7 +100,7 @@ public static class ServiceCollectionExtensions
     /// </summary>
     /// <param name="services">The service collection to add services to.</param>
     /// <returns>The service collection for chaining.</returns>
-    public static IServiceCollection AddPublishServices(this IServiceCollection services)
+    private static IServiceCollection AddPublishServices(this IServiceCollection services)
     {
         services.AddSingleton<IPublishOutputService, PublishOutputService>();
         services.AddSingleton<IPublishService, PublishService>();
@@ -114,7 +113,7 @@ public static class ServiceCollectionExtensions
     /// </summary>
     /// <param name="services">The service collection to add services to.</param>
     /// <returns>The service collection for chaining.</returns>
-    public static IServiceCollection AddConsumeServices(this IServiceCollection services)
+    private static IServiceCollection AddConsumeServices(this IServiceCollection services)
     {
         services.AddSingleton<IConsumeOutputService, ConsumeOutputService>();
         services.AddSingleton<IConsumeService, ConsumeService>();
@@ -142,7 +141,7 @@ public static class ServiceCollectionExtensions
     /// </summary>
     /// <param name="services">The service collection to add services to.</param>
     /// <returns>The service collection for chaining.</returns>
-    public static IServiceCollection AddPeekServices(this IServiceCollection services)
+    private static IServiceCollection AddPeekServices(this IServiceCollection services)
     {
         services.AddSingleton<IPeekOutputService, PeekOutputService>();
         services.AddSingleton<IPeekService, PeekService>();
@@ -181,7 +180,7 @@ public static class ServiceCollectionExtensions
     /// </summary>
     /// <param name="services">The service collection to add services to.</param>
     /// <param name="parseResult">The parse result containing CLI options.</param>
-    /// <param name="consumeOptions">Consume-specific options.</param>
+    /// <param name="consumeOptions">Consume specific options</param>
     /// <param name="outputOptions">Output formatting options.</param>
     /// <returns>The service collection for chaining.</returns>
     public static IServiceCollection AddRmqConsume(
