@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using RmqCli.Commands.Consume;
 using RmqCli.Commands.MessageRetrieval;
+using RmqCli.Commands.MessageRetrieval.Strategies;
 using RmqCli.Commands.Peek;
 using RmqCli.Commands.Publish;
 using RmqCli.Core.Services;
@@ -115,8 +116,8 @@ public static class ServiceCollectionExtensions
     /// <returns>The service collection for chaining.</returns>
     private static IServiceCollection AddConsumeServices(this IServiceCollection services)
     {
-        services.AddSingleton<IConsumeOutputService, ConsumeOutputService>();
         services.AddSingleton<IConsumeService, ConsumeService>();
+        services.AddSingleton<IMessageRetrievalStrategy, SubscriberStrategy>();
 
         return services;
     }
@@ -143,8 +144,8 @@ public static class ServiceCollectionExtensions
     /// <returns>The service collection for chaining.</returns>
     private static IServiceCollection AddPeekServices(this IServiceCollection services)
     {
-        services.AddSingleton<IPeekOutputService, PeekOutputService>();
         services.AddSingleton<IPeekService, PeekService>();
+        services.AddSingleton<IMessageRetrievalStrategy, PollingStrategy>();
 
         return services;
     }
@@ -186,7 +187,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddRmqConsume(
         this IServiceCollection services,
         ParseResult parseResult,
-        ConsumeOptions consumeOptions,
+        MessageRetrievalOptions consumeOptions,
         OutputOptions outputOptions)
     {
         services.AddRmqLogging(outputOptions.Verbose);
@@ -215,7 +216,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddRmqPeek(
         this IServiceCollection services,
         ParseResult parseResult,
-        PeekOptions peekOptions,
+        MessageRetrievalOptions peekOptions,
         OutputOptions outputOptions)
     {
         services.AddRmqLogging(outputOptions.Verbose);

@@ -1,8 +1,6 @@
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using RmqCli.Commands.Consume;
-using RmqCli.Commands.Peek;
 using RmqCli.Commands.MessageRetrieval;
 using RmqCli.Commands.Publish;
 using RmqCli.Core.Models;
@@ -28,10 +26,6 @@ namespace RmqCli.Shared.Json;
 [JsonSerializable(typeof(Response))]
 [JsonSerializable(typeof(PublishResponse))]
 [JsonSerializable(typeof(PublishResult))]
-[JsonSerializable(typeof(ConsumeResponse))]
-[JsonSerializable(typeof(ConsumeResult))]
-[JsonSerializable(typeof(PeekResponse))]
-[JsonSerializable(typeof(PeekResult))]
 [JsonSerializable(typeof(MessageRetrievalResponse))]
 [JsonSerializable(typeof(MessageRetrievalResult))]
 [JsonSerializable(typeof(ErrorInfo))]
