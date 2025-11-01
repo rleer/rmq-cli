@@ -4,7 +4,6 @@ using RabbitMQ.Client.Events;
 using RabbitMQ.Client.Exceptions;
 using RmqCli.Infrastructure.Configuration.Models;
 using RmqCli.Infrastructure.Output;
-using RmqCli.Infrastructure.RabbitMq;
 using RmqCli.Shared.Factories;
 
 namespace RmqCli.Core.Services;

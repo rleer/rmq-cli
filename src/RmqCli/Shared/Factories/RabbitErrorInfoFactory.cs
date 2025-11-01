@@ -1,9 +1,20 @@
 using RmqCli.Core.Models;
 
-namespace RmqCli.Infrastructure.RabbitMq;
+namespace RmqCli.Shared.Factories;
 
 public static class RabbitErrorInfoFactory
 {
+    public static ErrorInfo QueueNotFound(string queueName)
+    {
+        return new ErrorInfo
+        {
+            Category = "routing",
+            Code = "QUEUE_NOT_FOUND",
+            Error = $"Queue '{queueName}' not found",
+            Suggestion = "Check if the queue exists and is correctly configured"
+        };
+    }
+
     public static ErrorInfo OperationInterrupted(string reason, string code)
     {
         return new ErrorInfo
@@ -14,6 +25,7 @@ public static class RabbitErrorInfoFactory
             Suggestion = "Check RabbitMQ server status and network connectivity"
         };
     }
+
     public static ErrorInfo VirtualHostNotFound(string vhost)
     {
         return new ErrorInfo
@@ -24,6 +36,7 @@ public static class RabbitErrorInfoFactory
             Suggestion = "Check if the virtual host exists and is correctly configured"
         };
     }
+
     public static ErrorInfo AccessDenied(string user, string vhost)
     {
         return new ErrorInfo
@@ -34,6 +47,7 @@ public static class RabbitErrorInfoFactory
             Suggestion = "Check user permissions and virtual host configuration"
         };
     }
+
     public static ErrorInfo AuthenticationFailed(string user)
     {
         return new ErrorInfo
@@ -44,6 +58,7 @@ public static class RabbitErrorInfoFactory
             Suggestion = "Check username and password"
         };
     }
+
     public static ErrorInfo ConnectionFailed(string host, int port)
     {
         return new ErrorInfo
@@ -54,6 +69,7 @@ public static class RabbitErrorInfoFactory
             Suggestion = "Check RabbitMQ server status and network connectivity"
         };
     }
+
     public static ErrorInfo BrokerUnreachable(string host, int port)
     {
         return new ErrorInfo
