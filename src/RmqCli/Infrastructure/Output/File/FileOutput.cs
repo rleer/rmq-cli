@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Text;
 using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
-using RmqCli.Commands.Consume;
+using RmqCli.Core.Models;
 using RmqCli.Infrastructure.Configuration.Models;
 using RmqCli.Infrastructure.Output.Formatters;
 using RmqCli.Shared;

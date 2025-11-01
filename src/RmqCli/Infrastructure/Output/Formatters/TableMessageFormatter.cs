@@ -1,6 +1,6 @@
 using System.Text;
 using RabbitMQ.Client;
-using RmqCli.Commands.Consume;
+using RmqCli.Core.Models;
 using RmqCli.Shared;
 using Spectre.Console;
 using Spectre.Console.Rendering;

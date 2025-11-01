@@ -1,7 +1,7 @@
 using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
-using RmqCli.Commands.Consume;
+using RmqCli.Core.Models;
 using RmqCli.Infrastructure.Configuration.Models;
 using RmqCli.Infrastructure.Output;
 using RmqCli.Shared;
