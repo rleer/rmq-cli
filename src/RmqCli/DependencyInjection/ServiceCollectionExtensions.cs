@@ -92,9 +92,6 @@ public static class ServiceCollectionExtensions
     {
         services.AddSingleton<IRabbitChannelFactory, RabbitChannelFactory>();
         services.AddSingleton<IStatusOutputService, StatusOutputService>();
-        services.AddSingleton<QueueValidator>();
-        services.AddSingleton<AckHandler>();
-        services.AddSingleton<MessagePipeline>();
 
         return services;
     }
@@ -121,6 +118,21 @@ public static class ServiceCollectionExtensions
     {
         services.AddSingleton<IConsumeOutputService, ConsumeOutputService>();
         services.AddSingleton<IConsumeService, ConsumeService>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Adds message retrieval related services to the service collection.
+    /// </summary>
+    /// <param name="services">The service collection to add services to.</param>
+    /// <returns>The service collection for chaining.</returns>
+    private static IServiceCollection AddMessageRetrievalServices(this IServiceCollection services)
+    {
+        services.AddSingleton<MessageRetrievalResultOutputService>();
+        services.AddSingleton<QueueValidator>();
+        services.AddSingleton<AckHandler>();
+        services.AddSingleton<MessagePipeline>(); 
 
         return services;
     }
@@ -186,6 +198,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(outputOptions);
 
         services.AddRmqCoreServices();
+        services.AddMessageRetrievalServices();
         services.AddConsumeServices();
 
         return services;
@@ -214,6 +227,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(outputOptions);
 
         services.AddRmqCoreServices();
+        services.AddMessageRetrievalServices();
         services.AddPeekServices();
 
         return services;
