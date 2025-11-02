@@ -32,6 +32,14 @@ uninstall:
 # Reinstall rmq global tool (uninstall + install)
 reinstall: uninstall install
 
+# Run rmq via dotnet run (usage: just run <args>)
+run *args:
+    @dotnet run --project src/RmqCli/RmqCli.csproj --no-build --no-launch-profile -- {{args}}
+
+# Create alias for running rmq via dotnet run (use: eval $(just create-alias))
+create-alias:
+    @echo "alias rmq-dev='dotnet run --project {{justfile_directory()}}/src/RmqCli/RmqCli.csproj --no-build --'"
+
 # Clean build artifacts
 clean:
     dotnet clean
