@@ -21,11 +21,11 @@ public class PublishCommandHandler : ICommandHandler
 
                                    INPUT MODES:
                                      --body:          Specify message body directly
-                                     --from-file:     Read plain text messages from file (delimiter-separated)
-                                     STDIN:           Pipe/redirect plain text messages
+                                     --message-file:  Read messages from file (auto-detects JSON/NDJSON or plain text)
+                                     STDIN:           Pipe/redirect messages (auto-detects JSON/NDJSON or plain text)
                                      --message:       Provide complete message as JSON (with properties/headers)
-                                     --message-file:  Read JSON message(s) from file (supports NDJSON)
-                                     --json-format:   Treat STDIN as newline-delimited JSON messages
+                                     
+                                     Note: Only one input mode can be used at a time. STDIN takes precedence over --body and --message.
 
                                    MESSAGE PROPERTIES:
                                      Set RabbitMQ message properties using dedicated flags:
@@ -51,14 +51,17 @@ public class PublishCommandHandler : ICommandHandler
                                      # With custom headers
                                      rmq publish -q orders --body "order" -H "x-tenant:acme" -H "x-trace-id:123"
 
-                                     # JSON message
+                                     # JSON message inline
                                      rmq publish -q orders --message '{"body":"order","properties":{"priority":5}}'
 
-                                     # Batch NDJSON
+                                     # JSON messages from file (auto-detected)
                                      rmq publish -q orders --message-file batch.ndjson
 
-                                     # RPC pattern
-                                     rmq publish -q rpc --body "calc" --correlation-id req-123 --reply-to callback
+                                     # Plain text from file (auto-detected)
+                                     rmq publish -q orders --message-file messages.txt
+
+                                     # STDIN with JSON format (auto-detected)
+                                     cat messages.ndjson | rmq publish -q orders
 
                                    Note: Messages are sent with the mandatory flag set to true, meaning that if the message
                                    cannot be routed to any queue, it will be returned to the sender.
@@ -88,11 +91,6 @@ public class PublishCommandHandler : ICommandHandler
         {
             Description = "Message body to send.",
             Aliases = { "-m" }
-        };
-
-        var fromFileOption = new Option<string>("--from-file")
-        {
-            Description = "Path to file that contains message bodies to send."
         };
 
         var burstOption = new Option<int>("--burst")
@@ -187,21 +185,14 @@ public class PublishCommandHandler : ICommandHandler
 
         var messageFileOption = new Option<string>("--message-file")
         {
-            Description = "Path to file containing JSON message(s). Supports NDJSON format.",
+            Description = "Path to file containing messages. Auto-detects JSON (NDJSON) or plain text format.",
             Aliases = { "-mf" }
-        };
-
-        var jsonFormatOption = new Option<bool>("--json-format")
-        {
-            Description = "Treat STDIN input as newline-delimited JSON messages",
-            DefaultValueFactory = _ => false
         };
 
         publishCommand.Options.Add(queueOption);
         publishCommand.Options.Add(exchangeOption);
         publishCommand.Options.Add(routingKeyOption);
         publishCommand.Options.Add(messageOption);
-        publishCommand.Options.Add(fromFileOption);
         publishCommand.Options.Add(burstOption);
         publishCommand.Options.Add(outputFormatOption);
         publishCommand.Options.Add(appIdOption);
@@ -217,7 +208,6 @@ public class PublishCommandHandler : ICommandHandler
         publishCommand.Options.Add(headerOption);
         publishCommand.Options.Add(jsonMessageOption);
         publishCommand.Options.Add(messageFileOption);
-        publishCommand.Options.Add(jsonFormatOption);
 
         publishCommand.Validators.Add(result =>
         {
@@ -245,31 +235,24 @@ public class PublishCommandHandler : ICommandHandler
 
             // Input mode validation
             var hasBody = result.GetValue(messageOption) is not null;
-            var hasFromFile = result.GetValue(fromFileOption) is not null;
             var hasJsonMessage = result.GetValue(jsonMessageOption) is not null;
             var hasMessageFile = result.GetValue(messageFileOption) is not null;
-            var hasJsonFormat = result.GetValue(jsonFormatOption);
             var hasStdin = Console.IsInputRedirected;
 
-            if (!hasBody && !hasFromFile && !hasJsonMessage && !hasMessageFile && !hasStdin)
+            if (!hasBody && !hasJsonMessage && !hasMessageFile && !hasStdin)
             {
-                result.AddError("You must specify a message using --body, --from-file, --message, --message-file, or pipe/redirect via STDIN.");
+                result.AddError("You must specify a message using --body, --message, --message-file, or pipe/redirect via STDIN.");
             }
 
             // Prevent mixing incompatible input modes
-            if ((hasJsonMessage || hasMessageFile) && hasBody)
+            if (hasBody && hasJsonMessage)
             {
-                result.AddError("Cannot specify both --message/--message-file and --body. Use --message for JSON format or --body for plain text.");
+                result.AddError("Cannot specify both --body and --message.");
             }
 
-            if ((hasJsonMessage || hasMessageFile) && hasFromFile)
+            if (hasBody && hasMessageFile)
             {
-                result.AddError("Cannot specify both --message/--message-file and --from-file.");
-            }
-
-            if (hasJsonFormat && (hasBody || hasFromFile))
-            {
-                result.AddError("Cannot use --json-format with --body or --from-file.");
+                result.AddError("Cannot specify both --body and --message-file.");
             }
 
             if (hasJsonMessage && hasMessageFile)
@@ -277,17 +260,7 @@ public class PublishCommandHandler : ICommandHandler
                 result.AddError("Cannot specify both --message and --message-file.");
             }
 
-            if (hasFromFile && hasBody)
-            {
-                result.AddError("You cannot specify both --body and --from-file.");
-            }
-
             // File existence validation
-            if (result.GetValue(fromFileOption) is { } filePath && !File.Exists(filePath))
-            {
-                result.AddError($"Input file '{filePath}' not found.");
-            }
-
             if (result.GetValue(messageFileOption) is { } msgFilePath && !File.Exists(msgFilePath))
             {
                 result.AddError($"Message file '{msgFilePath}' not found.");
@@ -330,26 +303,40 @@ public class PublishCommandHandler : ICommandHandler
         try
         {
             // Route to appropriate method based on input source
-            if (options.InputFile is not null)
+            // Priority: --message-file > --message/--body > STDIN
+
+            if (options.MessageFile is not null)
             {
+                // File input (auto-detects JSON or plain text)
                 return await publishService.PublishMessageFromFile(
                     options.Destination,
-                    options.InputFile,
+                    options.MessageFile,
+                    options.BurstCount,
+                    cts.Token);
+            }
+
+            // Check explicit message options before STDIN
+            if (options.JsonMessage is not null || options.MessageBody is not null)
+            {
+                // Inline JSON message or plain body
+                return await publishService.PublishMessage(
+                    options.Destination,
                     options.BurstCount,
                     cts.Token);
             }
 
             if (options.IsStdinRedirected)
             {
+                // STDIN input (auto-detects JSON or plain text)
                 return await publishService.PublishMessageFromStdin(
                     options.Destination,
                     options.BurstCount,
                     cts.Token);
             }
 
+            // Fallback - should not reach here due to validation
             return await publishService.PublishMessage(
                 options.Destination,
-                [options.MessageBody ?? string.Empty],
                 options.BurstCount,
                 cts.Token);
         }

@@ -154,17 +154,17 @@ public class ServiceFactory
     /// </summary>
     public static PublishOptions CreatePublishOptions(ParseResult parseResult)
     {
-        var filePath = parseResult.GetValue<string>("--from-file");
         var exchangeName = parseResult.GetValue<string>("--exchange");
         var queueName = parseResult.GetValue<string>("--queue");
         var routingKey = parseResult.GetValue<string>("--routing-key");
         var messageBody = parseResult.GetValue<string>("--body");
         var burstCount = parseResult.GetValue<int>("--burst");
 
-        FileInfo? inputFile = null;
-        if (!string.IsNullOrWhiteSpace(filePath))
+        var messageFilePath = parseResult.GetValue<string>("--message-file");
+        FileInfo? messageFile = null;
+        if (!string.IsNullOrWhiteSpace(messageFilePath))
         {
-            inputFile = new FileInfo(Path.GetFullPath(filePath, Environment.CurrentDirectory));
+            messageFile = new FileInfo(Path.GetFullPath(messageFilePath, Environment.CurrentDirectory));
         }
 
         var destination = new DestinationInfo
@@ -193,24 +193,18 @@ public class ServiceFactory
         Dictionary<string, object>? headers = null;
         if (headerStrings != null && headerStrings.Length > 0)
         {
+            // TODO: Handle potential exceptions from header parsing
             headers = HeaderParser.Parse(headerStrings);
         }
 
         // Extract JSON message options
         var jsonMessage = parseResult.GetValue<string>("--message");
-        var jsonMessageFilePath = parseResult.GetValue<string>("--message-file");
-        FileInfo? jsonMessageFile = null;
-        if (!string.IsNullOrWhiteSpace(jsonMessageFilePath))
-        {
-            jsonMessageFile = new FileInfo(Path.GetFullPath(jsonMessageFilePath, Environment.CurrentDirectory));
-        }
-        var useJsonFormat = parseResult.GetValue<bool>("--json-format");
 
         return new PublishOptions
         {
             Destination = destination,
             MessageBody = messageBody,
-            InputFile = inputFile,
+            MessageFile = messageFile,
             BurstCount = burstCount,
             IsStdinRedirected = Console.IsInputRedirected,
             AppId = appId,
@@ -224,9 +218,7 @@ public class ServiceFactory
             Type = type,
             UserId = userId,
             Headers = headers,
-            JsonMessage = jsonMessage,
-            JsonMessageFile = jsonMessageFile,
-            UseJsonFormat = useJsonFormat
+            JsonMessage = jsonMessage
         };
     }
 }
