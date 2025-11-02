@@ -24,12 +24,13 @@ public class FormattedMessageProperties
 
     /// <summary>
     /// Returns true if any property is present (not null).
+    /// Note: Headers are checked separately and not included in this check.
     /// </summary>
     public bool HasAnyProperty()
     {
         return Type != null || MessageId != null || AppId != null || ClusterId != null ||
                ContentType != null || ContentEncoding != null || CorrelationId != null ||
                DeliveryMode != null || Expiration != null || Priority != null ||
-               ReplyTo != null || Timestamp != null || Headers != null;
+               ReplyTo != null || Timestamp != null;
     }
 }

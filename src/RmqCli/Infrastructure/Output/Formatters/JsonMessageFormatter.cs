@@ -25,6 +25,7 @@ public static class JsonMessageFormatter
     {
         var formattedProps = MessagePropertyExtractor.ExtractProperties(message.Props);
         var properties = ConvertToJsonProperties(formattedProps);
+        var headers = formattedProps.Headers; // Extract headers separately
 
         var bodySizeBytes = Encoding.UTF8.GetByteCount(message.Body);
         var bodySize = OutputUtilities.ToSizeString(bodySizeBytes);
@@ -38,7 +39,8 @@ public static class JsonMessageFormatter
             message.Body,
             bodySizeBytes,
             bodySize,
-            properties
+            properties,
+            headers  // Pass headers as separate parameter
         );
     }
 
@@ -79,8 +81,6 @@ public static class JsonMessageFormatter
             properties["replyTo"] = props.ReplyTo;
         if (props.Timestamp != null)
             properties["timestamp"] = props.Timestamp;
-        if (props.Headers != null)
-            properties["headers"] = props.Headers;
 
         return properties.Count > 0 ? properties : null;
     }

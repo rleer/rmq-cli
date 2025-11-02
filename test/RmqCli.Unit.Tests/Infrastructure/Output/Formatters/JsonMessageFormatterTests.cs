@@ -230,7 +230,7 @@ public class JsonMessageFormatterTests
             properties.GetProperty("replyTo").GetString().Should().Be("reply-queue");
             properties.GetProperty("timestamp").GetString().Should().NotBeNullOrEmpty();
 
-            properties.TryGetProperty("headers", out var headers).Should().BeTrue();
+            json.RootElement.TryGetProperty("headers", out var headers).Should().BeTrue();
             headers.GetProperty("x-custom").GetString().Should().Be("custom-value");
         }
 
@@ -283,7 +283,7 @@ public class JsonMessageFormatterTests
 
             // Assert
             var json = JsonDocument.Parse(result);
-            json.RootElement.GetProperty("properties").TryGetProperty("headers", out var headers).Should().BeTrue();
+            json.RootElement.TryGetProperty("headers", out var headers).Should().BeTrue();
             headers.GetProperty("x-custom").GetString().Should().Be("custom-value");
             headers.GetProperty("x-number").GetInt32().Should().Be(42);
         }
@@ -307,7 +307,7 @@ public class JsonMessageFormatterTests
 
             // Assert
             var json = JsonDocument.Parse(result);
-            var headers = json.RootElement.GetProperty("properties").GetProperty("headers");
+            var headers = json.RootElement.GetProperty("headers");
             headers.TryGetProperty("x-valid", out var validProp).Should().BeTrue();
             validProp.GetString().Should().Be("value");
             headers.TryGetProperty("x-null", out _).Should().BeFalse();
@@ -332,7 +332,7 @@ public class JsonMessageFormatterTests
 
             // Assert
             var json = JsonDocument.Parse(result);
-            var headers = json.RootElement.GetProperty("properties").GetProperty("headers");
+            var headers = json.RootElement.GetProperty("headers");
             headers.GetProperty("x-enabled").GetBoolean().Should().BeTrue();
             headers.GetProperty("x-disabled").GetBoolean().Should().BeFalse();
         }
@@ -355,7 +355,7 @@ public class JsonMessageFormatterTests
 
             // Assert
             var json = JsonDocument.Parse(result);
-            var tags = json.RootElement.GetProperty("properties").GetProperty("headers").GetProperty("x-tags");
+            var tags = json.RootElement.GetProperty("headers").GetProperty("x-tags");
             tags.ValueKind.Should().Be(JsonValueKind.Array);
             tags.GetArrayLength().Should().Be(3);
             tags[0].GetString().Should().Be("tag1");
@@ -386,7 +386,7 @@ public class JsonMessageFormatterTests
 
             // Assert
             var json = JsonDocument.Parse(result);
-            var metadata = json.RootElement.GetProperty("properties").GetProperty("headers").GetProperty("x-metadata");
+            var metadata = json.RootElement.GetProperty("headers").GetProperty("x-metadata");
             metadata.ValueKind.Should().Be(JsonValueKind.Object);
             metadata.GetProperty("region").GetString().Should().Be("us-west");
             metadata.GetProperty("datacenter").GetString().Should().Be("dc1");
@@ -421,7 +421,6 @@ public class JsonMessageFormatterTests
             // Assert
             var json = JsonDocument.Parse(result);
             var deepValue = json.RootElement
-                .GetProperty("properties")
                 .GetProperty("headers")
                 .GetProperty("x-deep")
                 .GetProperty("level1")
@@ -453,7 +452,7 @@ public class JsonMessageFormatterTests
 
             // Assert
             var json = JsonDocument.Parse(result);
-            var users = json.RootElement.GetProperty("properties").GetProperty("headers").GetProperty("x-users");
+            var users = json.RootElement.GetProperty("headers").GetProperty("x-users");
             users.ValueKind.Should().Be(JsonValueKind.Array);
             users.GetArrayLength().Should().Be(2);
             users[0].GetProperty("name").GetString().Should().Be("Alice");
@@ -485,7 +484,7 @@ public class JsonMessageFormatterTests
 
             // Assert
             var json = JsonDocument.Parse(result);
-            var headers = json.RootElement.GetProperty("properties").GetProperty("headers");
+            var headers = json.RootElement.GetProperty("headers");
             headers.GetProperty("x-string").GetString().Should().Be("text");
             headers.GetProperty("x-int").GetInt32().Should().Be(123);
             headers.GetProperty("x-long").GetInt64().Should().Be(9876543210L);
