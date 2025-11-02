@@ -7,13 +7,25 @@
     <Authors>Richard Leer</Authors>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <EnableConfigurationBindingGenerator>true</EnableConfigurationBindingGenerator>
+    <OptimizationPreference>Speed</OptimizationPreference>
+
+    <!-- NuGet Package Properties for dotnet tool -->
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>rmq</ToolCommandName>
+    <PackageId>rmq</PackageId>
+    <Version>0.1.0</Version>
+    <PackageOutputPath>../../nupkg</PackageOutputPath>
+    <Description>A .NET CLI tool for RabbitMQ focused on developers</Description>
+  </PropertyGroup>
+
+  <!-- AOT/Self-contained settings for 'dotnet publish' only -->
+  <PropertyGroup Condition="'$(PublishDir)' != ''">
     <SelfContained>true</SelfContained>
     <PublishAot>true</PublishAot>
     <PublishTrimmed>true</PublishTrimmed>
     <TrimMode>full</TrimMode>
-    <InvariantGlobalization>true</InvariantGlobalization>
-    <EnableConfigurationBindingGenerator>true</EnableConfigurationBindingGenerator>
-    <OptimizationPreference>Speed</OptimizationPreference>
   </PropertyGroup>
 
   <ItemGroup>

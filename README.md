@@ -10,13 +10,41 @@
 
 ## Installation
 
-Build and install the tool:
+### Install as .NET Global Tool
+
+Build and install `rmq` as a .NET global tool:
 
 ```bash
-dotnet build
 dotnet pack
-dotnet tool install --global --add-source ./nupkg rmq
+dotnet tool install -g --source . rmq
 ```
+
+This requires the .NET 8 SDK to be installed on your system.
+
+### Uninstall
+
+To remove the tool:
+
+```bash
+dotnet tool uninstall -g rmq
+```
+
+### Build Native Binary
+
+To create a self-contained, AOT-compiled native binary (no .NET runtime required):
+
+```bash
+dotnet publish src/RmqCli/RmqCli.csproj -c Release -r osx-arm64 -o release
+```
+
+Replace `osx-arm64` with your target runtime identifier:
+- **macOS ARM64**: `osx-arm64`
+- **macOS x64**: `osx-x64`
+- **Linux x64**: `linux-x64`
+- **Linux ARM64**: `linux-arm64`
+- **Windows x64**: `win-x64`
+
+The compiled binary will be in the `release/` directory.
 
 ## Configuration
 
