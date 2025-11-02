@@ -12,7 +12,10 @@ QUEUE="test-queue"
 echo "Populating '$QUEUE' with multi-line messages..."
 
 # Create temporary file with multi-line messages
-cat > /tmp/rmq-multiline-messages.txt << 'EOF'
+TEMP_FILE=$(mktemp)
+trap "rm -f $TEMP_FILE" EXIT
+
+cat > "$TEMP_FILE" << 'EOF'
 This is a multi-line message.
 It spans multiple lines.
 Great for testing formatters!
@@ -53,6 +56,5 @@ Log Entry #5: Ready to accept requests
 EOF
 
 dotnet run --project "$PROJECT_ROOT/src/RmqCli/RmqCli.csproj" --no-build --no-launch-profile -- \
-  publish --queue "$QUEUE" --from-file /tmp/rmq-multiline-messages.txt
+  publish --queue "$QUEUE" --message-file "$TEMP_FILE"
 
-rm /tmp/rmq-multiline-messages.txt
