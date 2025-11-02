@@ -12,7 +12,8 @@ public record MessageJson(
     string Body,
     long BodySizeBytes,
     string BodySize,
-    Dictionary<string, object>? Properties = null
+    Dictionary<string, object>? Properties = null,
+    Dictionary<string, object>? Headers = null
 );
 
 public record MessageJsonArray(MessageJson[] Messages);
