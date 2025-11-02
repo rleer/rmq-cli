@@ -24,7 +24,15 @@ public static class JsonMessageParser
                 throw new ArgumentException("Failed to parse JSON message: result was null");
             }
 
-            return (PublishMessageJson)message;
+            var result = (PublishMessageJson)message;
+
+            // Convert JsonElement header values to actual types for RabbitMQ serialization
+            if (result.Headers != null)
+            {
+                result.Headers = NormalizeHeaderValues(result.Headers);
+            }
+
+            return result;
         }
         catch (JsonException ex)
         {
@@ -33,12 +41,48 @@ public static class JsonMessageParser
     }
 
     /// <summary>
+    /// Converts JsonElement values in a dictionary to their actual types (string, long, double, bool).
+    /// RabbitMQ cannot serialize JsonElement objects, so we need to convert them to primitive types.
+    /// </summary>
+    private static Dictionary<string, object> NormalizeHeaderValues(Dictionary<string, object> headers)
+    {
+        var normalized = new Dictionary<string, object>();
+
+        foreach (var (key, value) in headers)
+        {
+            normalized[key] = value switch
+            {
+                JsonElement jsonElement => ConvertJsonElement(jsonElement),
+                _ => value
+            };
+        }
+
+        return normalized;
+    }
+
+    /// <summary>
+    /// Converts a JsonElement to its actual type.
+    /// </summary>
+    private static object ConvertJsonElement(JsonElement element)
+    {
+        return element.ValueKind switch
+        {
+            JsonValueKind.String => element.GetString() ?? string.Empty,
+            JsonValueKind.Number => element.TryGetInt64(out var longVal) ? longVal : element.GetDouble(),
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            JsonValueKind.Null => string.Empty,
+            _ => element.ToString() ?? string.Empty
+        };
+    }
+
+    /// <summary>
     /// Parses newline-delimited JSON (NDJSON) messages.
     /// </summary>
     public static List<PublishMessageJson> ParseNdjson(string ndjson)
     {
         var messages = new List<PublishMessageJson>();
-        var lines = ndjson.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        var lines = ndjson.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
 
         for (var i = 0; i < lines.Length; i++)
         {
