@@ -13,13 +13,23 @@ public class ConsoleOutputTests
 {
     #region WriteMessagesAsync
 
-    public class WriteMessagesAsync
+    public class WriteMessagesAsync : IDisposable
     {
         private readonly ITestOutputHelper _testOutputHelper;
+        private readonly TextWriter _originalOut;
 
         public WriteMessagesAsync(ITestOutputHelper testOutputHelper)
         {
             _testOutputHelper = testOutputHelper;
+            // Redirect console output to suppress test noise
+            _originalOut = Console.Out;
+            Console.SetOut(TextWriter.Null);
+        }
+
+        public void Dispose()
+        {
+            // Restore original console output
+            Console.SetOut(_originalOut);
         }
 
         [Fact]
