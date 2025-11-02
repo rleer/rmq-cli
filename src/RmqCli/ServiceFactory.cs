@@ -138,11 +138,12 @@ public class ServiceFactory
     /// <returns>A configured publish service instance.</returns>
     public IPublishService CreatePublishService(ParseResult parseResult)
     {
-        // Extract output options (reused across commands)
+        // Extract command-specific options from ParseResult
+        var publishOptions = CreatePublishOptions(parseResult);
         var outputOptions = CreateOutputOptions(parseResult);
 
         var services = new ServiceCollection();
-        services.AddRmqPublish(parseResult, outputOptions);
+        services.AddRmqPublish(parseResult, publishOptions, outputOptions);
 
         var serviceProvider = services.BuildServiceProvider();
         return serviceProvider.GetRequiredService<IPublishService>();

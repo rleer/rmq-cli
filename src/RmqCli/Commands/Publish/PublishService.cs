@@ -13,6 +13,35 @@ using PublishErrorInfoFactory = RmqCli.Shared.Factories.PublishErrorInfoFactory;
 
 namespace RmqCli.Commands.Publish;
 
+/// <summary>
+/// Represents message properties that can be set by the user.
+/// </summary>
+public class MessageProperties
+{
+    public string? AppId { get; init; }
+    public string? ContentType { get; init; }
+    public string? ContentEncoding { get; init; }
+    public string? CorrelationId { get; init; }
+    public DeliveryModes? DeliveryMode { get; init; }
+    public string? Expiration { get; init; }
+    public string? MessageId { get; init; }
+    public byte? Priority { get; init; }
+    public string? ReplyTo { get; init; }
+    public long? Timestamp { get; init; }
+    public string? Type { get; init; }
+    public string? UserId { get; init; }
+    public Dictionary<string, object>? Headers { get; init; }
+}
+
+/// <summary>
+/// Represents a message with optional properties to be published.
+/// </summary>
+public class MessageWithProperties
+{
+    public string Body { get; init; } = string.Empty;
+    public MessageProperties? Properties { get; init; }
+}
+
 public interface IPublishService
 {
     Task<int> PublishMessage(DestinationInfo dest, List<string> messages, int burstCount = 1, CancellationToken cancellationToken = default);
@@ -27,19 +56,22 @@ public class PublishService : IPublishService
     private readonly FileConfig _fileConfig;
     private readonly IStatusOutputService _statusOutput;
     private readonly IPublishOutputService _resultOutput;
+    private readonly PublishOptions _options;
 
     public PublishService(
         IRabbitChannelFactory rabbitChannelFactory,
         ILogger<PublishService> logger,
         FileConfig fileConfig,
         IStatusOutputService statusOutput,
-        IPublishOutputService resultOutput)
+        IPublishOutputService resultOutput,
+        PublishOptions options)
     {
         _rabbitChannelFactory = rabbitChannelFactory;
         _logger = logger;
         _fileConfig = fileConfig;
         _statusOutput = statusOutput;
         _resultOutput = resultOutput;
+        _options = options;
     }
 
     /// <summary>
@@ -56,15 +88,237 @@ public class PublishService : IPublishService
         int burstCount = 1,
         CancellationToken cancellationToken = default)
     {
+        // Check if inline JSON message is provided
+        if (_options.JsonMessage != null)
+        {
+            _logger.LogDebug("Parsing inline JSON message");
+
+            try
+            {
+                var jsonMessage = JsonMessageParser.ParseSingle(_options.JsonMessage);
+                _logger.LogDebug("Parsed inline JSON message");
+
+                // Convert JSON message to MessageWithProperties, merging with CLI options
+                var (mergedProps, mergedHeaders) = PropertyMerger.Merge(jsonMessage, _options);
+                var messageWithProps = new MessageWithProperties
+                {
+                    Body = jsonMessage.Body,
+                    Properties = mergedProps != null ? ConvertToMessageProperties(mergedProps, mergedHeaders) : null
+                };
+
+                return await PublishMessageInternal(dest, [messageWithProps], burstCount, cancellationToken);
+            }
+            catch (ArgumentException ex)
+            {
+                _logger.LogError(ex, "Failed to parse inline JSON message");
+                _statusOutput.ShowError($"Failed to parse inline JSON message: {ex.Message}");
+                return 1;
+            }
+        }
+
+        // Convert plain text messages to MessageWithProperties
+        var messagesWithProps = ConvertToMessagesWithProperties(messages);
+        return await PublishMessageInternal(dest, messagesWithProps, burstCount, cancellationToken);
+    }
+
+    public async Task<int> PublishMessageFromFile(DestinationInfo dest, FileInfo fileInfo, int burstCount = 1, CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("Reading messages from file: {FilePath}", fileInfo.FullName);
+        var messageBlob = await File.ReadAllTextAsync(fileInfo.FullName, cancellationToken);
+
+        // Check if this is a JSON message file
+        if (_options.JsonMessageFile != null)
+        {
+            _logger.LogDebug("Parsing JSON messages from file: {FilePath}", fileInfo.FullName);
+
+            try
+            {
+                var jsonMessages = JsonMessageParser.ParseNdjson(messageBlob);
+                _logger.LogDebug("Parsed {MessageCount} JSON messages from '{FilePath}'", jsonMessages.Count, fileInfo.FullName);
+
+                // Convert JSON messages to MessageWithProperties, merging with CLI options
+                var messagesWithProps = jsonMessages.Select(jsonMsg =>
+                {
+                    var (mergedProps, mergedHeaders) = PropertyMerger.Merge(jsonMsg, _options);
+                    return new MessageWithProperties
+                    {
+                        Body = jsonMsg.Body,
+                        Properties = mergedProps != null ? ConvertToMessageProperties(mergedProps, mergedHeaders) : null
+                    };
+                }).ToList();
+
+                return await PublishMessageInternal(dest, messagesWithProps, burstCount, cancellationToken);
+            }
+            catch (ArgumentException ex)
+            {
+                _logger.LogError(ex, "Failed to parse JSON messages from file: {FilePath}", fileInfo.FullName);
+                _statusOutput.ShowError($"Failed to parse JSON messages from file: {ex.Message}");
+                return 1;
+            }
+        }
+
+        // Plain text mode
+        var (messages, delimiterDisplay) = SplitMessages(messageBlob);
+
+        _logger.LogDebug("Read {MessageCount} messages from '{FilePath}' with delimiter '{MessageDelimiter}'", messages.Count, fileInfo.FullName,
+            delimiterDisplay);
+
+        return await PublishMessage(dest, messages, burstCount, cancellationToken);
+    }
+
+    public async Task<int> PublishMessageFromStdin(DestinationInfo dest, int burstCount = 1, CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("Reading messages from STDIN");
+        var messageBlob = await Console.In.ReadToEndAsync(cancellationToken);
+
+        // Check if this is JSON format mode
+        if (_options.UseJsonFormat)
+        {
+            _logger.LogDebug("Parsing JSON messages from STDIN");
+
+            try
+            {
+                var jsonMessages = JsonMessageParser.ParseNdjson(messageBlob);
+                _logger.LogDebug("Parsed {MessageCount} JSON messages from STDIN", jsonMessages.Count);
+
+                // Convert JSON messages to MessageWithProperties, merging with CLI options
+                var messagesWithProps = jsonMessages.Select(jsonMsg =>
+                {
+                    var (mergedProps, mergedHeaders) = PropertyMerger.Merge(jsonMsg, _options);
+                    return new MessageWithProperties
+                    {
+                        Body = jsonMsg.Body,
+                        Properties = mergedProps != null ? ConvertToMessageProperties(mergedProps, mergedHeaders) : null
+                    };
+                }).ToList();
+
+                return await PublishMessageInternal(dest, messagesWithProps, burstCount, cancellationToken);
+            }
+            catch (ArgumentException ex)
+            {
+                _logger.LogError(ex, "Failed to parse JSON messages from STDIN");
+                _statusOutput.ShowError($"Failed to parse JSON messages from STDIN: {ex.Message}");
+                return 1;
+            }
+        }
+
+        // Plain text mode
+        var (messages, delimiterDisplay) = SplitMessages(messageBlob);
+
+        _logger.LogDebug("Read {MessageCount} messages from STDIN with delimiter '{MessageDelimiter}'", messages.Count,
+            delimiterDisplay);
+
+        return await PublishMessage(dest, messages, burstCount, cancellationToken);
+    }
+
+    private async Task PublishCore(
+        List<MessageWithProperties> messages,
+        IChannel channel,
+        DestinationInfo dest,
+        List<PublishOperationDto> results,
+        IProgress<int>? progress = null,
+        int burstCount = 1,
+        CancellationToken cancellationToken = default)
+    {
+        var messageBaseId = GetMessageId();
+        var currentProgress = 0;
+
+        for (var m = 0; m < messages.Count; m++)
+        {
+            var message = messages[m];
+            var body = Encoding.UTF8.GetBytes(message.Body);
+            var messageIdSuffix = GetMessageIdSuffix(m, messages.Count);
+
+            for (var i = 0; i < burstCount; i++)
+            {
+                var burstSuffix = burstCount > 1 ? GetMessageIdSuffix(i, burstCount) : string.Empty;
+                var messageId = $"{messageBaseId}{messageIdSuffix}{burstSuffix}";
+                var props = new BasicProperties
+                {
+                    MessageId = messageId,
+                    Timestamp = new AmqpTimestamp(DateTimeOffset.UtcNow.ToUnixTimeSeconds())
+                };
+
+                // Apply user-specified properties (may override MessageId and Timestamp)
+                ApplyPropertiesToBasicProperties(props, message.Properties);
+
+                await channel.BasicPublishAsync(
+                    exchange: dest.Exchange ?? string.Empty,
+                    routingKey: dest.Queue ?? dest.RoutingKey ?? string.Empty,
+                    mandatory: true,
+                    basicProperties: props,
+                    body: body,
+                    cancellationToken: cancellationToken);
+
+                // Collect the result
+                results.Add(new PublishOperationDto(props.MessageId, body.LongLength, props.Timestamp));
+
+                // Report progress
+                currentProgress++;
+                progress?.Report(currentProgress);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Applies user-specified properties to RabbitMQ BasicProperties.
+    /// Only sets properties that are present (not null) in userProps.
+    /// </summary>
+    private static void ApplyPropertiesToBasicProperties(
+        BasicProperties props,
+        MessageProperties? userProps)
+    {
+        if (userProps == null)
+            return;
+
+        if (userProps.AppId != null)
+            props.AppId = userProps.AppId;
+        if (userProps.ContentType != null)
+            props.ContentType = userProps.ContentType;
+        if (userProps.ContentEncoding != null)
+            props.ContentEncoding = userProps.ContentEncoding;
+        if (userProps.CorrelationId != null)
+            props.CorrelationId = userProps.CorrelationId;
+        if (userProps.DeliveryMode.HasValue)
+            props.DeliveryMode = userProps.DeliveryMode.Value;
+        if (userProps.Expiration != null)
+            props.Expiration = userProps.Expiration;
+        if (userProps.Priority.HasValue)
+            props.Priority = userProps.Priority.Value;
+        if (userProps.ReplyTo != null)
+            props.ReplyTo = userProps.ReplyTo;
+        if (userProps.Type != null)
+            props.Type = userProps.Type;
+        if (userProps.UserId != null)
+            props.UserId = userProps.UserId;
+        if (userProps.Headers != null && userProps.Headers.Count > 0)
+            props.Headers = (IDictionary<string, object?>)userProps.Headers;
+
+        // Override MessageId and Timestamp only if provided by user
+        if (userProps.MessageId != null)
+            props.MessageId = userProps.MessageId;
+        if (userProps.Timestamp.HasValue)
+            props.Timestamp = new AmqpTimestamp(userProps.Timestamp.Value);
+    }
+
+    /// <summary>
+    /// Internal method to publish messages with properties.
+    /// </summary>
+    private async Task<int> PublishMessageInternal(
+        DestinationInfo dest,
+        List<MessageWithProperties> messagesWithProps,
+        int burstCount = 1,
+        CancellationToken cancellationToken = default)
+    {
         var startTime = Stopwatch.GetTimestamp();
 
         _logger.LogDebug(
             "Initiating publish operation: exchange={Exchange}, routing-key={RoutingKey}, queue={Queue}, msg-count={MessageCount}, burst-count={BurstCount}",
-            dest.Exchange, dest.RoutingKey, dest.Queue, messages.Count, burstCount);
+            dest.Exchange, dest.RoutingKey, dest.Queue, messagesWithProps.Count, burstCount);
 
         await using var channel = await _rabbitChannelFactory.GetChannelWithPublisherConfirmsAsync();
 
-        var totalMessageCount = messages.Count * burstCount;
+        var totalMessageCount = messagesWithProps.Count * burstCount;
         var messageCountString = OutputUtilities.GetMessageCountString(totalMessageCount, _statusOutput.NoColor);
 
         // Prepare the list to collect publish results
@@ -78,7 +332,7 @@ public class PublishService : IPublishService
                 description: "Publishing messages",
                 maxValue: totalMessageCount,
                 workload: progress =>
-                    PublishCore(messages, channel, dest, publishResults, progress, burstCount, cancellationToken));
+                    PublishCore(messagesWithProps, channel, dest, publishResults, progress, burstCount, cancellationToken));
 
             var endTime = Stopwatch.GetTimestamp();
             var elapsedTime = Stopwatch.GetElapsedTime(startTime, endTime);
@@ -150,7 +404,7 @@ public class PublishService : IPublishService
             _statusOutput.ShowWarning("Publishing cancelled by user", addNewLine: true);
 
             var successCount = publishResults.Count;
-            var failCount = messages.Count - successCount;
+            var failCount = messagesWithProps.Count - successCount;
             if (successCount > 0)
             {
                 _statusOutput.ShowSuccess(
@@ -163,7 +417,7 @@ public class PublishService : IPublishService
             {
                 _statusOutput.ShowError("No messages were published before cancellation");
 
-                var errorResult = PublishResponseFactory.Failure(dest, messages.Count, elapsedTime);
+                var errorResult = PublishResponseFactory.Failure(dest, messagesWithProps.Count, elapsedTime);
                 _resultOutput.WritePublishResult(errorResult);
             }
         }
@@ -176,74 +430,80 @@ public class PublishService : IPublishService
         return 0;
     }
 
-    public async Task<int> PublishMessageFromFile(DestinationInfo dest, FileInfo fileInfo, int burstCount = 1, CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Converts plain text messages to MessageWithProperties, applying CLI properties.
+    /// </summary>
+    private List<MessageWithProperties> ConvertToMessagesWithProperties(List<string> messages)
     {
-        _logger.LogDebug("Reading messages from file: {FilePath}", fileInfo.FullName);
-        var messageBlob = await File.ReadAllTextAsync(fileInfo.FullName, cancellationToken);
-
-        var (messages, delimiterDisplay) = SplitMessages(messageBlob);
-
-        _logger.LogDebug("Read {MessageCount} messages from '{FilePath}' with delimiter '{MessageDelimiter}'", messages.Count, fileInfo.FullName,
-            delimiterDisplay);
-
-        return await PublishMessage(dest, messages, burstCount, cancellationToken);
-    }
-
-    public async Task<int> PublishMessageFromStdin(DestinationInfo dest, int burstCount = 1, CancellationToken cancellationToken = default)
-    {
-        _logger.LogDebug("Reading messages from STDIN");
-        var messageBlob = await Console.In.ReadToEndAsync(cancellationToken);
-
-        var (messages, delimiterDisplay) = SplitMessages(messageBlob);
-
-        _logger.LogDebug("Read {MessageCount} messages from STDIN with delimiter '{MessageDelimiter}'", messages.Count,
-            delimiterDisplay);
-
-        return await PublishMessage(dest, messages, burstCount, cancellationToken);
-    }
-
-    private async Task PublishCore(
-        List<string> messages,
-        IChannel channel,
-        DestinationInfo dest,
-        List<PublishOperationDto> results,
-        IProgress<int>? progress = null,
-        int burstCount = 1,
-        CancellationToken cancellationToken = default)
-    {
-        var messageBaseId = GetMessageId();
-        var currentProgress = 0;
-
-        for (var m = 0; m < messages.Count; m++)
+        var cliProps = CreateMessagePropertiesFromOptions();
+        return messages.Select(body => new MessageWithProperties
         {
-            var body = Encoding.UTF8.GetBytes(messages[m]);
-            var messageIdSuffix = GetMessageIdSuffix(m, messages.Count);
-            for (var i = 0; i < burstCount; i++)
-            {
-                var burstSuffix = burstCount > 1 ? GetMessageIdSuffix(i, burstCount) : string.Empty;
-                var messageId = $"{messageBaseId}{messageIdSuffix}{burstSuffix}";
-                var props = new BasicProperties
-                {
-                    MessageId = messageId,
-                    Timestamp = new AmqpTimestamp(DateTimeOffset.UtcNow.ToUnixTimeSeconds())
-                };
+            Body = body,
+            Properties = cliProps
+        }).ToList();
+    }
 
-                await channel.BasicPublishAsync(
-                    exchange: dest.Exchange ?? string.Empty,
-                    routingKey: dest.Queue ?? dest.RoutingKey ?? string.Empty,
-                    mandatory: true,
-                    basicProperties: props,
-                    body: body,
-                    cancellationToken: cancellationToken);
+    /// <summary>
+    /// Converts PublishPropertiesJson and headers to MessageProperties.
+    /// </summary>
+    private static MessageProperties ConvertToMessageProperties(
+        RmqCli.Shared.Json.PublishPropertiesJson props,
+        Dictionary<string, object>? headers)
+    {
+        return new MessageProperties
+        {
+            AppId = props.AppId,
+            ContentType = props.ContentType,
+            ContentEncoding = props.ContentEncoding,
+            CorrelationId = props.CorrelationId,
+            DeliveryMode = props.DeliveryMode,
+            Expiration = props.Expiration,
+            MessageId = props.MessageId,
+            Priority = props.Priority,
+            ReplyTo = props.ReplyTo,
+            Timestamp = props.Timestamp,
+            Type = props.Type,
+            UserId = props.UserId,
+            Headers = headers
+        };
+    }
 
-                // Collect the result
-                results.Add(new PublishOperationDto(props.MessageId, body.LongLength, props.Timestamp));
-
-                // Report progress
-                currentProgress++;
-                progress?.Report(currentProgress);
-            }
+    /// <summary>
+    /// Creates MessageProperties from CLI options.
+    /// Returns null if no properties are specified.
+    /// </summary>
+    private MessageProperties? CreateMessagePropertiesFromOptions()
+    {
+        // Check if any properties are set
+        if (_options.AppId == null &&
+            _options.ContentType == null &&
+            _options.ContentEncoding == null &&
+            _options.CorrelationId == null &&
+            !_options.DeliveryMode.HasValue &&
+            _options.Expiration == null &&
+            !_options.Priority.HasValue &&
+            _options.ReplyTo == null &&
+            _options.Type == null &&
+            _options.UserId == null &&
+            (_options.Headers == null || _options.Headers.Count == 0))
+        {
+            return null;
         }
+
+        return new MessageProperties
+        {
+            AppId = _options.AppId,
+            ContentType = _options.ContentType,
+            ContentEncoding = _options.ContentEncoding,
+            CorrelationId = _options.CorrelationId,
+            DeliveryMode = _options.DeliveryMode,
+            Expiration = _options.Expiration,
+            Priority = _options.Priority,
+            ReplyTo = _options.ReplyTo,
+            Type = _options.Type,
+            UserId = _options.UserId,
+            Headers = _options.Headers
+        };
     }
 
     private (List<string> messages, string delimiterDisplay) SplitMessages(string messageBlob)
