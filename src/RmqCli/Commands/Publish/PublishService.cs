@@ -44,7 +44,7 @@ public class MessageWithProperties
 
 public interface IPublishService
 {
-    Task<int> PublishMessage(DestinationInfo dest, List<string> messages, int burstCount = 1, CancellationToken cancellationToken = default);
+    Task<int> PublishMessage(DestinationInfo dest, int burstCount = 1, CancellationToken cancellationToken = default);
     Task<int> PublishMessageFromFile(DestinationInfo dest, FileInfo fileInfo, int burstCount = 1, CancellationToken cancellationToken = default);
     Task<int> PublishMessageFromStdin(DestinationInfo dest, int burstCount = 1, CancellationToken cancellationToken = default);
 }
@@ -79,12 +79,10 @@ public class PublishService : IPublishService
     /// Supports burst publishing, where each message can be published multiple times.
     /// </summary>
     /// <param name="dest"></param>
-    /// <param name="messages"></param>
     /// <param name="burstCount"></param>
     /// <param name="cancellationToken"></param>
     public async Task<int> PublishMessage(
         DestinationInfo dest,
-        List<string> messages,
         int burstCount = 1,
         CancellationToken cancellationToken = default)
     {
@@ -111,14 +109,26 @@ public class PublishService : IPublishService
             catch (ArgumentException ex)
             {
                 _logger.LogError(ex, "Failed to parse inline JSON message");
-                _statusOutput.ShowError($"Failed to parse inline JSON message: {ex.Message}");
+                var errorInfo = ErrorInfoFactory.GenericErrorInfo(
+                    ex.Message,
+                    "INVALID_JSON",
+                    "Ensure the inline JSON message is correctly formatted",
+                    exception: ex);
+                _statusOutput.ShowError($"Failed to parse inline JSON message", errorInfo);
                 return 1;
             }
         }
 
-        // Convert plain text messages to MessageWithProperties
-        var messagesWithProps = ConvertToMessagesWithProperties(messages);
-        return await PublishMessageInternal(dest, messagesWithProps, burstCount, cancellationToken);
+        if (_options.MessageBody != null)
+        {
+            // Convert plain text messages to MessageWithProperties
+            var messagesWithProps = ConvertToMessagesWithProperties([_options.MessageBody]);
+            return await PublishMessageInternal(dest, messagesWithProps, burstCount, cancellationToken);
+        }
+
+        // Should not reach here due to prior validation
+        _logger.LogError("No message body or file provided for publishing");
+        return 1;
     }
 
     public async Task<int> PublishMessageFromFile(DestinationInfo dest, FileInfo fileInfo, int burstCount = 1, CancellationToken cancellationToken = default)
@@ -126,18 +136,18 @@ public class PublishService : IPublishService
         _logger.LogDebug("Reading messages from file: {FilePath}", fileInfo.FullName);
         var messageBlob = await File.ReadAllTextAsync(fileInfo.FullName, cancellationToken);
 
-        // Check if this is a JSON message file
-        if (_options.JsonMessageFile != null)
+        // Auto-detect format: Try JSON first, fallback to plain text
+        try
         {
-            _logger.LogDebug("Parsing JSON messages from file: {FilePath}", fileInfo.FullName);
+            _logger.LogDebug("Attempting to parse file as JSON (NDJSON format)");
+            var jsonMessages = JsonMessageParser.ParseNdjson(messageBlob);
 
-            try
+            if (jsonMessages.Count > 0)
             {
-                var jsonMessages = JsonMessageParser.ParseNdjson(messageBlob);
-                _logger.LogDebug("Parsed {MessageCount} JSON messages from '{FilePath}'", jsonMessages.Count, fileInfo.FullName);
+                _logger.LogDebug("Detected JSON format: Parsed {MessageCount} JSON messages from '{FilePath}'", jsonMessages.Count, fileInfo.FullName);
 
                 // Convert JSON messages to MessageWithProperties, merging with CLI options
-                var messagesWithProps = jsonMessages.Select(jsonMsg =>
+                var jsonMessagesWithProps = jsonMessages.Select(jsonMsg =>
                 {
                     var (mergedProps, mergedHeaders) = PropertyMerger.Merge(jsonMsg, _options);
                     return new MessageWithProperties
@@ -147,23 +157,25 @@ public class PublishService : IPublishService
                     };
                 }).ToList();
 
-                return await PublishMessageInternal(dest, messagesWithProps, burstCount, cancellationToken);
-            }
-            catch (ArgumentException ex)
-            {
-                _logger.LogError(ex, "Failed to parse JSON messages from file: {FilePath}", fileInfo.FullName);
-                _statusOutput.ShowError($"Failed to parse JSON messages from file: {ex.Message}");
-                return 1;
+                return await PublishMessageInternal(dest, jsonMessagesWithProps, burstCount, cancellationToken);
             }
         }
+        catch (ArgumentException)
+        {
+            // Not valid JSON, fallback to plain text
+            _logger.LogDebug("JSON parsing failed, treating file as plain text");
+        }
 
-        // Plain text mode
+        // Plain text mode (delimiter-separated messages)
+        _logger.LogDebug("Detected plain text format");
         var (messages, delimiterDisplay) = SplitMessages(messageBlob);
 
         _logger.LogDebug("Read {MessageCount} messages from '{FilePath}' with delimiter '{MessageDelimiter}'", messages.Count, fileInfo.FullName,
             delimiterDisplay);
 
-        return await PublishMessage(dest, messages, burstCount, cancellationToken);
+        // Convert plain text messages to MessageWithProperties and publish
+        var plainMessagesWithProps = ConvertToMessagesWithProperties(messages);
+        return await PublishMessageInternal(dest, plainMessagesWithProps, burstCount, cancellationToken);
     }
 
     public async Task<int> PublishMessageFromStdin(DestinationInfo dest, int burstCount = 1, CancellationToken cancellationToken = default)
@@ -171,18 +183,18 @@ public class PublishService : IPublishService
         _logger.LogDebug("Reading messages from STDIN");
         var messageBlob = await Console.In.ReadToEndAsync(cancellationToken);
 
-        // Check if this is JSON format mode
-        if (_options.UseJsonFormat)
+        // Auto-detect format: Try JSON first, fallback to plain text
+        try
         {
-            _logger.LogDebug("Parsing JSON messages from STDIN");
+            _logger.LogDebug("Attempting to parse STDIN as JSON (NDJSON format)");
+            var jsonMessages = JsonMessageParser.ParseNdjson(messageBlob);
 
-            try
+            if (jsonMessages.Count > 0)
             {
-                var jsonMessages = JsonMessageParser.ParseNdjson(messageBlob);
-                _logger.LogDebug("Parsed {MessageCount} JSON messages from STDIN", jsonMessages.Count);
+                _logger.LogDebug("Detected JSON format: Parsed {MessageCount} JSON messages from STDIN", jsonMessages.Count);
 
                 // Convert JSON messages to MessageWithProperties, merging with CLI options
-                var messagesWithProps = jsonMessages.Select(jsonMsg =>
+                var jsonMessagesWithProps = jsonMessages.Select(jsonMsg =>
                 {
                     var (mergedProps, mergedHeaders) = PropertyMerger.Merge(jsonMsg, _options);
                     return new MessageWithProperties
@@ -192,23 +204,25 @@ public class PublishService : IPublishService
                     };
                 }).ToList();
 
-                return await PublishMessageInternal(dest, messagesWithProps, burstCount, cancellationToken);
-            }
-            catch (ArgumentException ex)
-            {
-                _logger.LogError(ex, "Failed to parse JSON messages from STDIN");
-                _statusOutput.ShowError($"Failed to parse JSON messages from STDIN: {ex.Message}");
-                return 1;
+                return await PublishMessageInternal(dest, jsonMessagesWithProps, burstCount, cancellationToken);
             }
         }
+        catch (ArgumentException)
+        {
+            // Not valid JSON, fallback to plain text
+            _logger.LogDebug("JSON parsing failed, treating STDIN as plain text");
+        }
 
-        // Plain text mode
+        // Plain text mode (delimiter-separated messages)
+        _logger.LogDebug("Detected plain text format");
         var (messages, delimiterDisplay) = SplitMessages(messageBlob);
 
         _logger.LogDebug("Read {MessageCount} messages from STDIN with delimiter '{MessageDelimiter}'", messages.Count,
             delimiterDisplay);
 
-        return await PublishMessage(dest, messages, burstCount, cancellationToken);
+        // Convert plain text messages to MessageWithProperties and publish
+        var plainMessagesWithProps = ConvertToMessagesWithProperties(messages);
+        return await PublishMessageInternal(dest, plainMessagesWithProps, burstCount, cancellationToken);
     }
 
     private async Task PublishCore(
@@ -447,7 +461,7 @@ public class PublishService : IPublishService
     /// Converts PublishPropertiesJson and headers to MessageProperties.
     /// </summary>
     private static MessageProperties ConvertToMessageProperties(
-        RmqCli.Shared.Json.PublishPropertiesJson props,
+        Shared.Json.PublishPropertiesJson props,
         Dictionary<string, object>? headers)
     {
         return new MessageProperties

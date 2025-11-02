@@ -10,7 +10,7 @@ public class PublishOptions
 {
     public DestinationInfo Destination { get; init; } = null!;
     public string? MessageBody { get; init; }
-    public FileInfo? InputFile { get; init; }
+    public FileInfo? MessageFile { get; init; }
     public int BurstCount { get; init; }
     public bool IsStdinRedirected { get; init; }
 
@@ -29,6 +29,4 @@ public class PublishOptions
 
     // JSON message options
     public string? JsonMessage { get; init; }
-    public FileInfo? JsonMessageFile { get; init; }
-    public bool UseJsonFormat { get; init; }
 }
