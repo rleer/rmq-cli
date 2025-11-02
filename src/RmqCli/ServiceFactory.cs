@@ -1,5 +1,6 @@
 using System.CommandLine;
 using Microsoft.Extensions.DependencyInjection;
+using RabbitMQ.Client;
 using RmqCli.Commands.Consume;
 using RmqCli.Commands.MessageRetrieval;
 using RmqCli.Commands.Peek;
@@ -173,13 +174,58 @@ public class ServiceFactory
             Type = string.IsNullOrWhiteSpace(queueName) ? "exchange" : "queue"
         };
 
+        // Extract property options
+        var appId = parseResult.GetValue<string>("--app-id");
+        var contentType = parseResult.GetValue<string>("--content-type");
+        var contentEncoding = parseResult.GetValue<string>("--content-encoding");
+        var correlationId = parseResult.GetValue<string>("--correlation-id");
+        var deliveryMode = parseResult.GetValue<DeliveryModes?>("--delivery-mode");
+        var expiration = parseResult.GetValue<string>("--expiration");
+        var priorityInt = parseResult.GetValue<int?>("--priority");
+        var priority = priorityInt.HasValue ? (byte?)priorityInt.Value : null;
+        var replyTo = parseResult.GetValue<string>("--reply-to");
+        var type = parseResult.GetValue<string>("--type");
+        var userId = parseResult.GetValue<string>("--user-id");
+
+        // Parse headers
+        var headerStrings = parseResult.GetValue<string[]>("--header");
+        Dictionary<string, object>? headers = null;
+        if (headerStrings != null && headerStrings.Length > 0)
+        {
+            headers = HeaderParser.Parse(headerStrings);
+        }
+
+        // Extract JSON message options
+        var jsonMessage = parseResult.GetValue<string>("--message");
+        var jsonMessageFilePath = parseResult.GetValue<string>("--message-file");
+        FileInfo? jsonMessageFile = null;
+        if (!string.IsNullOrWhiteSpace(jsonMessageFilePath))
+        {
+            jsonMessageFile = new FileInfo(Path.GetFullPath(jsonMessageFilePath, Environment.CurrentDirectory));
+        }
+        var useJsonFormat = parseResult.GetValue<bool>("--json-format");
+
         return new PublishOptions
         {
             Destination = destination,
             MessageBody = messageBody,
             InputFile = inputFile,
             BurstCount = burstCount,
-            IsStdinRedirected = Console.IsInputRedirected
+            IsStdinRedirected = Console.IsInputRedirected,
+            AppId = appId,
+            ContentType = contentType,
+            ContentEncoding = contentEncoding,
+            CorrelationId = correlationId,
+            DeliveryMode = deliveryMode,
+            Expiration = expiration,
+            Priority = priority,
+            ReplyTo = replyTo,
+            Type = type,
+            UserId = userId,
+            Headers = headers,
+            JsonMessage = jsonMessage,
+            JsonMessageFile = jsonMessageFile,
+            UseJsonFormat = useJsonFormat
         };
     }
 }
