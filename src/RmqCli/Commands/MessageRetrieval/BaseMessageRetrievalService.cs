@@ -44,11 +44,11 @@ public abstract class BaseMessageRetrievalService
     }
 
     protected abstract Task<bool> BeforeRetrievalAsync(IChannel channel, QueueInfo queueInfo, CancellationToken cancellationToken);
-    
+
     protected async Task<int> RetrieveMessagesAsync(CancellationToken cancellationToken)
     {
         var startTime = Stopwatch.GetTimestamp();
-        
+
         Logger.LogDebug("Starting message retrieval: mode={OperationName}, queue={Queue}, count={MessageCount}", Strategy.StrategyName.ToLower(), Options.Queue, Options.MessageCount);
 
         // Get RabbitMQ channel
@@ -68,7 +68,7 @@ public abstract class BaseMessageRetrievalService
         }
 
         ShowOperationStartingStatus(Options.Queue, Options.MessageCount);
-        
+
         // Create channels for message processing pipeline
         var receiveChan = Channel.CreateUnbounded<RabbitMessage>();
         var ackChan = Channel.CreateUnbounded<(ulong deliveryTag, bool success)>();
@@ -77,21 +77,21 @@ public abstract class BaseMessageRetrievalService
 
         var counter = new ReceivedMessageCounter();
         await Strategy.RetrieveMessagesAsync(channel, Options.Queue, receiveChan, Options.MessageCount, counter, cancellationToken);
-        
+
         // Wait for pipeline tasks to complete
         await Task.WhenAll(writerTask, ackTask);
-        
+
         var endTime = Stopwatch.GetTimestamp();
         var elapsedTime = Stopwatch.GetElapsedTime(startTime, endTime);
 
         // Show completion status
         ShowCompletionStatus(counter.Value, cancellationToken.IsCancellationRequested, elapsedTime);
-        
+
         var response = BuildResponse(Options.Queue, Options.AckMode, counter.Value, writerTask.Result, elapsedTime, cancellationToken.IsCancellationRequested);
         ResultOutput.WriteMessageRetrievalResult(response);
 
         await channel.CloseAsync(cancellationToken);
-        
+
         return 0;
     }
 
@@ -104,7 +104,7 @@ public abstract class BaseMessageRetrievalService
         var statusMessage = messageCount > 0
             ? $"Retrieving up to {OutputUtilities.GetMessageCountString(messageCount, StatusOutput.NoColor)} from queue {formattedQueueName} in {formattedMode} mode (Ctrl+C to stop)"
             : $"Retrieving messages from queue '{formattedQueueName}' in {formattedMode} mode (Ctrl+C to stop)";
-        StatusOutput.ShowStatus(statusMessage); 
+        StatusOutput.ShowStatus(statusMessage);
     }
 
 
@@ -119,7 +119,7 @@ public abstract class BaseMessageRetrievalService
             $"Retrieved {OutputUtilities.GetMessageCountString(retrievalCount, StatusOutput.NoColor)} in {OutputUtilities.GetElapsedTimeString(elapsedTime)}");
         Logger.LogDebug("Message retrieval stopped (mode={OperationName}). Waiting for RabbitMQ channel to close", Strategy.StrategyName);
     }
-    
+
     private MessageRetrievalResponse BuildResponse(
         string queue,
         AckModes ackMode,

@@ -36,7 +36,7 @@ public static class HeaderValueFormatter
             _ => value.ToString() ?? "-"
         };
     }
-    
+
     private static string EscapeString(string str)
     {
         return str.Replace("\n", "\\n").Replace("\r", "\\r").Replace("\t", "\\t");

@@ -80,7 +80,7 @@ public class PublishCommandHandler : ICommandHandler
             Aliases = { "-b" },
             DefaultValueFactory = _ => 1
         };
- 
+
         var outputFormatOption = new Option<OutputFormat>("--output")
         {
             Description = "Output format",

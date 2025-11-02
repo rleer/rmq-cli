@@ -17,7 +17,7 @@ public class MessageRetrievalResultOutputService
         _outputOptions = outputOptions;
         _console = AnsiConsoleFactory.CreateStderrConsole();
     }
-    
+
     public void WriteMessageRetrievalResult(MessageRetrievalResponse response)
     {
         if (_outputOptions.Quiet)
@@ -63,7 +63,7 @@ public class MessageRetrievalResultOutputService
         var resultJson = JsonSerializer.Serialize(response, JsonSerializationContext.RelaxedEscapingOptions.GetTypeInfo(typeof(MessageRetrievalResponse)));
         Console.Error.WriteLine(resultJson);
     }
-    
+
     private static string FormatMessageCount(long count)
     {
         var pluralSuffix = count == 1 ? string.Empty : "s";

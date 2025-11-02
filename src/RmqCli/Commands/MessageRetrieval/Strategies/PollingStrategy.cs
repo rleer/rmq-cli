@@ -52,10 +52,10 @@ public class PollingStrategy : IMessageRetrievalStrategy
             counter.Increment();
             // await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
         }
-        
+
         // Complete the channels
         receiveChan.Writer.TryComplete();
-        _logger.LogDebug("Receive channel completed after peeking {Count} messages", counter.Value); 
+        _logger.LogDebug("Receive channel completed after peeking {Count} messages", counter.Value);
     }
 
     public string StrategyName => "Polling";
