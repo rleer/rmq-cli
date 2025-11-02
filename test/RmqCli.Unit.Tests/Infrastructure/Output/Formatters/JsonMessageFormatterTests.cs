@@ -71,7 +71,7 @@ public class JsonMessageFormatterTests
             var json = JsonDocument.Parse(result);
             json.RootElement.GetProperty("redelivered").GetBoolean().Should().BeFalse();
         }
-        
+
         [Fact]
         public void IncludesExchange()
         {
@@ -85,7 +85,7 @@ public class JsonMessageFormatterTests
             var json = JsonDocument.Parse(result);
             json.RootElement.GetProperty("exchange").GetString().Should().Be("amq.direct");
         }
-        
+
         [Fact]
         public void IncludesRoutingKey()
         {

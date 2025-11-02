@@ -76,7 +76,7 @@ public class TextMessageFormatterTests
             // Assert
             result.Should().Contain("Routing Key: test.routingKey");
         }
-        
+
         [Fact]
         public void IncludesQueue()
         {
@@ -497,7 +497,7 @@ public class TextMessageFormatterTests
             var message = CreateRabbitMessage("test", props: props);
 
             // Act
-            var result = TextMessageFormatter.FormatMessage(message, compact:true);
+            var result = TextMessageFormatter.FormatMessage(message, compact: true);
 
             // Assert - Verify proper indentation at each nesting level (platform-independent)
             result.Should().Contain("== Custom Headers ==");

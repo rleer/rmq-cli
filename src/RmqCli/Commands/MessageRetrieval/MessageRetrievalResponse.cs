@@ -7,7 +7,7 @@ public class MessageRetrievalResponse : Response
 {
     [JsonPropertyName("result")]
     public MessageRetrievalResult? Result { get; set; }
-    
+
     [JsonPropertyName("queue")]
     public string Queue { get; set; } = string.Empty;
 }
@@ -31,7 +31,7 @@ public class MessageRetrievalResult
 
     [JsonPropertyName("ack_mode")]
     public string AckMode { get; set; } = string.Empty;
-    
+
     [JsonPropertyName("retrieval_mode")]
     public string RetrievalMode { get; set; } = string.Empty; // e.g., "subscribe", "polling"
 
@@ -46,5 +46,5 @@ public class MessageRetrievalResult
     public long TotalSizeBytes { get; set; }
 
     [JsonPropertyName("total_size")]
-    public string TotalSize { get; set; } = string.Empty; 
+    public string TotalSize { get; set; } = string.Empty;
 }

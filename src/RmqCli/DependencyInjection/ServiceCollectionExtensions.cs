@@ -132,7 +132,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<MessageRetrievalResultOutputService>();
         services.AddSingleton<QueueValidator>();
         services.AddSingleton<AckHandler>();
-        services.AddSingleton<MessagePipeline>(); 
+        services.AddSingleton<MessagePipeline>();
 
         return services;
     }
