@@ -12,7 +12,10 @@ QUEUE="test-queue"
 echo "Populating '$QUEUE' with mixed message types..."
 
 # Create temporary file with various message formats
-cat > /tmp/rmq-mixed-messages.txt << 'EOF'
+TEMP_FILE=$(mktemp)
+trap "rm -f $TEMP_FILE" EXIT
+
+cat > "$TEMP_FILE" << 'EOF'
 Plain text message - simple and straightforward
 {"type": "json", "data": {"id": 1, "value": "structured"}}
 key1=value1,key2=value2,key3=value3
@@ -23,6 +26,4 @@ SUCCESS,2025-01-15T14:30:00Z,operation_completed,duration_ms:1250
 EOF
 
 dotnet run --project "$PROJECT_ROOT/src/RmqCli/RmqCli.csproj" --no-build --no-launch-profile -- \
-  publish --queue "$QUEUE" --from-file /tmp/rmq-mixed-messages.txt
-
-rm /tmp/rmq-mixed-messages.txt
+  publish --queue "$QUEUE" --message-file "$TEMP_FILE"

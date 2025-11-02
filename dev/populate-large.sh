@@ -19,5 +19,4 @@ for i in $(seq 1 $COUNT); do
   dotnet run --project "$PROJECT_ROOT/src/RmqCli/RmqCli.csproj" --no-build --no-launch-profile -- \
     publish --queue "$QUEUE" --body "$MESSAGE"
 
-  echo "  Published large message #$i (~5KB)"
 done

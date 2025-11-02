@@ -1,20 +1,21 @@
 #!/usr/bin/env bash
-# Clean up test queue by consuming and acknowledging all messages
+# Clean up test queue by purging it via RabbitMQ Management API
 
 set -e
 
-# Get the directory where the script is located
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-
 QUEUE="${1:-test-queue}"
+RABBITMQ_HOST="${RABBITMQ_HOST:-127.0.0.1}"
+RABBITMQ_PORT="${RABBITMQ_PORT:-8080}"
+RABBITMQ_USER="${RABBITMQ_USER:-guest}"
+RABBITMQ_PASS="${RABBITMQ_PASS:-guest}"
+VHOST="${VHOST:-%2F}"  # URL-encoded / (default '/' vhost)
 
-echo "Cleaning up queue: $QUEUE"
+echo "Purging queue: $QUEUE"
 
-# Consume messages with ack (this removes them from the queue)
-# Use timeout to stop after 3 seconds of waiting for messages
-# The consume command will process all available messages and then timeout
-timeout 4s dotnet run --project "$PROJECT_ROOT/src/RmqCli/RmqCli.csproj" --no-build --no-launch-profile -- \
-  consume --queue "$QUEUE" --ack-mode ack --output plain --quiet > /dev/null 2>&1 || true
+# Purge the queue using RabbitMQ Management API
+curl -s -X DELETE \
+  -u "$RABBITMQ_USER:$RABBITMQ_PASS" \
+  "http://$RABBITMQ_HOST:$RABBITMQ_PORT/api/queues/$VHOST/$QUEUE/contents" \
+  > /dev/null
 
-echo "Queue cleaned: $QUEUE"
+echo "Queue purged: $QUEUE"
