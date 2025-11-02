@@ -156,17 +156,20 @@ public static class ServiceCollectionExtensions
     /// </summary>
     /// <param name="services">The service collection to add services to.</param>
     /// <param name="parseResult">The parse result containing CLI options.</param>
+    /// <param name="publishOptions">Publish-specific options.</param>
     /// <param name="outputOptions">Output formatting options.</param>
     /// <returns>The service collection for chaining.</returns>
     public static IServiceCollection AddRmqPublish(
         this IServiceCollection services,
         ParseResult parseResult,
+        PublishOptions publishOptions,
         OutputOptions outputOptions)
     {
         services.AddRmqLogging(outputOptions.Verbose);
         services.AddRmqConfiguration(parseResult);
 
-        // Register output options as singleton
+        // Register command-specific options as singletons
+        services.AddSingleton(publishOptions);
         services.AddSingleton(outputOptions);
 
         services.AddRmqCoreServices();
