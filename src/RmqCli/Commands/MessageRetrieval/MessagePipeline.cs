@@ -22,7 +22,7 @@ public class MessagePipeline
     }
 
     public (Task<MessageOutputResult> writerTask, Task ackTask) StartPipeline(
-        Channel<RabbitMessage> receiveChan,
+        Channel<RetrievedMessage> receiveChan,
         Channel<(ulong deliveryTag, bool success)> ackChan,
         IChannel channel,
         OutputOptions outputOptions,

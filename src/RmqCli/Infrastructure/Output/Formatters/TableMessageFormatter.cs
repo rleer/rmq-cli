@@ -19,7 +19,7 @@ public static class TableMessageFormatter
     /// </summary>
     /// <param name="message">The message to format</param>
     /// <param name="compact">If true, only show properties with values. If false, show all properties with "-" for empty values.</param>
-    public static string FormatMessage(RabbitMessage message, bool compact = false)
+    public static string FormatMessage(RetrievedMessage message, bool compact = false)
     {
         var panel = CreateMessagePanel(message, compact);
 
@@ -39,7 +39,7 @@ public static class TableMessageFormatter
     /// <summary>
     /// Formats multiple messages separated by newlines.
     /// </summary>
-    public static string FormatMessages(IEnumerable<RabbitMessage> messages, bool compact = false)
+    public static string FormatMessages(IEnumerable<RetrievedMessage> messages, bool compact = false)
     {
         var messageList = messages.ToList();
         var sb = new StringBuilder();
@@ -56,10 +56,9 @@ public static class TableMessageFormatter
         return sb.ToString();
     }
 
-    private static Panel CreateMessagePanel(RabbitMessage message, bool compact)
+    private static Panel CreateMessagePanel(RetrievedMessage message, bool compact)
     {
-        var props = MessagePropertyExtractor.ExtractProperties(message.Props);
-        var content = CreateMessageContent(message, props, compact);
+        var content = CreateMessageContent(message, compact);
 
         var panel = new Panel(content)
         {
@@ -71,7 +70,7 @@ public static class TableMessageFormatter
         return panel;
     }
 
-    private static IRenderable CreateMessageContent(RabbitMessage message, FormattedMessageProperties props, bool compact)
+    private static IRenderable CreateMessageContent(RetrievedMessage message, bool compact)
     {
         var renderables = new List<IRenderable>();
 
@@ -81,26 +80,25 @@ public static class TableMessageFormatter
         renderables.Add(routingTable);
 
         // Properties Section
-        if (props.HasAnyProperty() || !compact)
+        if (message.Properties != null && (message.Properties.HasAnyProperty() || !compact))
         {
             renderables.Add(new Rule("[dim]Properties[/]").LeftJustified().RuleStyle("dim"));
             var propertiesTable = CreateSectionTable();
-            AddPropertiesRows(propertiesTable, props, compact);
+            AddPropertiesRows(propertiesTable, message.Properties, compact);
             renderables.Add(propertiesTable);
         }
 
         // Custom Headers Section
-        if (props.Headers != null && props.Headers.Count > 0)
+        if (message.Headers != null && message.Headers.Count > 0)
         {
             renderables.Add(new Rule("[dim]Custom Headers[/]").LeftJustified().RuleStyle("dim"));
             var headersTable = CreateSectionTable();
-            AddHeadersRows(headersTable, props.Headers);
+            AddHeadersRows(headersTable, message.Headers);
             renderables.Add(headersTable);
         }
 
         // Body Section
-        var bodySize = Encoding.UTF8.GetByteCount(message.Body);
-        renderables.Add(new Rule($"[dim]Body ({OutputUtilities.ToSizeString(bodySize)})[/]").LeftJustified().RuleStyle("dim"));
+        renderables.Add(new Rule($"[dim]Body ({message.BodySize})[/]").LeftJustified().RuleStyle("dim"));
         renderables.Add(new Markup(Markup.Escape(message.Body)));
 
         // Combine all renderables into a Rows layout
@@ -119,7 +117,7 @@ public static class TableMessageFormatter
         return table;
     }
 
-    private static void AddRoutingRows(Table table, RabbitMessage message)
+    private static void AddRoutingRows(Table table, RetrievedMessage message)
     {
         table.AddRow(new Markup("Queue"), new Markup(Markup.Escape(message.Queue)));
         table.AddRow(new Markup("Routing Key"), new Markup(Markup.Escape(message.RoutingKey)));
@@ -130,7 +128,7 @@ public static class TableMessageFormatter
         table.AddRow(new Markup("Redelivered"), new Markup(redelivered));
     }
 
-    private static void AddPropertiesRows(Table table, FormattedMessageProperties props, bool compact)
+    private static void AddPropertiesRows(Table table, MessageProperties props, bool compact)
     {
         if (compact)
         {
@@ -140,7 +138,7 @@ public static class TableMessageFormatter
             if (props.CorrelationId != null)
                 AddRow(table, "Correlation ID", props.CorrelationId);
             if (props.Timestamp != null)
-                AddRow(table, "Timestamp", props.Timestamp + " UTC");
+                AddRow(table, "Timestamp", FormatTimestamp(props.Timestamp.Value) + " UTC");
             if (props.ContentType != null)
                 AddRow(table, "Content Type", props.ContentType);
             if (props.ContentEncoding != null)
@@ -160,6 +158,8 @@ public static class TableMessageFormatter
                 AddRow(table, "Type", props.Type);
             if (props.AppId != null)
                 AddRow(table, "App ID", props.AppId);
+            if (props.UserId != null)
+                AddRow(table, "User ID", props.UserId);
             if (props.ClusterId != null)
                 AddRow(table, "Cluster ID", props.ClusterId);
         }
@@ -168,7 +168,7 @@ public static class TableMessageFormatter
             // Full mode: show all properties with "-" for empty
             AddRow(table, "Message ID", props.MessageId ?? "[dim]-[/]", allowMarkup: props.MessageId == null);
             AddRow(table, "Correlation ID", props.CorrelationId ?? "[dim]-[/]", allowMarkup: props.CorrelationId == null);
-            AddRow(table, "Timestamp", props.Timestamp != null ? props.Timestamp + " UTC" : "[dim]-[/]", allowMarkup: props.Timestamp == null);
+            AddRow(table, "Timestamp", props.Timestamp != null ? FormatTimestamp(props.Timestamp.Value) + " UTC" : "[dim]-[/]", allowMarkup: props.Timestamp == null);
             AddRow(table, "Content Type", props.ContentType ?? "[dim]-[/]", allowMarkup: props.ContentType == null);
             AddRow(table, "Content Encoding", props.ContentEncoding ?? "[dim]-[/]", allowMarkup: props.ContentEncoding == null);
 
@@ -187,6 +187,7 @@ public static class TableMessageFormatter
             AddRow(table, "Reply To", props.ReplyTo ?? "[dim]-[/]", allowMarkup: props.ReplyTo == null);
             AddRow(table, "Type", props.Type ?? "[dim]-[/]", allowMarkup: props.Type == null);
             AddRow(table, "App ID", props.AppId ?? "[dim]-[/]", allowMarkup: props.AppId == null);
+            AddRow(table, "User ID", props.UserId ?? "[dim]-[/]", allowMarkup: props.UserId == null);
             AddRow(table, "Cluster ID", props.ClusterId ?? "[dim]-[/]", allowMarkup: props.ClusterId == null);
         }
     }
@@ -220,5 +221,14 @@ public static class TableMessageFormatter
             DeliveryModes.Persistent => "Persistent (2)",
             _ => mode.ToString()
         };
+    }
+
+    /// <summary>
+    /// Formats a Unix timestamp (seconds) to a standard string format.
+    /// </summary>
+    private static string FormatTimestamp(long unixSeconds)
+    {
+        var dateTime = DateTimeOffset.FromUnixTimeSeconds(unixSeconds);
+        return dateTime.ToString("yyyy-MM-dd HH:mm:ss");
     }
 }

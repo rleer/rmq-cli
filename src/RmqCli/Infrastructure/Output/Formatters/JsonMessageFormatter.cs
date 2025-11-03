@@ -1,87 +1,22 @@
-using System.Text;
 using System.Text.Json;
 using RmqCli.Core.Models;
-using RmqCli.Shared;
 using RmqCli.Shared.Json;
 
 namespace RmqCli.Infrastructure.Output.Formatters;
 
+/// <summary>
+/// Formats retrieved messages as JSON using source-generated serialization.
+/// </summary>
 public static class JsonMessageFormatter
 {
-    public static string FormatMessage(RabbitMessage message)
+    public static string FormatMessage(RetrievedMessage message)
     {
-        var messageJson = CreateMessageJson(message);
-        return JsonSerializer.Serialize(messageJson, JsonSerializationContext.RelaxedEscapingOptions.GetTypeInfo(typeof(MessageJson)));
+        return JsonSerializer.Serialize(message, JsonSerializationContext.RelaxedEscapingOptions.GetTypeInfo(typeof(RetrievedMessage)));
     }
 
-    public static string FormatMessages(IEnumerable<RabbitMessage> messages)
+    public static string FormatMessages(IEnumerable<RetrievedMessage> messages)
     {
-        var messageArr = messages.Select(CreateMessageJson).ToArray();
-        var wrapper = new MessageJsonArray(messageArr);
-        return JsonSerializer.Serialize(wrapper, JsonSerializationContext.RelaxedEscapingOptions.GetTypeInfo(typeof(MessageJsonArray)));
-    }
-
-    private static MessageJson CreateMessageJson(RabbitMessage message)
-    {
-        var formattedProps = MessagePropertyExtractor.ExtractProperties(message.Props);
-        var properties = ConvertToJsonProperties(formattedProps);
-        var headers = formattedProps.Headers; // Extract headers separately
-
-        var bodySizeBytes = Encoding.UTF8.GetByteCount(message.Body);
-        var bodySize = OutputUtilities.ToSizeString(bodySizeBytes);
-
-        return new MessageJson(
-            message.Exchange,
-            message.RoutingKey,
-            message.Queue,
-            message.DeliveryTag,
-            message.Redelivered,
-            message.Body,
-            bodySizeBytes,
-            bodySize,
-            properties,
-            headers  // Pass headers as separate parameter
-        );
-    }
-
-    /// <summary>
-    /// Converts FormattedMessageProperties to a dictionary suitable for JSON serialization.
-    /// Only includes properties that are present (not null).
-    /// </summary>
-    private static Dictionary<string, object>? ConvertToJsonProperties(FormattedMessageProperties props)
-    {
-        if (!props.HasAnyProperty())
-        {
-            return null;
-        }
-
-        var properties = new Dictionary<string, object>();
-
-        if (props.Type != null)
-            properties["type"] = props.Type;
-        if (props.MessageId != null)
-            properties["messageId"] = props.MessageId;
-        if (props.AppId != null)
-            properties["appId"] = props.AppId;
-        if (props.ClusterId != null)
-            properties["clusterId"] = props.ClusterId;
-        if (props.ContentType != null)
-            properties["contentType"] = props.ContentType;
-        if (props.ContentEncoding != null)
-            properties["contentEncoding"] = props.ContentEncoding;
-        if (props.CorrelationId != null)
-            properties["correlationId"] = props.CorrelationId;
-        if (props.DeliveryMode != null)
-            properties["deliveryMode"] = props.DeliveryMode.Value;
-        if (props.Expiration != null)
-            properties["expiration"] = props.Expiration;
-        if (props.Priority != null)
-            properties["priority"] = props.Priority.Value;
-        if (props.ReplyTo != null)
-            properties["replyTo"] = props.ReplyTo;
-        if (props.Timestamp != null)
-            properties["timestamp"] = props.Timestamp;
-
-        return properties.Count > 0 ? properties : null;
+        var messageArr = messages.ToArray();
+        return JsonSerializer.Serialize(messageArr, JsonSerializationContext.RelaxedEscapingOptions.GetTypeInfo(typeof(RetrievedMessage[])));
     }
 }

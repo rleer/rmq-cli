@@ -7,12 +7,11 @@ using RmqCli.Core.Models;
 
 namespace RmqCli.Shared.Json;
 
-[JsonSerializable(typeof(MessageJson))]
-[JsonSerializable(typeof(MessageJson[]), TypeInfoPropertyName = "ArrayOfMessageJson")]
-[JsonSerializable(typeof(MessageJsonArray))]
-[JsonSerializable(typeof(PublishMessageJson))]
-[JsonSerializable(typeof(PublishMessageJson[]))]
-[JsonSerializable(typeof(PublishPropertiesJson))]
+[JsonSerializable(typeof(Message))]
+[JsonSerializable(typeof(Message[]))]
+[JsonSerializable(typeof(RetrievedMessage))]
+[JsonSerializable(typeof(RetrievedMessage[]))]
+[JsonSerializable(typeof(MessageProperties))]
 [JsonSerializable(typeof(Dictionary<string, object>))]
 [JsonSerializable(typeof(string))]
 [JsonSerializable(typeof(string[]))]

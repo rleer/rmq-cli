@@ -1,7 +1,9 @@
 using System.Globalization;
+using System.Text;
 using RabbitMQ.Client;
 using RmqCli.Core.Models;
 using RmqCli.Infrastructure.Output.Formatters;
+using RmqCli.Shared;
 using RmqCli.Unit.Tests.Helpers;
 
 namespace RmqCli.Unit.Tests.Infrastructure.Output.Formatters;
@@ -16,7 +18,7 @@ public class TextMessageFormatterTests
         public void IncludesMessageDeliveryTagAsHeader()
         {
             // Arrange
-            var message = CreateRabbitMessage("test", deliveryTag: 42);
+            var message = CreateRetrievedMessage("test", deliveryTag: 42);
 
             // Act
             var result = TextMessageFormatter.FormatMessage(message);
@@ -29,7 +31,7 @@ public class TextMessageFormatterTests
         public void IncludesRedeliveredFlag_WhenTrue()
         {
             // Arrange
-            var message = CreateRabbitMessage("test", redelivered: true);
+            var message = CreateRetrievedMessage("test", redelivered: true);
 
             // Act
             var result = TextMessageFormatter.FormatMessage(message);
@@ -42,7 +44,7 @@ public class TextMessageFormatterTests
         public void IncludesRedeliveredFlag_WhenFalse()
         {
             // Arrange
-            var message = CreateRabbitMessage("test", redelivered: false);
+            var message = CreateRetrievedMessage("test", redelivered: false);
 
             // Act
             var result = TextMessageFormatter.FormatMessage(message);
@@ -55,7 +57,7 @@ public class TextMessageFormatterTests
         public void IncludesExchange()
         {
             // Arrange
-            var message = CreateRabbitMessage("Test message body", exchange: "test.exchange");
+            var message = CreateRetrievedMessage("Test message body", exchange: "test.exchange");
 
             // Act
             var result = TextMessageFormatter.FormatMessage(message);
@@ -68,7 +70,7 @@ public class TextMessageFormatterTests
         public void IncludesRoutingKey()
         {
             // Arrange
-            var message = CreateRabbitMessage("Test message body", routingKey: "test.routingKey");
+            var message = CreateRetrievedMessage("Test message body", routingKey: "test.routingKey");
 
             // Act
             var result = TextMessageFormatter.FormatMessage(message);
@@ -81,7 +83,7 @@ public class TextMessageFormatterTests
         public void IncludesQueue()
         {
             // Arrange
-            var message = CreateRabbitMessage("Test message body", queue: "queue-name");
+            var message = CreateRetrievedMessage("Test message body", queue: "queue-name");
 
             // Act
             var result = TextMessageFormatter.FormatMessage(message);
@@ -94,7 +96,7 @@ public class TextMessageFormatterTests
         public void DistinguishesQueueFromRoutingKey()
         {
             // Arrange - Queue and routing key should be different
-            var message = CreateRabbitMessage(
+            var message = CreateRetrievedMessage(
                 "Test message body",
                 exchange: "amq.direct",
                 routingKey: "user.created",
@@ -114,7 +116,7 @@ public class TextMessageFormatterTests
         public void IncludesBody()
         {
             // Arrange
-            var message = CreateRabbitMessage("Test message body");
+            var message = CreateRetrievedMessage("Test message body");
 
             // Act
             var result = TextMessageFormatter.FormatMessage(message);
@@ -127,7 +129,7 @@ public class TextMessageFormatterTests
         public void HandlesEmptyBody()
         {
             // Arrange
-            var message = CreateRabbitMessage("");
+            var message = CreateRetrievedMessage("");
 
             // Act
             var result = TextMessageFormatter.FormatMessage(message);
@@ -141,7 +143,7 @@ public class TextMessageFormatterTests
         public void OmitsProperties_WhenNonePresent()
         {
             // Arrange
-            var message = CreateRabbitMessage("test", props: null);
+            var message = CreateRetrievedMessage("test", props: null);
 
             // Act - use compact mode to omit empty properties
             var result = TextMessageFormatter.FormatMessage(message, compact: true);
@@ -160,7 +162,7 @@ public class TextMessageFormatterTests
             props.IsMessageIdPresent().Returns(true);
             props.MessageId.Returns("msg-123");
 
-            var message = CreateRabbitMessage("test", props: props);
+            var message = CreateRetrievedMessage("test", props: props);
 
             // Act
             var result = TextMessageFormatter.FormatMessage(message);
@@ -177,7 +179,7 @@ public class TextMessageFormatterTests
             props.IsContentTypePresent().Returns(true);
             props.ContentType.Returns("application/json");
 
-            var message = CreateRabbitMessage("test", props: props);
+            var message = CreateRetrievedMessage("test", props: props);
 
             // Act
             var result = TextMessageFormatter.FormatMessage(message);
@@ -191,7 +193,7 @@ public class TextMessageFormatterTests
         {
             // Arrange
             var props = RabbitMessageTestHelper.CreateFullyPopulatedProperties();
-            var message = CreateRabbitMessage("test", props: props);
+            var message = CreateRetrievedMessage("test", props: props);
 
             // Act
             var result = TextMessageFormatter.FormatMessage(message);
@@ -226,7 +228,7 @@ public class TextMessageFormatterTests
                 ["x-key2"] = "value2"
             });
 
-            var message = CreateRabbitMessage("test", props: props);
+            var message = CreateRetrievedMessage("test", props: props);
 
             // Act
             var result = TextMessageFormatter.FormatMessage(message);
@@ -249,7 +251,7 @@ public class TextMessageFormatterTests
                 // null values are not stored in RabbitMQ headers
             });
 
-            var message = CreateRabbitMessage("test", props: props);
+            var message = CreateRetrievedMessage("test", props: props);
 
             // Act
             var result = TextMessageFormatter.FormatMessage(message);
@@ -271,7 +273,7 @@ public class TextMessageFormatterTests
                 ["x-binary"] = binaryData
             });
 
-            var message = CreateRabbitMessage("test", props: props);
+            var message = CreateRetrievedMessage("test", props: props);
 
             // Act
             var result = TextMessageFormatter.FormatMessage(message);
@@ -294,7 +296,7 @@ public class TextMessageFormatterTests
                 ["x-empty-array"] = Array.Empty<object>()
             });
 
-            var message = CreateRabbitMessage("test", props: props);
+            var message = CreateRetrievedMessage("test", props: props);
 
             // Act
             var result = TextMessageFormatter.FormatMessage(message);
@@ -318,7 +320,7 @@ public class TextMessageFormatterTests
                 ["x-array"] = new object[] { "item1", "item2", 42, true, 3.14 }
             });
 
-            var message = CreateRabbitMessage("test", props: props);
+            var message = CreateRetrievedMessage("test", props: props);
 
             // Act
             var result = TextMessageFormatter.FormatMessage(message);
@@ -341,7 +343,7 @@ public class TextMessageFormatterTests
                 ["x-large-array"] = new object[] { 1, 2, 3, 4, 5, 6 }
             });
 
-            var message = CreateRabbitMessage("test", props: props);
+            var message = CreateRetrievedMessage("test", props: props);
 
             // Act
             var result = TextMessageFormatter.FormatMessage(message);
@@ -373,7 +375,7 @@ public class TextMessageFormatterTests
                 }
             });
 
-            var message = CreateRabbitMessage("test", props: props);
+            var message = CreateRetrievedMessage("test", props: props);
 
             // Act
             var result = TextMessageFormatter.FormatMessage(message);
@@ -397,7 +399,7 @@ public class TextMessageFormatterTests
                 ["x-empty-dict"] = new Dictionary<string, object>()
             });
 
-            var message = CreateRabbitMessage("test", props: props);
+            var message = CreateRetrievedMessage("test", props: props);
 
             // Act
             var result = TextMessageFormatter.FormatMessage(message);
@@ -425,7 +427,7 @@ public class TextMessageFormatterTests
                 }
             });
 
-            var message = CreateRabbitMessage("test", props: props);
+            var message = CreateRetrievedMessage("test", props: props);
 
             // Act
             var result = TextMessageFormatter.FormatMessage(message);
@@ -456,7 +458,7 @@ public class TextMessageFormatterTests
                 }
             });
 
-            var message = CreateRabbitMessage("test", props: props);
+            var message = CreateRetrievedMessage("test", props: props);
 
             // Act
             var result = TextMessageFormatter.FormatMessage(message);
@@ -494,7 +496,7 @@ public class TextMessageFormatterTests
                 }
             });
 
-            var message = CreateRabbitMessage("test", props: props);
+            var message = CreateRetrievedMessage("test", props: props);
 
             // Act
             var result = TextMessageFormatter.FormatMessage(message, compact: true);
@@ -528,7 +530,7 @@ public class TextMessageFormatterTests
             };
             props.Headers.Returns(headers);
 
-            var message = CreateRabbitMessage("test", props: props);
+            var message = CreateRetrievedMessage("test", props: props);
 
             // Act
             var result = TextMessageFormatter.FormatMessage(message);
@@ -549,7 +551,7 @@ public class TextMessageFormatterTests
         {
             // Arrange - Use \n explicitly for consistent byte count across platforms
             var multilineBody = "Line 1\nLine 2\nLine 3";
-            var message = CreateRabbitMessage(multilineBody);
+            var message = CreateRetrievedMessage(multilineBody);
 
             // Act
             var result = TextMessageFormatter.FormatMessage(message);
@@ -574,9 +576,9 @@ public class TextMessageFormatterTests
             // Arrange
             var messages = new[]
             {
-                CreateRabbitMessage("Message 1", exchange: "amq.direct", routingKey: "key.1", deliveryTag: 1),
-                CreateRabbitMessage("Message 2", exchange: "amq.topic", routingKey: "key.2", deliveryTag: 2),
-                CreateRabbitMessage("Message 3", exchange: "amq.fanout", routingKey: "key.3", deliveryTag: 3)
+                CreateRetrievedMessage("Message 1", exchange: "amq.direct", routingKey: "key.1", deliveryTag: 1),
+                CreateRetrievedMessage("Message 2", exchange: "amq.topic", routingKey: "key.2", deliveryTag: 2),
+                CreateRetrievedMessage("Message 3", exchange: "amq.fanout", routingKey: "key.3", deliveryTag: 3)
             };
 
             // Act
@@ -603,8 +605,8 @@ public class TextMessageFormatterTests
             // Arrange
             var messages = new[]
             {
-                CreateRabbitMessage("First", exchange: "amq.direct", routingKey: "key.1", deliveryTag: 1),
-                CreateRabbitMessage("Second", exchange: "amq.topic", routingKey: "key.2", deliveryTag: 2)
+                CreateRetrievedMessage("First", exchange: "amq.direct", routingKey: "key.1", deliveryTag: 1),
+                CreateRetrievedMessage("Second", exchange: "amq.topic", routingKey: "key.2", deliveryTag: 2)
             };
 
             // Act
@@ -625,7 +627,7 @@ public class TextMessageFormatterTests
         public void ReturnsEmptyString_WhenNoMessages()
         {
             // Arrange
-            var messages = Array.Empty<RabbitMessage>();
+            var messages = Array.Empty<RetrievedMessage>();
 
             // Act
             var result = TextMessageFormatter.FormatMessages(messages);
@@ -638,7 +640,7 @@ public class TextMessageFormatterTests
         public void HandlesSingleMessage()
         {
             // Arrange
-            var messages = new[] { CreateRabbitMessage("Only one", exchange: "amq.direct", routingKey: "key.1", deliveryTag: 99) };
+            var messages = new[] { CreateRetrievedMessage("Only one", exchange: "amq.direct", routingKey: "key.1", deliveryTag: 99) };
 
             // Act
             var result = TextMessageFormatter.FormatMessages(messages);
@@ -664,8 +666,8 @@ public class TextMessageFormatterTests
 
             var messages = new[]
             {
-                CreateRabbitMessage("First", deliveryTag: 1, props: props1),
-                CreateRabbitMessage("Second", deliveryTag: 2, props: props2)
+                CreateRetrievedMessage("First", deliveryTag: 1, props: props1),
+                CreateRetrievedMessage("Second", deliveryTag: 2, props: props2)
             };
 
             // Act
@@ -683,7 +685,7 @@ public class TextMessageFormatterTests
 
     #region Test Helpers
 
-    private static RabbitMessage CreateRabbitMessage(
+    private static RetrievedMessage CreateRetrievedMessage(
         string body,
         string exchange = "exchange",
         string routingKey = "routing.key",
@@ -692,7 +694,22 @@ public class TextMessageFormatterTests
         IReadOnlyBasicProperties? props = null,
         bool redelivered = false)
     {
-        return new RabbitMessage(exchange, routingKey, queue, body, deliveryTag, props, redelivered);
+        var (properties, headers) = MessagePropertyExtractor.ExtractPropertiesAndHeaders(props);
+        var bodySizeBytes = Encoding.UTF8.GetByteCount(body);
+
+        return new RetrievedMessage
+        {
+            Body = body,
+            Exchange = exchange,
+            RoutingKey = routingKey,
+            Queue = queue,
+            DeliveryTag = deliveryTag,
+            Properties = properties,
+            Headers = headers,
+            Redelivered = redelivered,
+            BodySizeBytes = bodySizeBytes,
+            BodySize = OutputUtilities.ToSizeString(bodySizeBytes)
+        };
     }
 
     #endregion

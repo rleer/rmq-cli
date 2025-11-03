@@ -1,3 +1,4 @@
+using System.Text;
 using System.Threading.Channels;
 using Microsoft.Extensions.Logging.Abstractions;
 using RabbitMQ.Client;
@@ -5,6 +6,7 @@ using RmqCli.Core.Models;
 using RmqCli.Infrastructure.Configuration.Models;
 using RmqCli.Infrastructure.Output;
 using RmqCli.Infrastructure.Output.File;
+using RmqCli.Infrastructure.Output.Formatters;
 using RmqCli.Shared;
 
 namespace RmqCli.Integration.Tests.Infrastructure.Output;
@@ -48,13 +50,13 @@ public class FileOutputTests
             var fileConfig = new FileConfig { MessagesPerFile = 100 };
             var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 5);
 
-            var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
+            var messageChannel = Channel.CreateUnbounded<RetrievedMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
 
             // Add messages
             for (int i = 1; i <= 5; i++)
             {
-                await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "test-queue", $"Message {i}", (ulong)i, null, false));
+                await messageChannel.Writer.WriteAsync(CreateRetrievedMessage($"Message {i}", "exchange", "routing-key", "test-queue", (ulong)i));
             }
             messageChannel.Writer.Complete();
 
@@ -86,12 +88,12 @@ public class FileOutputTests
             };
             var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 3);
 
-            var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
+            var messageChannel = Channel.CreateUnbounded<RetrievedMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
 
-            await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "test-queue", "Message 1", 1, null, false));
-            await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "test-queue", "Message 2", 2, null, false));
-            await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "test-queue", "Message 3", 3, null, false));
+            await messageChannel.Writer.WriteAsync(CreateRetrievedMessage("Message 1", "exchange", "routing-key", "test-queue", 1));
+            await messageChannel.Writer.WriteAsync(CreateRetrievedMessage("Message 2", "exchange", "routing-key", "test-queue", 2));
+            await messageChannel.Writer.WriteAsync(CreateRetrievedMessage("Message 3", "exchange", "routing-key", "test-queue", 3));
             messageChannel.Writer.Complete();
 
             // Act
@@ -116,11 +118,11 @@ public class FileOutputTests
             var fileConfig = new FileConfig { MessagesPerFile = 100, MessageDelimiter = "---" };
             var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Json, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 2);
 
-            var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
+            var messageChannel = Channel.CreateUnbounded<RetrievedMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
 
-            await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "test-queue", "Message 1", 1, null, false));
-            await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "test-queue", "Message 2", 2, null, false));
+            await messageChannel.Writer.WriteAsync(CreateRetrievedMessage("Message 1", "exchange", "routing-key", "test-queue", 1));
+            await messageChannel.Writer.WriteAsync(CreateRetrievedMessage("Message 2", "exchange", "routing-key", "test-queue", 2));
             messageChannel.Writer.Complete();
 
             // Act
@@ -144,7 +146,7 @@ public class FileOutputTests
             var fileConfig = new FileConfig { MessagesPerFile = 100 };
             var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 10);
 
-            var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
+            var messageChannel = Channel.CreateUnbounded<RetrievedMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
             messageChannel.Writer.Complete();
 
@@ -168,7 +170,7 @@ public class FileOutputTests
             var fileConfig = new FileConfig { MessagesPerFile = 100 };
             var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 2);
 
-            var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
+            var messageChannel = Channel.CreateUnbounded<RetrievedMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
 
             var body1 = "Test message 1";
@@ -176,8 +178,8 @@ public class FileOutputTests
             var expectedBytes = System.Text.Encoding.UTF8.GetByteCount(body1)
                               + System.Text.Encoding.UTF8.GetByteCount(body2);
 
-            await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "test-queue", body1, 1, null, false));
-            await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "test-queue", body2, 2, null, false));
+            await messageChannel.Writer.WriteAsync(CreateRetrievedMessage(body1, "exchange", "routing-key", "test-queue", 1));
+            await messageChannel.Writer.WriteAsync(CreateRetrievedMessage(body2, "exchange", "routing-key", "test-queue", 2));
             messageChannel.Writer.Complete();
 
             // Act
@@ -222,13 +224,13 @@ public class FileOutputTests
             var fileConfig = new FileConfig { MessagesPerFile = 2 }; // 2 messages per file
             var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 5);
 
-            var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
+            var messageChannel = Channel.CreateUnbounded<RetrievedMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
 
             // Add 5 messages (should create 3 files: 2+2+1)
             for (int i = 1; i <= 5; i++)
             {
-                await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "test-queue", $"Message {i}", (ulong)i, null, false));
+                await messageChannel.Writer.WriteAsync(CreateRetrievedMessage($"Message {i}", "exchange", "routing-key", "test-queue", (ulong)i));
             }
             messageChannel.Writer.Complete();
 
@@ -255,13 +257,13 @@ public class FileOutputTests
             var fileConfig = new FileConfig { MessagesPerFile = 2 };
             var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: -1); // Unlimited
 
-            var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
+            var messageChannel = Channel.CreateUnbounded<RetrievedMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
 
             // Add 5 messages
             for (int i = 1; i <= 5; i++)
             {
-                await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "test-queue", $"Message {i}", (ulong)i, null, false));
+                await messageChannel.Writer.WriteAsync(CreateRetrievedMessage($"Message {i}", "exchange", "routing-key", "test-queue", (ulong)i));
             }
             messageChannel.Writer.Complete();
 
@@ -288,12 +290,12 @@ public class FileOutputTests
             var fileConfig = new FileConfig { MessagesPerFile = 3 };
             var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 10); // 10 > 3
 
-            var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
+            var messageChannel = Channel.CreateUnbounded<RetrievedMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
 
             for (int i = 1; i <= 6; i++)
             {
-                await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "test-queue", $"Message {i}", (ulong)i, null, false));
+                await messageChannel.Writer.WriteAsync(CreateRetrievedMessage($"Message {i}", "exchange", "routing-key", "test-queue", (ulong)i));
             }
             messageChannel.Writer.Complete();
 
@@ -320,12 +322,12 @@ public class FileOutputTests
             var fileConfig = new FileConfig { MessagesPerFile = 1 }; // 1 message per file
             var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 3);
 
-            var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
+            var messageChannel = Channel.CreateUnbounded<RetrievedMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
 
             for (int i = 1; i <= 3; i++)
             {
-                await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "test-queue", $"Message {i}", (ulong)i, null, false));
+                await messageChannel.Writer.WriteAsync(CreateRetrievedMessage($"Message {i}", "exchange", "routing-key", "test-queue", (ulong)i));
             }
             messageChannel.Writer.Complete();
 
@@ -354,12 +356,12 @@ public class FileOutputTests
             };
             var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 6);
 
-            var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
+            var messageChannel = Channel.CreateUnbounded<RetrievedMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
 
             for (int i = 1; i <= 6; i++)
             {
-                await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "test-queue", $"Message {i}", (ulong)i, null, false));
+                await messageChannel.Writer.WriteAsync(CreateRetrievedMessage($"Message {i}", "exchange", "routing-key", "test-queue", (ulong)i));
             }
             messageChannel.Writer.Complete();
 
@@ -390,12 +392,12 @@ public class FileOutputTests
             var fileConfig = new FileConfig { MessagesPerFile = 2 };
             var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Json, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 4);
 
-            var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
+            var messageChannel = Channel.CreateUnbounded<RetrievedMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
 
             for (int i = 1; i <= 4; i++)
             {
-                await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "test-queue", $"Message {i}", (ulong)i, null, false));
+                await messageChannel.Writer.WriteAsync(CreateRetrievedMessage($"Message {i}", "exchange", "routing-key", "test-queue", (ulong)i));
             }
             messageChannel.Writer.Complete();
 
@@ -448,10 +450,10 @@ public class FileOutputTests
             var fileConfig = new FileConfig { MessagesPerFile = 100 };
             var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 1);
 
-            var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
+            var messageChannel = Channel.CreateUnbounded<RetrievedMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
 
-            await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "test-queue", "Test", 42, null, false));
+            await messageChannel.Writer.WriteAsync(CreateRetrievedMessage("Test", "exchange", "routing-key", "test-queue", 42));
             messageChannel.Writer.Complete();
 
             // Act
@@ -475,14 +477,14 @@ public class FileOutputTests
             var fileConfig = new FileConfig { MessagesPerFile = 100 };
             var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 1);
 
-            var messageChannel = Channel.CreateUnbounded<RabbitMessage>();
+            var messageChannel = Channel.CreateUnbounded<RetrievedMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
 
             var props = Substitute.For<IReadOnlyBasicProperties>();
             props.IsMessageIdPresent().Returns(true);
             props.MessageId.Returns("msg-123");
 
-            await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "test-queue", "Test", 1, props, false));
+            await messageChannel.Writer.WriteAsync(CreateRetrievedMessage("Test", "exchange", "routing-key", "test-queue", 1, props));
             messageChannel.Writer.Complete();
 
             // Act
@@ -507,7 +509,7 @@ public class FileOutputTests
             var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 100000);
 
             // Use bounded channel to control message flow rate
-            var messageChannel = Channel.CreateBounded<RabbitMessage>(500);
+            var messageChannel = Channel.CreateBounded<RetrievedMessage>(500);
             var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
 
             const int totalMessages = 100000;
@@ -528,7 +530,7 @@ public class FileOutputTests
                     if (cts.Token.IsCancellationRequested)
                         break;
 
-                    await messageChannel.Writer.WriteAsync(new RabbitMessage("exchange", "routing-key", "test-queue", $"Message {i}", (ulong)i, null, false));
+                    await messageChannel.Writer.WriteAsync(CreateRetrievedMessage($"Message {i}", "exchange", "routing-key", "test-queue", (ulong)i));
 
                     // Cancel after some messages have been written
                     if (i == 1000)
@@ -548,6 +550,37 @@ public class FileOutputTests
             result.ProcessedCount.Should().BeGreaterThan(100, "at least 100 messages should be processed before cancellation");
             result.ProcessedCount.Should().BeLessThan(totalMessages, "cancellation should stop processing before all messages are consumed");
         }
+    }
+
+    #endregion
+
+    #region Test Helpers
+
+    private static RetrievedMessage CreateRetrievedMessage(
+        string body,
+        string exchange = "exchange",
+        string routingKey = "routing.key",
+        string queue = "test-queue",
+        ulong deliveryTag = 1,
+        IReadOnlyBasicProperties? props = null,
+        bool redelivered = false)
+    {
+        var (properties, headers) = MessagePropertyExtractor.ExtractPropertiesAndHeaders(props);
+        var bodySizeBytes = Encoding.UTF8.GetByteCount(body);
+
+        return new RetrievedMessage
+        {
+            Body = body,
+            Exchange = exchange,
+            RoutingKey = routingKey,
+            Queue = queue,
+            DeliveryTag = deliveryTag,
+            Properties = properties,
+            Headers = headers,
+            Redelivered = redelivered,
+            BodySizeBytes = bodySizeBytes,
+            BodySize = OutputUtilities.ToSizeString(bodySizeBytes)
+        };
     }
 
     #endregion

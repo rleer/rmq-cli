@@ -70,7 +70,7 @@ public abstract class BaseMessageRetrievalService
         ShowOperationStartingStatus(Options.Queue, Options.MessageCount);
 
         // Create channels for message processing pipeline
-        var receiveChan = Channel.CreateUnbounded<RabbitMessage>();
+        var receiveChan = Channel.CreateUnbounded<RetrievedMessage>();
         var ackChan = Channel.CreateUnbounded<(ulong deliveryTag, bool success)>();
 
         var (writerTask, ackTask) = MessagePipeline.StartPipeline(receiveChan, ackChan, channel, OutputOptions, Options.MessageCount, cancellationToken);
