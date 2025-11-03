@@ -1,8 +1,11 @@
+using System.Text;
 using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using RmqCli.Core.Models;
+using RmqCli.Infrastructure.Output.Formatters;
+using RmqCli.Shared;
 
 namespace RmqCli.Commands.MessageRetrieval.Strategies;
 
@@ -18,7 +21,7 @@ public class SubscriberStrategy : IMessageRetrievalStrategy
     public async Task RetrieveMessagesAsync(
         IChannel channel,
         string queue,
-        Channel<RabbitMessage> receiveChan,
+        Channel<RetrievedMessage> receiveChan,
         int messageCount,
         ReceivedMessageCounter counter,
         CancellationToken cancellationToken)
@@ -43,7 +46,7 @@ public class SubscriberStrategy : IMessageRetrievalStrategy
 
     private AsyncEventingBasicConsumer CreateConsumer(
         IChannel channel,
-        Channel<RabbitMessage> receiveChan,
+        Channel<RetrievedMessage> receiveChan,
         string queue,
         int messageCount,
         ReceivedMessageCounter counter,
@@ -67,8 +70,24 @@ public class SubscriberStrategy : IMessageRetrievalStrategy
 
             _logger.LogTrace("Received message #{DeliveryTag}", ea.DeliveryTag);
 
-            var message = new RabbitMessage(ea.Exchange, ea.RoutingKey, queue, System.Text.Encoding.UTF8.GetString(ea.Body.ToArray()), ea.DeliveryTag,
-                ea.BasicProperties, ea.Redelivered);
+            // Extract properties and headers
+            var body = Encoding.UTF8.GetString(ea.Body.ToArray());
+            var (properties, headers) = MessagePropertyExtractor.ExtractPropertiesAndHeaders(ea.BasicProperties);
+            var bodySizeBytes = Encoding.UTF8.GetByteCount(body);
+
+            var message = new RetrievedMessage
+            {
+                Body = body,
+                Properties = properties,
+                Headers = headers,
+                Exchange = ea.Exchange,
+                RoutingKey = ea.RoutingKey,
+                Queue = queue,
+                DeliveryTag = ea.DeliveryTag,
+                Redelivered = ea.Redelivered,
+                BodySizeBytes = bodySizeBytes,
+                BodySize = OutputUtilities.ToSizeString(bodySizeBytes)
+            };
 
             await receiveChan.Writer.WriteAsync(message, CancellationToken.None);
 
@@ -87,7 +106,7 @@ public class SubscriberStrategy : IMessageRetrievalStrategy
         CancellationToken userCancellationToken,
         IChannel channel,
         string consumerTag,
-        Channel<RabbitMessage> receiveChan)
+        Channel<RetrievedMessage> receiveChan)
     {
         // Hook up callback that cancels the RabbitMQ consumer and completes the receive channel
         // when cancellation is requested (Ctrl+C or message count limit reached)

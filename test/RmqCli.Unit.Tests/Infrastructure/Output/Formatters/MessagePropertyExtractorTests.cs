@@ -14,7 +14,7 @@ public class MessagePropertyExtractorTests
         public void ReturnsEmptyProperties_WhenPropsIsNull()
         {
             // Act
-            var result = MessagePropertyExtractor.ExtractProperties(null);
+            var (result, _) = MessagePropertyExtractor.ExtractPropertiesAndHeaders(null);
 
             // Assert
             result.Should().NotBeNull();
@@ -30,7 +30,7 @@ public class MessagePropertyExtractorTests
             props.Type.Returns("application.event");
 
             // Act
-            var result = MessagePropertyExtractor.ExtractProperties(props);
+            var (result, _) = MessagePropertyExtractor.ExtractPropertiesAndHeaders(props);
 
             // Assert
             result.Type.Should().Be("application.event");
@@ -45,7 +45,7 @@ public class MessagePropertyExtractorTests
             props.MessageId.Returns("msg-12345");
 
             // Act
-            var result = MessagePropertyExtractor.ExtractProperties(props);
+            var (result, _) = MessagePropertyExtractor.ExtractPropertiesAndHeaders(props);
 
             // Assert
             result.MessageId.Should().Be("msg-12345");
@@ -60,7 +60,7 @@ public class MessagePropertyExtractorTests
             props.AppId.Returns("my-app");
 
             // Act
-            var result = MessagePropertyExtractor.ExtractProperties(props);
+            var (result, _) = MessagePropertyExtractor.ExtractPropertiesAndHeaders(props);
 
             // Assert
             result.AppId.Should().Be("my-app");
@@ -75,7 +75,7 @@ public class MessagePropertyExtractorTests
             props.ClusterId.Returns("cluster-1");
 
             // Act
-            var result = MessagePropertyExtractor.ExtractProperties(props);
+            var (result, _) = MessagePropertyExtractor.ExtractPropertiesAndHeaders(props);
 
             // Assert
             result.ClusterId.Should().Be("cluster-1");
@@ -90,7 +90,7 @@ public class MessagePropertyExtractorTests
             props.ContentType.Returns("application/json");
 
             // Act
-            var result = MessagePropertyExtractor.ExtractProperties(props);
+            var (result, _) = MessagePropertyExtractor.ExtractPropertiesAndHeaders(props);
 
             // Assert
             result.ContentType.Should().Be("application/json");
@@ -105,7 +105,7 @@ public class MessagePropertyExtractorTests
             props.ContentEncoding.Returns("gzip");
 
             // Act
-            var result = MessagePropertyExtractor.ExtractProperties(props);
+            var (result, _) = MessagePropertyExtractor.ExtractPropertiesAndHeaders(props);
 
             // Assert
             result.ContentEncoding.Should().Be("gzip");
@@ -120,7 +120,7 @@ public class MessagePropertyExtractorTests
             props.CorrelationId.Returns("corr-123");
 
             // Act
-            var result = MessagePropertyExtractor.ExtractProperties(props);
+            var (result, _) = MessagePropertyExtractor.ExtractPropertiesAndHeaders(props);
 
             // Assert
             result.CorrelationId.Should().Be("corr-123");
@@ -135,7 +135,7 @@ public class MessagePropertyExtractorTests
             props.DeliveryMode.Returns(DeliveryModes.Persistent);
 
             // Act
-            var result = MessagePropertyExtractor.ExtractProperties(props);
+            var (result, _) = MessagePropertyExtractor.ExtractPropertiesAndHeaders(props);
 
             // Assert
             result.DeliveryMode.Should().Be(DeliveryModes.Persistent);
@@ -150,7 +150,7 @@ public class MessagePropertyExtractorTests
             props.Expiration.Returns("60000");
 
             // Act
-            var result = MessagePropertyExtractor.ExtractProperties(props);
+            var (result, _) = MessagePropertyExtractor.ExtractPropertiesAndHeaders(props);
 
             // Assert
             result.Expiration.Should().Be("60000");
@@ -165,7 +165,7 @@ public class MessagePropertyExtractorTests
             props.Priority.Returns((byte)5);
 
             // Act
-            var result = MessagePropertyExtractor.ExtractProperties(props);
+            var (result, _) = MessagePropertyExtractor.ExtractPropertiesAndHeaders(props);
 
             // Assert
             result.Priority.Should().Be(5);
@@ -180,7 +180,7 @@ public class MessagePropertyExtractorTests
             props.ReplyTo.Returns("reply-queue");
 
             // Act
-            var result = MessagePropertyExtractor.ExtractProperties(props);
+            var (result, _) = MessagePropertyExtractor.ExtractPropertiesAndHeaders(props);
 
             // Assert
             result.ReplyTo.Should().Be("reply-queue");
@@ -195,10 +195,10 @@ public class MessagePropertyExtractorTests
             props.Timestamp.Returns(new AmqpTimestamp(1609459200)); // 2021-01-01 00:00:00 UTC
 
             // Act
-            var result = MessagePropertyExtractor.ExtractProperties(props);
+            var (result, _) = MessagePropertyExtractor.ExtractPropertiesAndHeaders(props);
 
             // Assert
-            result.Timestamp.Should().Be("2021-01-01 00:00:00");
+            result.Timestamp.Should().Be(1609459200L);
         }
 
         [Fact]
@@ -211,7 +211,7 @@ public class MessagePropertyExtractorTests
             props.IsAppIdPresent().Returns(false);
 
             // Act
-            var result = MessagePropertyExtractor.ExtractProperties(props);
+            var (result, _) = MessagePropertyExtractor.ExtractPropertiesAndHeaders(props);
 
             // Assert
             result.Type.Should().BeNull();
@@ -226,7 +226,7 @@ public class MessagePropertyExtractorTests
             var props = CreateFullyPopulatedProperties();
 
             // Act
-            var result = MessagePropertyExtractor.ExtractProperties(props);
+            var (result, _) = MessagePropertyExtractor.ExtractPropertiesAndHeaders(props);
 
             // Assert
             result.Type.Should().Be("test.type");
@@ -240,7 +240,7 @@ public class MessagePropertyExtractorTests
             result.Expiration.Should().Be("60000");
             result.Priority.Should().Be(5);
             result.ReplyTo.Should().Be("reply-queue");
-            result.Timestamp.Should().NotBeNullOrEmpty();
+            result.Timestamp.Should().NotBeNull();
         }
     }
 
@@ -258,10 +258,10 @@ public class MessagePropertyExtractorTests
             props.IsHeadersPresent().Returns(false);
 
             // Act
-            var result = MessagePropertyExtractor.ExtractProperties(props);
+            var (_, headers) = MessagePropertyExtractor.ExtractPropertiesAndHeaders(props);
 
             // Assert
-            result.Headers.Should().BeNull();
+            headers.Should().BeNull();
         }
 
         [Fact]
@@ -273,10 +273,10 @@ public class MessagePropertyExtractorTests
             props.Headers.Returns(new Dictionary<string, object?>());
 
             // Act
-            var result = MessagePropertyExtractor.ExtractProperties(props);
+            var (_, headers) = MessagePropertyExtractor.ExtractPropertiesAndHeaders(props);
 
             // Assert
-            result.Headers.Should().BeNull();
+            headers.Should().BeNull();
         }
 
         [Fact]
@@ -292,12 +292,12 @@ public class MessagePropertyExtractorTests
             });
 
             // Act
-            var result = MessagePropertyExtractor.ExtractProperties(props);
+            var (_, headers) = MessagePropertyExtractor.ExtractPropertiesAndHeaders(props);
 
             // Assert
-            result.Headers.Should().NotBeNull();
-            result.Headers!["x-string"].Should().Be("test-value");
-            result.Headers["x-another"].Should().Be("another-value");
+            headers.Should().NotBeNull();
+            headers!["x-string"].Should().Be("test-value");
+            headers["x-another"].Should().Be("another-value");
         }
 
         [Fact]
@@ -314,13 +314,13 @@ public class MessagePropertyExtractorTests
             });
 
             // Act
-            var result = MessagePropertyExtractor.ExtractProperties(props);
+            var (_, headers) = MessagePropertyExtractor.ExtractPropertiesAndHeaders(props);
 
             // Assert
-            result.Headers.Should().NotBeNull();
-            result.Headers!["x-int"].Should().Be(42);
-            result.Headers["x-long"].Should().Be(123456789L);
-            result.Headers["x-double"].Should().Be(3.14);
+            headers.Should().NotBeNull();
+            headers!["x-int"].Should().Be(42);
+            headers["x-long"].Should().Be(123456789L);
+            headers["x-double"].Should().Be(3.14);
         }
 
         [Fact]
@@ -336,11 +336,11 @@ public class MessagePropertyExtractorTests
             });
 
             // Act
-            var result = MessagePropertyExtractor.ExtractProperties(props);
+            var (_, headers) = MessagePropertyExtractor.ExtractPropertiesAndHeaders(props);
 
             // Assert
-            result.Headers.Should().NotBeNull();
-            result.Headers!["x-bytes"].Should().Be("Hello, World!");
+            headers.Should().NotBeNull();
+            headers!["x-bytes"].Should().Be("Hello, World!");
         }
 
         [Fact]
@@ -356,11 +356,11 @@ public class MessagePropertyExtractorTests
             });
 
             // Act
-            var result = MessagePropertyExtractor.ExtractProperties(props);
+            var (_, headers) = MessagePropertyExtractor.ExtractPropertiesAndHeaders(props);
 
             // Assert
-            result.Headers.Should().NotBeNull();
-            result.Headers!["x-binary"].Should().Be("<binary data: 5 bytes>");
+            headers.Should().NotBeNull();
+            headers!["x-binary"].Should().Be("<binary data: 5 bytes>");
         }
 
         [Fact]
@@ -376,11 +376,11 @@ public class MessagePropertyExtractorTests
             });
 
             // Act
-            var result = MessagePropertyExtractor.ExtractProperties(props);
+            var (_, headers) = MessagePropertyExtractor.ExtractPropertiesAndHeaders(props);
 
             // Assert
-            result.Headers.Should().NotBeNull();
-            result.Headers!["x-timestamp"].Should().Be("2021-01-01 00:00:00");
+            headers.Should().NotBeNull();
+            headers!["x-timestamp"].Should().Be(1609459200L);
         }
 
         [Fact]
@@ -396,11 +396,11 @@ public class MessagePropertyExtractorTests
             });
 
             // Act
-            var result = MessagePropertyExtractor.ExtractProperties(props);
+            var (_, headers) = MessagePropertyExtractor.ExtractPropertiesAndHeaders(props);
 
             // Assert
-            result.Headers.Should().NotBeNull();
-            var convertedArray = result.Headers!["x-array"] as object[];
+            headers.Should().NotBeNull();
+            var convertedArray = headers!["x-array"] as object[];
             convertedArray.Should().NotBeNull();
             convertedArray.Should().HaveCount(3);
             convertedArray[0].Should().Be("string");
@@ -425,11 +425,11 @@ public class MessagePropertyExtractorTests
             });
 
             // Act
-            var result = MessagePropertyExtractor.ExtractProperties(props);
+            var (_, headers) = MessagePropertyExtractor.ExtractPropertiesAndHeaders(props);
 
             // Assert
-            result.Headers.Should().NotBeNull();
-            var convertedDict = result.Headers!["x-nested"] as Dictionary<string, object>;
+            headers.Should().NotBeNull();
+            var convertedDict = headers!["x-nested"] as Dictionary<string, object>;
             convertedDict.Should().NotBeNull();
             convertedDict["nested-key"].Should().Be("nested-value");
             convertedDict["nested-number"].Should().Be(99);
@@ -448,12 +448,12 @@ public class MessagePropertyExtractorTests
             });
 
             // Act
-            var result = MessagePropertyExtractor.ExtractProperties(props);
+            var (_, headers) = MessagePropertyExtractor.ExtractPropertiesAndHeaders(props);
 
             // Assert
-            result.Headers.Should().NotBeNull();
-            result.Headers.Should().ContainKey("x-valid");
-            result.Headers.Should().NotContainKey("x-null");
+            headers.Should().NotBeNull();
+            headers.Should().ContainKey("x-valid");
+            headers.Should().NotContainKey("x-null");
         }
 
         [Fact]
@@ -470,11 +470,11 @@ public class MessagePropertyExtractorTests
             });
 
             // Act
-            var result = MessagePropertyExtractor.ExtractProperties(props);
+            var (_, headers) = MessagePropertyExtractor.ExtractPropertiesAndHeaders(props);
 
             // Assert
-            result.Headers.Should().NotBeNull();
-            result.Headers!["x-text"].Should().Be(textWithWhitespace);
+            headers.Should().NotBeNull();
+            headers!["x-text"].Should().Be(textWithWhitespace);
         }
     }
 
@@ -496,11 +496,11 @@ public class MessagePropertyExtractorTests
             });
 
             // Act
-            var result = MessagePropertyExtractor.ExtractProperties(props);
+            var (_, headers) = MessagePropertyExtractor.ExtractPropertiesAndHeaders(props);
 
             // Assert
-            result.Headers.Should().NotBeNull();
-            result.Headers!["x-empty"].Should().Be(string.Empty);
+            headers.Should().NotBeNull();
+            headers!["x-empty"].Should().Be(string.Empty);
         }
 
         [Fact]
@@ -515,11 +515,11 @@ public class MessagePropertyExtractorTests
             });
 
             // Act
-            var result = MessagePropertyExtractor.ExtractProperties(props);
+            var (_, headers) = MessagePropertyExtractor.ExtractPropertiesAndHeaders(props);
 
             // Assert
-            result.Headers.Should().NotBeNull();
-            var array = result.Headers!["x-array"] as object[];
+            headers.Should().NotBeNull();
+            var array = headers!["x-array"] as object[];
             array.Should().NotBeNull();
             array.Should().BeEmpty();
         }
@@ -549,11 +549,11 @@ public class MessagePropertyExtractorTests
             });
 
             // Act
-            var result = MessagePropertyExtractor.ExtractProperties(props);
+            var (_, headers) = MessagePropertyExtractor.ExtractPropertiesAndHeaders(props);
 
             // Assert
-            result.Headers.Should().NotBeNull();
-            var converted = result.Headers!["x-complex"] as Dictionary<string, object>;
+            headers.Should().NotBeNull();
+            var converted = headers!["x-complex"] as Dictionary<string, object>;
             converted.Should().NotBeNull();
             converted["level1-string"].Should().Be("value");
 
@@ -575,10 +575,10 @@ public class MessagePropertyExtractorTests
             props.Timestamp.Returns(new AmqpTimestamp(0)); // Unix epoch
 
             // Act
-            var result = MessagePropertyExtractor.ExtractProperties(props);
+            var (result, _) = MessagePropertyExtractor.ExtractPropertiesAndHeaders(props);
 
             // Assert
-            result.Timestamp.Should().Be("1970-01-01 00:00:00");
+            result.Timestamp.Should().Be(0L);
         }
 
         [Fact]
@@ -590,10 +590,10 @@ public class MessagePropertyExtractorTests
             props.Timestamp.Returns(new AmqpTimestamp(2000000000)); // 2033-05-18
 
             // Act
-            var result = MessagePropertyExtractor.ExtractProperties(props);
+            var (result, _) = MessagePropertyExtractor.ExtractPropertiesAndHeaders(props);
 
             // Assert
-            result.Timestamp.Should().StartWith("2033-05-18");
+            result.Timestamp.Should().Be(2000000000L);
         }
     }
 

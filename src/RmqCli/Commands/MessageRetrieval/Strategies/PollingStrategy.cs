@@ -1,7 +1,10 @@
+using System.Text;
 using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 using RmqCli.Core.Models;
+using RmqCli.Infrastructure.Output.Formatters;
+using RmqCli.Shared;
 
 namespace RmqCli.Commands.MessageRetrieval.Strategies;
 
@@ -17,7 +20,7 @@ public class PollingStrategy : IMessageRetrievalStrategy
     public async Task RetrieveMessagesAsync(
         IChannel channel,
         string queue,
-        Channel<RabbitMessage> receiveChan,
+        Channel<RetrievedMessage> receiveChan,
         int messageCount,
         ReceivedMessageCounter counter,
         CancellationToken cancellationToken)
@@ -38,15 +41,24 @@ public class PollingStrategy : IMessageRetrievalStrategy
 
             _logger.LogTrace("Peeked message #{DeliveryTag}", result.DeliveryTag);
 
-            var message = new RabbitMessage(
-                result.Exchange,
-                result.RoutingKey,
-                queue,
-                System.Text.Encoding.UTF8.GetString(result.Body.ToArray()),
-                result.DeliveryTag,
-                result.BasicProperties,
-                result.Redelivered
-            );
+            // Extract properties and headers
+            var body = Encoding.UTF8.GetString(result.Body.ToArray());
+            var (properties, headers) = MessagePropertyExtractor.ExtractPropertiesAndHeaders(result.BasicProperties);
+            var bodySizeBytes = Encoding.UTF8.GetByteCount(body);
+
+            var message = new RetrievedMessage
+            {
+                Body = body,
+                Properties = properties,
+                Headers = headers,
+                Exchange = result.Exchange,
+                RoutingKey = result.RoutingKey,
+                Queue = queue,
+                DeliveryTag = result.DeliveryTag,
+                Redelivered = result.Redelivered,
+                BodySizeBytes = bodySizeBytes,
+                BodySize = OutputUtilities.ToSizeString(bodySizeBytes)
+            };
 
             await receiveChan.Writer.WriteAsync(message, CancellationToken.None);
             counter.Increment();

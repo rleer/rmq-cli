@@ -16,6 +16,7 @@ public class PublishOptions
 
     // Message properties from CLI flags
     public string? AppId { get; init; }
+    public string? ClusterId { get; init; }
     public string? ContentType { get; init; }
     public string? ContentEncoding { get; init; }
     public string? CorrelationId { get; init; }

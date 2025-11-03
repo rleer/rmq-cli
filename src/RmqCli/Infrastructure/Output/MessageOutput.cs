@@ -18,7 +18,7 @@ public abstract class MessageOutput
     /// <param name="cancellationToken">Token to signal graceful shutdown after current message</param>
     /// <returns>Statistics about the processed messages</returns>
     public abstract Task<MessageOutputResult> WriteMessagesAsync(
-        Channel<RabbitMessage> messageChannel,
+        Channel<RetrievedMessage> messageChannel,
         Channel<(ulong deliveryTag, bool success)> ackChannel,
         CancellationToken cancellationToken = default);
 }

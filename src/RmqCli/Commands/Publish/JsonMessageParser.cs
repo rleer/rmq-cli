@@ -1,4 +1,5 @@
 using System.Text.Json;
+using RmqCli.Core.Models;
 using RmqCli.Shared.Json;
 
 namespace RmqCli.Commands.Publish;
@@ -11,25 +12,29 @@ public static class JsonMessageParser
     /// <summary>
     /// Parses a single JSON message using source-generated serialization.
     /// </summary>
-    public static PublishMessageJson ParseSingle(string json)
+    public static Message ParseSingle(string json)
     {
         try
         {
             var message = JsonSerializer.Deserialize(
                 json,
-                JsonSerializationContext.RelaxedEscapingOptions.GetTypeInfo(typeof(PublishMessageJson)));
+                JsonSerializationContext.RelaxedEscapingOptions.GetTypeInfo(typeof(Message)));
 
             if (message == null)
             {
                 throw new ArgumentException("Failed to parse JSON message: result was null");
             }
 
-            var result = (PublishMessageJson)message;
+            var result = (Message)message;
 
             // Convert JsonElement header values to actual types for RabbitMQ serialization
             if (result.Headers != null)
             {
-                result.Headers = NormalizeHeaderValues(result.Headers);
+                var normalizedHeaders = NormalizeHeaderValues(result.Headers);
+                result = result with
+                {
+                    Headers = normalizedHeaders
+                };
             }
 
             return result;
@@ -79,9 +84,9 @@ public static class JsonMessageParser
     /// <summary>
     /// Parses newline-delimited JSON (NDJSON) messages.
     /// </summary>
-    public static List<PublishMessageJson> ParseNdjson(string ndjson)
+    public static List<Message> ParseNdjson(string ndjson)
     {
-        var messages = new List<PublishMessageJson>();
+        var messages = new List<Message>();
         var lines = ndjson.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
 
         for (var i = 0; i < lines.Length; i++)

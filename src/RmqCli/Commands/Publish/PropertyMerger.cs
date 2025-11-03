@@ -1,24 +1,26 @@
-using RmqCli.Shared.Json;
+using RmqCli.Core.Models;
 
 namespace RmqCli.Commands.Publish;
 
 /// <summary>
-/// Merges JSON properties/headers with CLI options. CLI options take precedence.
+/// Merges JSON message (properties + headers) with CLI options. CLI options take precedence.
 /// </summary>
 public static class PropertyMerger
 {
     /// <summary>
-    /// Merges JSON properties/headers with CLI options. CLI options take precedence.
+    /// Merges JSON message with CLI options. CLI options take precedence.
+    /// Returns a merged Message with properties and headers at root level.
     /// </summary>
-    public static (PublishPropertiesJson? properties, Dictionary<string, object>? headers) Merge(
-        PublishMessageJson jsonMessage,
+    public static Message Merge(
+        Message jsonMessage,
         PublishOptions cliOptions)
     {
-        // Start with copies of JSON properties and headers
+        // Start with copies of JSON properties
         var mergedProps = jsonMessage.Properties != null
-            ? new PublishPropertiesJson
+            ? new MessageProperties
             {
                 AppId = jsonMessage.Properties.AppId,
+                ClusterId = jsonMessage.Properties.ClusterId,
                 ContentType = jsonMessage.Properties.ContentType,
                 ContentEncoding = jsonMessage.Properties.ContentEncoding,
                 CorrelationId = jsonMessage.Properties.CorrelationId,
@@ -31,35 +33,29 @@ public static class PropertyMerger
                 Type = jsonMessage.Properties.Type,
                 UserId = jsonMessage.Properties.UserId
             }
-            : new PublishPropertiesJson();
+            : new MessageProperties();
 
+        // Override properties with CLI options (if specified)
+        mergedProps = mergedProps with
+        {
+            AppId = cliOptions.AppId ?? mergedProps.AppId,
+            ClusterId = cliOptions.ClusterId ?? mergedProps.ClusterId,
+            ContentType = cliOptions.ContentType ?? mergedProps.ContentType,
+            ContentEncoding = cliOptions.ContentEncoding ?? mergedProps.ContentEncoding,
+            CorrelationId = cliOptions.CorrelationId ?? mergedProps.CorrelationId,
+            DeliveryMode = cliOptions.DeliveryMode ?? mergedProps.DeliveryMode,
+            Expiration = cliOptions.Expiration ?? mergedProps.Expiration,
+            Priority = cliOptions.Priority ?? mergedProps.Priority,
+            ReplyTo = cliOptions.ReplyTo ?? mergedProps.ReplyTo,
+            Type = cliOptions.Type ?? mergedProps.Type,
+            UserId = cliOptions.UserId ?? mergedProps.UserId
+        };
+
+        // Merge headers at root level (CLI headers supplement/override JSON headers)
         var mergedHeaders = jsonMessage.Headers != null
             ? new Dictionary<string, object>(jsonMessage.Headers)
             : null;
 
-        // Override properties with CLI options (if specified)
-        if (cliOptions.AppId != null)
-            mergedProps.AppId = cliOptions.AppId;
-        if (cliOptions.ContentType != null)
-            mergedProps.ContentType = cliOptions.ContentType;
-        if (cliOptions.ContentEncoding != null)
-            mergedProps.ContentEncoding = cliOptions.ContentEncoding;
-        if (cliOptions.CorrelationId != null)
-            mergedProps.CorrelationId = cliOptions.CorrelationId;
-        if (cliOptions.DeliveryMode.HasValue)
-            mergedProps.DeliveryMode = cliOptions.DeliveryMode;
-        if (cliOptions.Expiration != null)
-            mergedProps.Expiration = cliOptions.Expiration;
-        if (cliOptions.Priority.HasValue)
-            mergedProps.Priority = cliOptions.Priority;
-        if (cliOptions.ReplyTo != null)
-            mergedProps.ReplyTo = cliOptions.ReplyTo;
-        if (cliOptions.Type != null)
-            mergedProps.Type = cliOptions.Type;
-        if (cliOptions.UserId != null)
-            mergedProps.UserId = cliOptions.UserId;
-
-        // Merge headers (CLI headers supplement/override JSON headers)
         if (cliOptions.Headers != null && cliOptions.Headers.Count > 0)
         {
             mergedHeaders ??= new Dictionary<string, object>();
@@ -69,6 +65,10 @@ public static class PropertyMerger
             }
         }
 
-        return (mergedProps, mergedHeaders);
+        return jsonMessage with
+        {
+            Properties = mergedProps,
+            Headers = mergedHeaders
+        };
     }
 }

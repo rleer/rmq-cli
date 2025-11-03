@@ -23,7 +23,7 @@ public class ConsoleOutput : MessageOutput
     }
 
     public override async Task<MessageOutputResult> WriteMessagesAsync(
-        Channel<RabbitMessage> messageChannel,
+        Channel<RetrievedMessage> messageChannel,
         Channel<(ulong deliveryTag, bool success)> ackChannel,
         CancellationToken cancellationToken = default)
     {
@@ -70,7 +70,7 @@ public class ConsoleOutput : MessageOutput
         return new MessageOutputResult(processedCount, totalBytes);
     }
 
-    private string FormatMessage(RabbitMessage message)
+    private string FormatMessage(RetrievedMessage message)
     {
         return _outputOptions.Format switch
         {

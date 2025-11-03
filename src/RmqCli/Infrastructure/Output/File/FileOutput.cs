@@ -35,7 +35,7 @@ public class FileOutput : MessageOutput
     }
 
     public override async Task<MessageOutputResult> WriteMessagesAsync(
-        Channel<RabbitMessage> messageChannel,
+        Channel<RetrievedMessage> messageChannel,
         Channel<(ulong deliveryTag, bool success)> ackChannel,
         CancellationToken cancellationToken = default)
     {
@@ -63,7 +63,7 @@ public class FileOutput : MessageOutput
     }
 
     private async Task<MessageOutputResult> WriteSingleFileAsync(
-        Channel<RabbitMessage> messageChannel,
+        Channel<RetrievedMessage> messageChannel,
         Channel<(ulong deliveryTag, bool success)> ackChannel,
         CancellationToken cancellationToken)
     {
@@ -118,7 +118,7 @@ public class FileOutput : MessageOutput
     }
 
     private async Task<MessageOutputResult> WriteRotatingFilesAsync(
-        Channel<RabbitMessage> messageChannel,
+        Channel<RetrievedMessage> messageChannel,
         Channel<(ulong deliveryTag, bool success)> ackChannel,
         CancellationToken cancellationToken)
     {
@@ -200,7 +200,7 @@ public class FileOutput : MessageOutput
         return new MessageOutputResult(processedCount, totalBytes);
     }
 
-    private string FormatMessage(RabbitMessage message)
+    private string FormatMessage(RetrievedMessage message)
     {
         return _outputOptions.Format switch
         {

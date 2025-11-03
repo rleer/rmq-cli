@@ -1,5 +1,6 @@
 using System.Text;
 using RabbitMQ.Client;
+using RmqCli.Core.Models;
 
 namespace RmqCli.Infrastructure.Output.Formatters;
 
@@ -10,17 +11,18 @@ namespace RmqCli.Infrastructure.Output.Formatters;
 public static class MessagePropertyExtractor
 {
     /// <summary>
-    /// Extracts all properties from IReadOnlyBasicProperties into a formatted representation.
+    /// Extracts properties and headers from IReadOnlyBasicProperties.
+    /// Returns a tuple with MessageProperties (standard AMQP properties) and Headers (custom headers).
+    /// Timestamp is extracted as Unix seconds (long).
     /// </summary>
-    public static FormattedMessageProperties ExtractProperties(IReadOnlyBasicProperties? props)
+    public static (MessageProperties properties, Dictionary<string, object>? headers) ExtractPropertiesAndHeaders(IReadOnlyBasicProperties? props)
     {
         if (props == null)
         {
-            return new FormattedMessageProperties();
+            return (new MessageProperties(), null);
         }
 
-        // TODO: Make choice of properties configurable.
-        return new FormattedMessageProperties
+        var properties = new MessageProperties
         {
             Type = props.IsTypePresent() ? props.Type : null,
             MessageId = props.IsMessageIdPresent() ? props.MessageId : null,
@@ -33,13 +35,17 @@ public static class MessagePropertyExtractor
             Expiration = props.IsExpirationPresent() ? props.Expiration : null,
             Priority = props.IsPriorityPresent() ? props.Priority : null,
             ReplyTo = props.IsReplyToPresent() ? props.ReplyTo : null,
+            UserId = props.IsUserIdPresent() ? props.UserId : null,
             Timestamp = props.IsTimestampPresent()
-                ? FormatTimestamp(props.Timestamp)
-                : null,
-            Headers = props.IsHeadersPresent() && props.Headers != null
-                ? ConvertHeaders(props.Headers)
+                ? props.Timestamp.UnixTime
                 : null
         };
+
+        var headers = props.IsHeadersPresent() && props.Headers != null
+            ? ConvertHeaders(props.Headers)
+            : null;
+
+        return (properties, headers);
     }
 
     /// <summary>
@@ -70,7 +76,7 @@ public static class MessagePropertyExtractor
         {
             null => "null",
             byte[] bytes => ConvertByteArray(bytes),
-            AmqpTimestamp timestamp => FormatTimestamp(timestamp),
+            AmqpTimestamp timestamp => timestamp.UnixTime,
             IEnumerable<object> enumerable when value is not string => enumerable.Select(ConvertValue).ToArray(),
             IDictionary<string, object> dict => dict.ToDictionary(pair => pair.Key, pair => ConvertValue(pair.Value)),
             _ => value
@@ -105,14 +111,5 @@ public static class MessagePropertyExtractor
     private static string FormatBinaryData(int length)
     {
         return $"<binary data: {length} bytes>";
-    }
-
-    /// <summary>
-    /// Formats an AMQP timestamp to a standard string format.
-    /// </summary>
-    private static string FormatTimestamp(AmqpTimestamp timestamp)
-    {
-        var dateTime = DateTimeOffset.FromUnixTimeSeconds(timestamp.UnixTime);
-        return dateTime.ToString("yyyy-MM-dd HH:mm:ss");
     }
 }

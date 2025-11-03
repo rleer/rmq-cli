@@ -1,7 +1,9 @@
+using System.Text;
 using System.Text.Json;
 using RabbitMQ.Client;
 using RmqCli.Core.Models;
 using RmqCli.Infrastructure.Output.Formatters;
+using RmqCli.Shared;
 using RmqCli.Unit.Tests.Helpers;
 
 namespace RmqCli.Unit.Tests.Infrastructure.Output.Formatters;
@@ -16,7 +18,7 @@ public class JsonMessageFormatterTests
         public void ReturnsValidJson_ForSimpleMessage()
         {
             // Arrange
-            var message = CreateRabbitMessage("Hello, World!", exchange: "exchange", routingKey: "key", deliveryTag: 1);
+            var message = CreateRetrievedMessage("Hello, World!", exchange: "exchange", routingKey: "key", deliveryTag: 1);
 
             // Act
             var result = JsonMessageFormatter.FormatMessage(message);
@@ -34,7 +36,7 @@ public class JsonMessageFormatterTests
         public void IncludesDeliveryTag()
         {
             // Arrange
-            var message = CreateRabbitMessage("test", deliveryTag: 42);
+            var message = CreateRetrievedMessage("test", deliveryTag: 42);
 
             // Act
             var result = JsonMessageFormatter.FormatMessage(message);
@@ -48,7 +50,7 @@ public class JsonMessageFormatterTests
         public void IncludesRedeliveredFlag_WhenTrue()
         {
             // Arrange
-            var message = CreateRabbitMessage("test", redelivered: true);
+            var message = CreateRetrievedMessage("test", redelivered: true);
 
             // Act
             var result = JsonMessageFormatter.FormatMessage(message);
@@ -62,7 +64,7 @@ public class JsonMessageFormatterTests
         public void IncludesRedeliveredFlag_WhenFalse()
         {
             // Arrange
-            var message = CreateRabbitMessage("test", redelivered: false);
+            var message = CreateRetrievedMessage("test", redelivered: false);
 
             // Act
             var result = JsonMessageFormatter.FormatMessage(message);
@@ -76,7 +78,7 @@ public class JsonMessageFormatterTests
         public void IncludesExchange()
         {
             // Arrange
-            var message = CreateRabbitMessage("Test message body", exchange: "amq.direct");
+            var message = CreateRetrievedMessage("Test message body", exchange: "amq.direct");
 
             // Act
             var result = JsonMessageFormatter.FormatMessage(message);
@@ -90,7 +92,7 @@ public class JsonMessageFormatterTests
         public void IncludesRoutingKey()
         {
             // Arrange
-            var message = CreateRabbitMessage("Test message body", routingKey: "my.routing.key");
+            var message = CreateRetrievedMessage("Test message body", routingKey: "my.routing.key");
 
             // Act
             var result = JsonMessageFormatter.FormatMessage(message);
@@ -104,7 +106,7 @@ public class JsonMessageFormatterTests
         public void IncludesQueue()
         {
             // Arrange
-            var message = CreateRabbitMessage("Test message body", routingKey: "test.queue");
+            var message = CreateRetrievedMessage("Test message body", routingKey: "test.queue");
 
             // Act
             var result = JsonMessageFormatter.FormatMessage(message);
@@ -118,7 +120,7 @@ public class JsonMessageFormatterTests
         public void DistinguishesQueueFromRoutingKey()
         {
             // Arrange - Queue and routing key should be different
-            var message = CreateRabbitMessage(
+            var message = CreateRetrievedMessage(
                 "Test message body",
                 exchange: "amq.direct",
                 routingKey: "user.created",
@@ -139,7 +141,7 @@ public class JsonMessageFormatterTests
         public void IncludesBody()
         {
             // Arrange
-            var message = CreateRabbitMessage("Test message body");
+            var message = CreateRetrievedMessage("Test message body");
 
             // Act
             var result = JsonMessageFormatter.FormatMessage(message);
@@ -153,7 +155,7 @@ public class JsonMessageFormatterTests
         public void HandlesEmptyBody()
         {
             // Arrange
-            var message = CreateRabbitMessage("");
+            var message = CreateRetrievedMessage("");
 
             // Act
             var result = JsonMessageFormatter.FormatMessage(message);
@@ -169,7 +171,7 @@ public class JsonMessageFormatterTests
             // Arrange
             var propsWithNoValues = Substitute.For<IReadOnlyBasicProperties>();
             // All IsXxxPresent() return false by default
-            var message = CreateRabbitMessage("test", props: propsWithNoValues);
+            var message = CreateRetrievedMessage("test", props: propsWithNoValues);
 
             // Act
             var result = JsonMessageFormatter.FormatMessage(message);
@@ -177,7 +179,9 @@ public class JsonMessageFormatterTests
             // Assert
             var json = JsonDocument.Parse(result);
             json.RootElement.TryGetProperty("properties", out var properties).Should().BeTrue();
-            properties.ValueKind.Should().Be(JsonValueKind.Null);
+            properties.ValueKind.Should().Be(JsonValueKind.Object);
+            // Verify all property values are null (not present in JSON due to null handling)
+            properties.EnumerateObject().All(p => p.Value.ValueKind == JsonValueKind.Null).Should().BeTrue();
         }
 
         [Fact]
@@ -190,7 +194,7 @@ public class JsonMessageFormatterTests
             props.IsContentTypePresent().Returns(true);
             props.ContentType.Returns("application/json");
 
-            var message = CreateRabbitMessage("test", props: props);
+            var message = CreateRetrievedMessage("test", props: props);
 
             // Act
             var result = JsonMessageFormatter.FormatMessage(message);
@@ -207,7 +211,7 @@ public class JsonMessageFormatterTests
         {
             // Arrange
             var props = RabbitMessageTestHelper.CreateFullyPopulatedProperties();
-            var message = CreateRabbitMessage("test", props: props);
+            var message = CreateRetrievedMessage("test", props: props);
 
             // Act
             var result = JsonMessageFormatter.FormatMessage(message);
@@ -228,7 +232,7 @@ public class JsonMessageFormatterTests
             properties.GetProperty("expiration").GetString().Should().Be("60000");
             properties.GetProperty("priority").GetByte().Should().Be(5);
             properties.GetProperty("replyTo").GetString().Should().Be("reply-queue");
-            properties.GetProperty("timestamp").GetString().Should().NotBeNullOrEmpty();
+            properties.GetProperty("timestamp").GetInt64().Should().BeGreaterThan(0);
 
             json.RootElement.TryGetProperty("headers", out var headers).Should().BeTrue();
             headers.GetProperty("x-custom").GetString().Should().Be("custom-value");
@@ -239,7 +243,7 @@ public class JsonMessageFormatterTests
         {
             // Arrange
             var specialBody = "Line1\nLine2\tTabbed\r\nQuotes:\"test\"";
-            var message = CreateRabbitMessage(specialBody);
+            var message = CreateRetrievedMessage(specialBody);
 
             // Act
             var result = JsonMessageFormatter.FormatMessage(message);
@@ -254,7 +258,7 @@ public class JsonMessageFormatterTests
         {
             // Arrange
             var unicodeBody = "Hello 世界 🌍 مرحبا";
-            var message = CreateRabbitMessage(unicodeBody);
+            var message = CreateRetrievedMessage(unicodeBody);
 
             // Act
             var result = JsonMessageFormatter.FormatMessage(message);
@@ -276,7 +280,7 @@ public class JsonMessageFormatterTests
                 ["x-number"] = 42
             });
 
-            var message = CreateRabbitMessage("test", props: props);
+            var message = CreateRetrievedMessage("test", props: props);
 
             // Act
             var result = JsonMessageFormatter.FormatMessage(message);
@@ -300,7 +304,7 @@ public class JsonMessageFormatterTests
                 // null values are not stored in RabbitMQ headers
             });
 
-            var message = CreateRabbitMessage("test", props: props);
+            var message = CreateRetrievedMessage("test", props: props);
 
             // Act
             var result = JsonMessageFormatter.FormatMessage(message);
@@ -325,7 +329,7 @@ public class JsonMessageFormatterTests
                 ["x-disabled"] = false
             });
 
-            var message = CreateRabbitMessage("test", props: props);
+            var message = CreateRetrievedMessage("test", props: props);
 
             // Act
             var result = JsonMessageFormatter.FormatMessage(message);
@@ -348,7 +352,7 @@ public class JsonMessageFormatterTests
                 ["x-tags"] = new object[] { "tag1", "tag2", "tag3" }
             });
 
-            var message = CreateRabbitMessage("test", props: props);
+            var message = CreateRetrievedMessage("test", props: props);
 
             // Act
             var result = JsonMessageFormatter.FormatMessage(message);
@@ -379,7 +383,7 @@ public class JsonMessageFormatterTests
                 }
             });
 
-            var message = CreateRabbitMessage("test", props: props);
+            var message = CreateRetrievedMessage("test", props: props);
 
             // Act
             var result = JsonMessageFormatter.FormatMessage(message);
@@ -413,7 +417,7 @@ public class JsonMessageFormatterTests
                 }
             });
 
-            var message = CreateRabbitMessage("test", props: props);
+            var message = CreateRetrievedMessage("test", props: props);
 
             // Act
             var result = JsonMessageFormatter.FormatMessage(message);
@@ -445,7 +449,7 @@ public class JsonMessageFormatterTests
                 }
             });
 
-            var message = CreateRabbitMessage("test", props: props);
+            var message = CreateRetrievedMessage("test", props: props);
 
             // Act
             var result = JsonMessageFormatter.FormatMessage(message);
@@ -477,7 +481,7 @@ public class JsonMessageFormatterTests
                 ["x-array"] = new object[] { 1, "two", 3.0 }
             });
 
-            var message = CreateRabbitMessage("test", props: props);
+            var message = CreateRetrievedMessage("test", props: props);
 
             // Act
             var result = JsonMessageFormatter.FormatMessage(message);
@@ -497,7 +501,7 @@ public class JsonMessageFormatterTests
         public void IncludesBodySize_InBytesAndFormatted()
         {
             // Arrange
-            var message = CreateRabbitMessage("Hello, World!");
+            var message = CreateRetrievedMessage("Hello, World!");
 
             // Act
             var result = JsonMessageFormatter.FormatMessage(message);
@@ -513,7 +517,7 @@ public class JsonMessageFormatterTests
         {
             // Arrange
             var largeBody = new string('a', 2048);
-            var message = CreateRabbitMessage(largeBody);
+            var message = CreateRetrievedMessage(largeBody);
 
             // Act
             var result = JsonMessageFormatter.FormatMessage(message);
@@ -537,9 +541,9 @@ public class JsonMessageFormatterTests
             // Arrange
             var messages = new[]
             {
-                CreateRabbitMessage("Message 1", deliveryTag: 1),
-                CreateRabbitMessage("Message 2", deliveryTag: 2),
-                CreateRabbitMessage("Message 3", deliveryTag: 3)
+                CreateRetrievedMessage("Message 1", deliveryTag: 1),
+                CreateRetrievedMessage("Message 2", deliveryTag: 2),
+                CreateRetrievedMessage("Message 3", deliveryTag: 3)
             };
 
             // Act
@@ -547,9 +551,8 @@ public class JsonMessageFormatterTests
 
             // Assert
             var json = JsonDocument.Parse(result);
-            json.RootElement.TryGetProperty("messages", out var messagesArray).Should().BeTrue();
-            messagesArray.ValueKind.Should().Be(JsonValueKind.Array);
-            messagesArray.GetArrayLength().Should().Be(3);
+            json.RootElement.ValueKind.Should().Be(JsonValueKind.Array);
+            json.RootElement.GetArrayLength().Should().Be(3);
         }
 
         [Fact]
@@ -558,8 +561,8 @@ public class JsonMessageFormatterTests
             // Arrange
             var messages = new[]
             {
-                CreateRabbitMessage("First", "exchange1", "routing.key.1", deliveryTag: 1),
-                CreateRabbitMessage("Second", "exchange2", "routing.key.2", deliveryTag: 2)
+                CreateRetrievedMessage("First", "exchange1", "routing.key.1", deliveryTag: 1),
+                CreateRetrievedMessage("Second", "exchange2", "routing.key.2", deliveryTag: 2)
             };
 
             // Act
@@ -567,7 +570,7 @@ public class JsonMessageFormatterTests
 
             // Assert
             var json = JsonDocument.Parse(result);
-            var array = json.RootElement.GetProperty("messages").EnumerateArray().ToList();
+            var array = json.RootElement.EnumerateArray().ToList();
 
             array[0].GetProperty("body").GetString().Should().Be("First");
             array[0].GetProperty("deliveryTag").GetUInt64().Should().Be(1);
@@ -584,34 +587,33 @@ public class JsonMessageFormatterTests
         public void ReturnsEmptyArray_WhenNoMessages()
         {
             // Arrange
-            var messages = Array.Empty<RabbitMessage>();
+            var messages = Array.Empty<RetrievedMessage>();
 
             // Act
             var result = JsonMessageFormatter.FormatMessages(messages);
 
             // Assert
             var json = JsonDocument.Parse(result);
-            json.RootElement.GetProperty("messages").ValueKind.Should().Be(JsonValueKind.Array);
-            json.RootElement.GetProperty("messages").GetArrayLength().Should().Be(0);
+            json.RootElement.ValueKind.Should().Be(JsonValueKind.Array);
+            json.RootElement.GetArrayLength().Should().Be(0);
         }
 
         [Fact]
         public void HandlesSingleMessage()
         {
             // Arrange
-            var messages = new[] { CreateRabbitMessage("Only one", "amq.direct", "key", deliveryTag: 99) };
+            var messages = new[] { CreateRetrievedMessage("Only one", "amq.direct", "key", deliveryTag: 99) };
 
             // Act
             var result = JsonMessageFormatter.FormatMessages(messages);
 
             // Assert
             var json = JsonDocument.Parse(result);
-            var messagesArray = json.RootElement.GetProperty("messages");
-            messagesArray.GetArrayLength().Should().Be(1);
-            messagesArray[0].GetProperty("body").GetString().Should().Be("Only one");
-            messagesArray[0].GetProperty("deliveryTag").GetUInt64().Should().Be(99);
-            messagesArray[0].GetProperty("exchange").GetString().Should().Be("amq.direct");
-            messagesArray[0].GetProperty("routingKey").GetString().Should().Be("key");
+            json.RootElement.GetArrayLength().Should().Be(1);
+            json.RootElement[0].GetProperty("body").GetString().Should().Be("Only one");
+            json.RootElement[0].GetProperty("deliveryTag").GetUInt64().Should().Be(99);
+            json.RootElement[0].GetProperty("exchange").GetString().Should().Be("amq.direct");
+            json.RootElement[0].GetProperty("routingKey").GetString().Should().Be("key");
         }
 
         [Fact]
@@ -628,8 +630,8 @@ public class JsonMessageFormatterTests
 
             var messages = new[]
             {
-                CreateRabbitMessage("First", props: props1),
-                CreateRabbitMessage("Second", props: props2)
+                CreateRetrievedMessage("First", props: props1),
+                CreateRetrievedMessage("Second", props: props2)
             };
 
             // Act
@@ -637,7 +639,7 @@ public class JsonMessageFormatterTests
 
             // Assert
             var json = JsonDocument.Parse(result);
-            var array = json.RootElement.GetProperty("messages").EnumerateArray().ToList();
+            var array = json.RootElement.EnumerateArray().ToList();
 
             array[0].GetProperty("properties").GetProperty("messageId").GetString().Should().Be("msg-1");
             array[1].GetProperty("properties").GetProperty("messageId").GetString().Should().Be("msg-2");
@@ -648,7 +650,7 @@ public class JsonMessageFormatterTests
 
     #region Test Helpers
 
-    private static RabbitMessage CreateRabbitMessage(
+    private static RetrievedMessage CreateRetrievedMessage(
         string body,
         string exchange = "exchange",
         string routingKey = "routing.key",
@@ -657,7 +659,22 @@ public class JsonMessageFormatterTests
         IReadOnlyBasicProperties? props = null,
         bool redelivered = false)
     {
-        return new RabbitMessage(exchange, routingKey, queue, body, deliveryTag, props, redelivered);
+        var (properties, headers) = MessagePropertyExtractor.ExtractPropertiesAndHeaders(props);
+        var bodySizeBytes = Encoding.UTF8.GetByteCount(body);
+
+        return new RetrievedMessage
+        {
+            Body = body,
+            Exchange = exchange,
+            RoutingKey = routingKey,
+            Queue = queue,
+            DeliveryTag = deliveryTag,
+            Properties = properties,
+            Headers = headers,
+            Redelivered = redelivered,
+            BodySizeBytes = bodySizeBytes,
+            BodySize = OutputUtilities.ToSizeString(bodySizeBytes)
+        };
     }
 
     #endregion

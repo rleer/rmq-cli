@@ -13,35 +13,6 @@ using PublishErrorInfoFactory = RmqCli.Shared.Factories.PublishErrorInfoFactory;
 
 namespace RmqCli.Commands.Publish;
 
-/// <summary>
-/// Represents message properties that can be set by the user.
-/// </summary>
-public class MessageProperties
-{
-    public string? AppId { get; init; }
-    public string? ContentType { get; init; }
-    public string? ContentEncoding { get; init; }
-    public string? CorrelationId { get; init; }
-    public DeliveryModes? DeliveryMode { get; init; }
-    public string? Expiration { get; init; }
-    public string? MessageId { get; init; }
-    public byte? Priority { get; init; }
-    public string? ReplyTo { get; init; }
-    public long? Timestamp { get; init; }
-    public string? Type { get; init; }
-    public string? UserId { get; init; }
-    public Dictionary<string, object>? Headers { get; init; }
-}
-
-/// <summary>
-/// Represents a message with optional properties to be published.
-/// </summary>
-public class MessageWithProperties
-{
-    public string Body { get; init; } = string.Empty;
-    public MessageProperties? Properties { get; init; }
-}
-
 public interface IPublishService
 {
     Task<int> PublishMessage(DestinationInfo dest, int burstCount = 1, CancellationToken cancellationToken = default);
@@ -96,15 +67,10 @@ public class PublishService : IPublishService
                 var jsonMessage = JsonMessageParser.ParseSingle(_options.JsonMessage);
                 _logger.LogDebug("Parsed inline JSON message");
 
-                // Convert JSON message to MessageWithProperties, merging with CLI options
-                var (mergedProps, mergedHeaders) = PropertyMerger.Merge(jsonMessage, _options);
-                var messageWithProps = new MessageWithProperties
-                {
-                    Body = jsonMessage.Body,
-                    Properties = mergedProps != null ? ConvertToMessageProperties(mergedProps, mergedHeaders) : null
-                };
+                // Merge JSON message with CLI options
+                var mergedMessage = PropertyMerger.Merge(jsonMessage, _options);
 
-                return await PublishMessageInternal(dest, [messageWithProps], burstCount, cancellationToken);
+                return await PublishMessageInternal(dest, [mergedMessage], burstCount, cancellationToken);
             }
             catch (ArgumentException ex)
             {
@@ -121,8 +87,8 @@ public class PublishService : IPublishService
 
         if (_options.MessageBody != null)
         {
-            // Convert plain text messages to MessageWithProperties
-            var messagesWithProps = ConvertToMessagesWithProperties([_options.MessageBody]);
+            // Convert plain text messages to Message
+            var messagesWithProps = ConvertToMessages([_options.MessageBody]);
             return await PublishMessageInternal(dest, messagesWithProps, burstCount, cancellationToken);
         }
 
@@ -146,18 +112,10 @@ public class PublishService : IPublishService
             {
                 _logger.LogDebug("Detected JSON format: Parsed {MessageCount} JSON messages from '{FilePath}'", jsonMessages.Count, fileInfo.FullName);
 
-                // Convert JSON messages to MessageWithProperties, merging with CLI options
-                var jsonMessagesWithProps = jsonMessages.Select(jsonMsg =>
-                {
-                    var (mergedProps, mergedHeaders) = PropertyMerger.Merge(jsonMsg, _options);
-                    return new MessageWithProperties
-                    {
-                        Body = jsonMsg.Body,
-                        Properties = mergedProps != null ? ConvertToMessageProperties(mergedProps, mergedHeaders) : null
-                    };
-                }).ToList();
+                // Merge JSON messages with CLI options
+                var mergedMessages = jsonMessages.Select(jsonMsg => PropertyMerger.Merge(jsonMsg, _options)).ToList();
 
-                return await PublishMessageInternal(dest, jsonMessagesWithProps, burstCount, cancellationToken);
+                return await PublishMessageInternal(dest, mergedMessages, burstCount, cancellationToken);
             }
         }
         catch (ArgumentException)
@@ -173,8 +131,8 @@ public class PublishService : IPublishService
         _logger.LogDebug("Read {MessageCount} messages from '{FilePath}' with delimiter '{MessageDelimiter}'", messages.Count, fileInfo.FullName,
             delimiterDisplay);
 
-        // Convert plain text messages to MessageWithProperties and publish
-        var plainMessagesWithProps = ConvertToMessagesWithProperties(messages);
+        // Convert plain text messages to Message and publish
+        var plainMessagesWithProps = ConvertToMessages(messages);
         return await PublishMessageInternal(dest, plainMessagesWithProps, burstCount, cancellationToken);
     }
 
@@ -193,18 +151,10 @@ public class PublishService : IPublishService
             {
                 _logger.LogDebug("Detected JSON format: Parsed {MessageCount} JSON messages from STDIN", jsonMessages.Count);
 
-                // Convert JSON messages to MessageWithProperties, merging with CLI options
-                var jsonMessagesWithProps = jsonMessages.Select(jsonMsg =>
-                {
-                    var (mergedProps, mergedHeaders) = PropertyMerger.Merge(jsonMsg, _options);
-                    return new MessageWithProperties
-                    {
-                        Body = jsonMsg.Body,
-                        Properties = mergedProps != null ? ConvertToMessageProperties(mergedProps, mergedHeaders) : null
-                    };
-                }).ToList();
+                // Merge JSON messages with CLI options
+                var mergedMessages = jsonMessages.Select(jsonMsg => PropertyMerger.Merge(jsonMsg, _options)).ToList();
 
-                return await PublishMessageInternal(dest, jsonMessagesWithProps, burstCount, cancellationToken);
+                return await PublishMessageInternal(dest, mergedMessages, burstCount, cancellationToken);
             }
         }
         catch (ArgumentException)
@@ -220,13 +170,13 @@ public class PublishService : IPublishService
         _logger.LogDebug("Read {MessageCount} messages from STDIN with delimiter '{MessageDelimiter}'", messages.Count,
             delimiterDisplay);
 
-        // Convert plain text messages to MessageWithProperties and publish
-        var plainMessagesWithProps = ConvertToMessagesWithProperties(messages);
+        // Convert plain text messages to Message and publish
+        var plainMessagesWithProps = ConvertToMessages(messages);
         return await PublishMessageInternal(dest, plainMessagesWithProps, burstCount, cancellationToken);
     }
 
     private async Task PublishCore(
-        List<MessageWithProperties> messages,
+        List<Message> messages,
         IChannel channel,
         DestinationInfo dest,
         List<PublishOperationDto> results,
@@ -253,8 +203,8 @@ public class PublishService : IPublishService
                     Timestamp = new AmqpTimestamp(DateTimeOffset.UtcNow.ToUnixTimeSeconds())
                 };
 
-                // Apply user-specified properties (may override MessageId and Timestamp)
-                ApplyPropertiesToBasicProperties(props, message.Properties);
+                // Apply user-specified properties and headers
+                ApplyPropertiesToBasicProperties(props, message.Properties, message.Headers);
 
                 await channel.BasicPublishAsync(
                     exchange: dest.Exchange ?? string.Empty,
@@ -275,15 +225,22 @@ public class PublishService : IPublishService
     }
 
     /// <summary>
-    /// Applies user-specified properties to RabbitMQ BasicProperties.
-    /// Only sets properties that are present (not null) in userProps.
+    /// Applies user-specified properties and headers to RabbitMQ BasicProperties.
+    /// Only sets properties that are present (not null).
     /// </summary>
     private static void ApplyPropertiesToBasicProperties(
         BasicProperties props,
-        MessageProperties? userProps)
+        MessageProperties? userProps,
+        Dictionary<string, object>? headers)
     {
+        // Apply headers
+        if (headers != null && headers.Count > 0)
+            props.Headers = (IDictionary<string, object?>)headers;
+
         if (userProps == null)
             return;
+
+        // Apply properties
 
         if (userProps.AppId != null)
             props.AppId = userProps.AppId;
@@ -305,22 +262,22 @@ public class PublishService : IPublishService
             props.Type = userProps.Type;
         if (userProps.UserId != null)
             props.UserId = userProps.UserId;
-        if (userProps.Headers != null && userProps.Headers.Count > 0)
-            props.Headers = (IDictionary<string, object?>)userProps.Headers;
+        if (userProps.ClusterId != null)
+            props.ClusterId = userProps.ClusterId;
 
-        // Override MessageId and Timestamp only if provided by user
-        if (userProps.MessageId != null)
-            props.MessageId = userProps.MessageId;
-        if (userProps.Timestamp.HasValue)
-            props.Timestamp = new AmqpTimestamp(userProps.Timestamp.Value);
+        // TODO: Add CLI options for these properties if needed
+        // if (userProps.MessageId != null)
+        //     props.MessageId = userProps.MessageId;
+        // if (userProps.Timestamp.HasValue)
+        //     props.Timestamp = new AmqpTimestamp(userProps.Timestamp.Value);
     }
 
     /// <summary>
-    /// Internal method to publish messages with properties.
+    /// Internal method to publish messages with properties and headers.
     /// </summary>
     private async Task<int> PublishMessageInternal(
         DestinationInfo dest,
-        List<MessageWithProperties> messagesWithProps,
+        List<Message> messagesWithProps,
         int burstCount = 1,
         CancellationToken cancellationToken = default)
     {
@@ -445,79 +402,60 @@ public class PublishService : IPublishService
     }
 
     /// <summary>
-    /// Converts plain text messages to MessageWithProperties, applying CLI properties.
+    /// Converts plain text messages to Message, applying CLI properties and headers.
     /// </summary>
-    private List<MessageWithProperties> ConvertToMessagesWithProperties(List<string> messages)
+    private List<Message> ConvertToMessages(List<string> messages)
     {
-        var cliProps = CreateMessagePropertiesFromOptions();
-        return messages.Select(body => new MessageWithProperties
+        var (cliProps, cliHeaders) = CreateMessagePropertiesAndHeadersFromOptions();
+        return messages.Select(body => new Message
         {
             Body = body,
-            Properties = cliProps
+            Properties = cliProps,
+            Headers = cliHeaders
         }).ToList();
     }
 
     /// <summary>
-    /// Converts PublishPropertiesJson and headers to MessageProperties.
+    /// Creates MessageProperties and headers from CLI options.
+    /// Returns null for both if no options are specified.
     /// </summary>
-    private static MessageProperties ConvertToMessageProperties(
-        Shared.Json.PublishPropertiesJson props,
-        Dictionary<string, object>? headers)
-    {
-        return new MessageProperties
-        {
-            AppId = props.AppId,
-            ContentType = props.ContentType,
-            ContentEncoding = props.ContentEncoding,
-            CorrelationId = props.CorrelationId,
-            DeliveryMode = props.DeliveryMode,
-            Expiration = props.Expiration,
-            MessageId = props.MessageId,
-            Priority = props.Priority,
-            ReplyTo = props.ReplyTo,
-            Timestamp = props.Timestamp,
-            Type = props.Type,
-            UserId = props.UserId,
-            Headers = headers
-        };
-    }
-
-    /// <summary>
-    /// Creates MessageProperties from CLI options.
-    /// Returns null if no properties are specified.
-    /// </summary>
-    private MessageProperties? CreateMessagePropertiesFromOptions()
+    private (MessageProperties? properties, Dictionary<string, object>? headers) CreateMessagePropertiesAndHeadersFromOptions()
     {
         // Check if any properties are set
-        if (_options.AppId == null &&
-            _options.ContentType == null &&
-            _options.ContentEncoding == null &&
-            _options.CorrelationId == null &&
-            !_options.DeliveryMode.HasValue &&
-            _options.Expiration == null &&
-            !_options.Priority.HasValue &&
-            _options.ReplyTo == null &&
-            _options.Type == null &&
-            _options.UserId == null &&
-            (_options.Headers == null || _options.Headers.Count == 0))
-        {
-            return null;
-        }
+        var hasProperties = _options.AppId != null ||
+                            _options.ClusterId != null ||
+                            _options.ContentType != null ||
+                            _options.ContentEncoding != null ||
+                            _options.CorrelationId != null ||
+                            _options.DeliveryMode.HasValue ||
+                            _options.Expiration != null ||
+                            _options.Priority.HasValue ||
+                            _options.ReplyTo != null ||
+                            _options.Type != null ||
+                            _options.UserId != null;
 
-        return new MessageProperties
-        {
-            AppId = _options.AppId,
-            ContentType = _options.ContentType,
-            ContentEncoding = _options.ContentEncoding,
-            CorrelationId = _options.CorrelationId,
-            DeliveryMode = _options.DeliveryMode,
-            Expiration = _options.Expiration,
-            Priority = _options.Priority,
-            ReplyTo = _options.ReplyTo,
-            Type = _options.Type,
-            UserId = _options.UserId,
-            Headers = _options.Headers
-        };
+        var properties = hasProperties
+            ? new MessageProperties
+            {
+                AppId = _options.AppId,
+                ClusterId = _options.ClusterId,
+                ContentType = _options.ContentType,
+                ContentEncoding = _options.ContentEncoding,
+                CorrelationId = _options.CorrelationId,
+                DeliveryMode = _options.DeliveryMode,
+                Expiration = _options.Expiration,
+                Priority = _options.Priority,
+                ReplyTo = _options.ReplyTo,
+                Type = _options.Type,
+                UserId = _options.UserId
+            }
+            : null;
+
+        var headers = _options.Headers != null && _options.Headers.Count > 0
+            ? _options.Headers
+            : null;
+
+        return (properties, headers);
     }
 
     private (List<string> messages, string delimiterDisplay) SplitMessages(string messageBlob)

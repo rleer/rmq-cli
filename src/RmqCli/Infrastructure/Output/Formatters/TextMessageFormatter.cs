@@ -1,7 +1,6 @@
 using System.Text;
 using RabbitMQ.Client;
 using RmqCli.Core.Models;
-using RmqCli.Shared;
 
 namespace RmqCli.Infrastructure.Output.Formatters;
 
@@ -15,7 +14,7 @@ public static class TextMessageFormatter
     /// </summary>
     /// <param name="message">The message to format</param>
     /// <param name="compact">If true, only show properties with values. If false, show all properties with "-" for empty values.</param>
-    public static string FormatMessage(RabbitMessage message, bool compact = false)
+    public static string FormatMessage(RetrievedMessage message, bool compact = false)
     {
         var sb = new StringBuilder();
 
@@ -27,23 +26,21 @@ public static class TextMessageFormatter
         sb.AppendLine($"Redelivered: {(message.Redelivered ? "Yes" : "No")}");
 
         // Properties
-        var props = MessagePropertyExtractor.ExtractProperties(message.Props);
-        if (props.HasAnyProperty() || !compact)
+        if (message.Properties != null && (message.Properties.HasAnyProperty() || !compact))
         {
             sb.AppendLine("== Properties ==");
-            sb.Append(FormatProperties(props, compact));
+            sb.Append(FormatProperties(message.Properties, compact));
         }
 
         // Custom Headers
-        if (props.Headers != null && props.Headers.Count > 0)
+        if (message.Headers != null && message.Headers.Count > 0)
         {
             sb.AppendLine("== Custom Headers ==");
-            sb.Append(FormatHeaders(props.Headers));
+            sb.Append(FormatHeaders(message.Headers));
         }
 
         // Body
-        var bodySize = Encoding.UTF8.GetByteCount(message.Body);
-        sb.AppendLine($"== Body ({OutputUtilities.ToSizeString(bodySize)}) ==");
+        sb.AppendLine($"== Body ({message.BodySize}) ==");
         sb.Append(message.Body);
 
         return sb.ToString();
@@ -52,7 +49,7 @@ public static class TextMessageFormatter
     /// <summary>
     /// Formats multiple messages separated by newlines.
     /// </summary>
-    public static string FormatMessages(IEnumerable<RabbitMessage> messages, bool compact = false)
+    public static string FormatMessages(IEnumerable<RetrievedMessage> messages, bool compact = false)
     {
         var messageList = messages.ToList();
         var sb = new StringBuilder();
@@ -70,7 +67,7 @@ public static class TextMessageFormatter
         return sb.ToString();
     }
 
-    private static string FormatProperties(FormattedMessageProperties props, bool compact)
+    private static string FormatProperties(MessageProperties props, bool compact)
     {
         var sb = new StringBuilder();
 
@@ -82,7 +79,7 @@ public static class TextMessageFormatter
             if (props.CorrelationId != null)
                 sb.AppendLine($"Correlation ID: {props.CorrelationId}");
             if (props.Timestamp != null)
-                sb.AppendLine($"Timestamp: {props.Timestamp} UTC");
+                sb.AppendLine($"Timestamp: {FormatTimestamp(props.Timestamp.Value)} UTC");
             if (props.ContentType != null)
                 sb.AppendLine($"Content Type: {props.ContentType}");
             if (props.ContentEncoding != null)
@@ -99,6 +96,8 @@ public static class TextMessageFormatter
                 sb.AppendLine($"Type: {props.Type}");
             if (props.AppId != null)
                 sb.AppendLine($"App ID: {props.AppId}");
+            if (props.UserId != null)
+                sb.AppendLine($"User ID: {props.UserId}");
             if (props.ClusterId != null)
                 sb.AppendLine($"Cluster ID: {props.ClusterId}");
         }
@@ -107,7 +106,7 @@ public static class TextMessageFormatter
             // Full mode: show all properties with "-" for empty
             sb.AppendLine($"Message ID: {props.MessageId ?? "-"}");
             sb.AppendLine($"Correlation ID: {props.CorrelationId ?? "-"}");
-            sb.AppendLine($"Timestamp: {(props.Timestamp != null ? props.Timestamp + " UTC" : "-")}");
+            sb.AppendLine($"Timestamp: {(props.Timestamp != null ? FormatTimestamp(props.Timestamp.Value) + " UTC" : "-")}");
             sb.AppendLine($"Content Type: {props.ContentType ?? "-"}");
             sb.AppendLine($"Content Encoding: {props.ContentEncoding ?? "-"}");
             sb.AppendLine($"Delivery Mode: {(props.DeliveryMode != null ? FormatDeliveryMode(props.DeliveryMode.Value) : "-")}");
@@ -116,6 +115,7 @@ public static class TextMessageFormatter
             sb.AppendLine($"Reply To: {props.ReplyTo ?? "-"}");
             sb.AppendLine($"Type: {props.Type ?? "-"}");
             sb.AppendLine($"App ID: {props.AppId ?? "-"}");
+            sb.AppendLine($"User ID: {props.UserId ?? "-"}");
             sb.AppendLine($"Cluster ID: {props.ClusterId ?? "-"}");
         }
 
@@ -141,5 +141,14 @@ public static class TextMessageFormatter
             DeliveryModes.Persistent => "Persistent (2)",
             _ => mode.ToString()
         };
+    }
+
+    /// <summary>
+    /// Formats a Unix timestamp (seconds) to a standard string format.
+    /// </summary>
+    private static string FormatTimestamp(long unixSeconds)
+    {
+        var dateTime = DateTimeOffset.FromUnixTimeSeconds(unixSeconds);
+        return dateTime.ToString("yyyy-MM-dd HH:mm:ss");
     }
 }
