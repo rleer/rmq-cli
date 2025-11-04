@@ -36,7 +36,7 @@ public class AckHandler
 
         await foreach (var (deliveryTag, success) in ackChan.Reader.ReadAllAsync())
         {
-            if (success && lastDeliveryTag - lastReportedDeliveryTag >= batchSize)
+            if (success && deliveryTag - lastReportedDeliveryTag >= batchSize)
             {
                 await PerformAckAsync(rmqChannel, lastDeliveryTag, multiple: true);
                 lastReportedDeliveryTag = lastDeliveryTag;
