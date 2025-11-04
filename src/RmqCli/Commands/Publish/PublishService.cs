@@ -297,7 +297,7 @@ public class PublishService : IPublishService
 
         try
         {
-            _statusOutput.ShowStatus($"Publishing {messageCountString} to {GetDestinationString(dest)}...");
+            _statusOutput.ShowStatus($"Publishing {messageCountString} to {GetDestinationString(dest)} (Ctrl+C to stop)");
 
             await _statusOutput.ExecuteWithProgress(
                 description: "Publishing messages",
@@ -482,12 +482,12 @@ public class PublishService : IPublishService
         var colorSuffix = useColor ? "[/]" : string.Empty;
         if (!string.IsNullOrEmpty(dest.Queue))
         {
-            return $"queue {colorPrefix}'{dest.Queue}'{colorSuffix}";
+            return $"queue {colorPrefix}{dest.Queue}{colorSuffix}";
         }
 
         if (!string.IsNullOrEmpty(dest.Exchange) && !string.IsNullOrEmpty(dest.RoutingKey))
         {
-            return $"exchange {colorPrefix}'{dest.Exchange}'{colorSuffix} with routing key {colorPrefix}'{dest.RoutingKey}'{colorSuffix}";
+            return $"exchange {colorPrefix}{dest.Exchange}{colorSuffix} with routing key {colorPrefix}{dest.RoutingKey}{colorSuffix}";
         }
 
         return string.Empty;
