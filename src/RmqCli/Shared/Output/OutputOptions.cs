@@ -1,6 +1,4 @@
-using RmqCli.Shared;
-
-namespace RmqCli.Infrastructure.Output;
+namespace RmqCli.Shared.Output;
 
 /// <summary>
 /// Options for output formatting and display.

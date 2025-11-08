@@ -1,4 +1,4 @@
-namespace RmqCli.Infrastructure.Output.Formatters;
+namespace RmqCli.Shared.Output.Formatters;
 
 /// <summary>
 /// Provides formatting for RabbitMQ message header values with support for nested structures.

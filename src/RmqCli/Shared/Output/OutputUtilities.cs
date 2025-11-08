@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text;
 
-namespace RmqCli.Shared;
+namespace RmqCli.Shared.Output;
 
 public static class OutputUtilities
 {

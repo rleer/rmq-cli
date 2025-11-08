@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using RmqCli.Core.Models;
+using RmqCli.Shared.Output;
 
 namespace RmqCli.Shared.Factories;
 

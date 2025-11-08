@@ -1,7 +1,7 @@
 using System.Threading.Channels;
 using RmqCli.Core.Models;
 
-namespace RmqCli.Infrastructure.Output;
+namespace RmqCli.Shared.Output;
 
 /// <summary>
 /// Base class for writing consumed messages to different outputs (console, file, etc.)

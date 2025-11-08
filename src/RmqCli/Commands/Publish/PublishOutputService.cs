@@ -1,7 +1,7 @@
 using System.Text.Json;
-using RmqCli.Infrastructure.Output;
 using RmqCli.Shared;
 using RmqCli.Shared.Json;
+using RmqCli.Shared.Output;
 using Spectre.Console;
 using AnsiConsoleFactory = RmqCli.Shared.Factories.AnsiConsoleFactory;
 

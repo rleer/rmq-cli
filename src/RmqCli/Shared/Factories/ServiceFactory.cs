@@ -7,10 +7,9 @@ using RmqCli.Commands.Peek;
 using RmqCli.Commands.Publish;
 using RmqCli.Core.Models;
 using RmqCli.DependencyInjection;
-using RmqCli.Infrastructure.Output;
-using RmqCli.Shared;
+using RmqCli.Shared.Output;
 
-namespace RmqCli;
+namespace RmqCli.Shared.Factories;
 
 /// <summary>
 /// Factory for creating command-specific services with dependency injection.

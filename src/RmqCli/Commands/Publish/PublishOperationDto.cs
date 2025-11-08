@@ -1,5 +1,6 @@
 using RabbitMQ.Client;
 using RmqCli.Shared;
+using RmqCli.Shared.Output;
 
 namespace RmqCli.Commands.Publish;
 

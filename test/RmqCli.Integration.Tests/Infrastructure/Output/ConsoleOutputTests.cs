@@ -3,10 +3,9 @@ using System.Threading.Channels;
 using Microsoft.Extensions.Logging.Abstractions;
 using RabbitMQ.Client;
 using RmqCli.Core.Models;
-using RmqCli.Infrastructure.Output;
-using RmqCli.Infrastructure.Output.Console;
-using RmqCli.Infrastructure.Output.Formatters;
 using RmqCli.Shared;
+using RmqCli.Shared.Output;
+using RmqCli.Shared.Output.Formatters;
 using Xunit.Abstractions;
 
 namespace RmqCli.Integration.Tests.Infrastructure.Output;

@@ -1,4 +1,4 @@
-namespace RmqCli.Shared;
+namespace RmqCli.Shared.Output;
 
 public enum OutputFormat
 {

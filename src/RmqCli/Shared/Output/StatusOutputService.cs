@@ -2,12 +2,11 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using RmqCli.Core.Models;
-using RmqCli.Shared;
 using RmqCli.Shared.Json;
 using Spectre.Console;
 using AnsiConsoleFactory = RmqCli.Shared.Factories.AnsiConsoleFactory;
 
-namespace RmqCli.Infrastructure.Output;
+namespace RmqCli.Shared.Output;
 
 public interface IStatusOutputService
 {

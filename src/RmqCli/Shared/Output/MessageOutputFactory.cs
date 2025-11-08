@@ -1,9 +1,7 @@
 using Microsoft.Extensions.Logging;
 using RmqCli.Infrastructure.Configuration.Models;
-using RmqCli.Infrastructure.Output.Console;
-using RmqCli.Infrastructure.Output.File;
 
-namespace RmqCli.Infrastructure.Output;
+namespace RmqCli.Shared.Output;
 
 /// <summary>
 /// Factory for creating MessageOutput instances based on CLI parameters.

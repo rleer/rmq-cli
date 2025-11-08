@@ -1,5 +1,6 @@
 ﻿using RmqCli;
 using RmqCli.Commands;
+using RmqCli.Shared.Factories;
 using Spectre.Console;
 
 try

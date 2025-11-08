@@ -3,10 +3,10 @@ using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using RabbitMQ.Client.Exceptions;
 using RmqCli.Infrastructure.Configuration.Models;
-using RmqCli.Infrastructure.Output;
 using RmqCli.Shared.Factories;
+using RmqCli.Shared.Output;
 
-namespace RmqCli.Core.Services;
+namespace RmqCli.Infrastructure.RabbitMq;
 
 public interface IRabbitChannelFactory
 {

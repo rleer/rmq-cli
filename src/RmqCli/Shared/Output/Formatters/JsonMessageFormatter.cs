@@ -2,7 +2,7 @@ using System.Text.Json;
 using RmqCli.Core.Models;
 using RmqCli.Shared.Json;
 
-namespace RmqCli.Infrastructure.Output.Formatters;
+namespace RmqCli.Shared.Output.Formatters;
 
 /// <summary>
 /// Formats retrieved messages as JSON using source-generated serialization.

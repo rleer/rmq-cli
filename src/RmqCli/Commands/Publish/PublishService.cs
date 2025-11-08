@@ -4,11 +4,11 @@ using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Exceptions;
 using RmqCli.Core.Models;
-using RmqCli.Core.Services;
 using RmqCli.Infrastructure.Configuration.Models;
-using RmqCli.Infrastructure.Output;
+using RmqCli.Infrastructure.RabbitMq;
 using RmqCli.Shared;
 using RmqCli.Shared.Factories;
+using RmqCli.Shared.Output;
 using PublishErrorInfoFactory = RmqCli.Shared.Factories.PublishErrorInfoFactory;
 
 namespace RmqCli.Commands.Publish;

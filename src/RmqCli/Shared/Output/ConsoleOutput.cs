@@ -3,10 +3,9 @@ using System.Text;
 using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
 using RmqCli.Core.Models;
-using RmqCli.Infrastructure.Output.Formatters;
-using RmqCli.Shared;
+using RmqCli.Shared.Output.Formatters;
 
-namespace RmqCli.Infrastructure.Output.Console;
+namespace RmqCli.Shared.Output;
 
 /// <summary>
 /// Writes consumed messages to standard output (console)

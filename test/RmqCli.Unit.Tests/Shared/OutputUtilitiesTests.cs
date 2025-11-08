@@ -1,4 +1,5 @@
 using RmqCli.Shared;
+using RmqCli.Shared.Output;
 
 namespace RmqCli.Unit.Tests.Shared;
 

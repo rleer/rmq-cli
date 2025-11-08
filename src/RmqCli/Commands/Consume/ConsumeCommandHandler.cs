@@ -2,6 +2,8 @@ using System.CommandLine;
 using RabbitMQ.Client.Exceptions;
 using RmqCli.Core.Models;
 using RmqCli.Shared;
+using RmqCli.Shared.Factories;
+using RmqCli.Shared.Output;
 
 namespace RmqCli.Commands.Consume;
 
