@@ -60,7 +60,7 @@ public class MessageRetrievalResultOutputService
 
     private void WriteMessageRetrievalResultInJsonFormat(MessageRetrievalResponse response)
     {
-        var resultJson = JsonSerializer.Serialize(response, JsonSerializationContext.RelaxedEscapingOptions.GetTypeInfo(typeof(MessageRetrievalResponse)));
+        var resultJson = JsonSerializer.Serialize(response, JsonSerializationContext.RelaxedEscaping.MessageRetrievalResponse);
         Console.Error.WriteLine(resultJson);
     }
 

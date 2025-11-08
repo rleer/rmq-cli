@@ -1,5 +1,6 @@
 using System.Text.Json;
 using RmqCli.Core.Models;
+using RmqCli.Shared.Json;
 
 namespace RmqCli.Unit.Tests.Core.Models;
 
@@ -129,7 +130,6 @@ public class ErrorInfoTests
     #endregion
 
     #region JSON Serialization
-
     public class JsonSerialization
     {
         [Fact]
@@ -146,7 +146,7 @@ public class ErrorInfoTests
             };
 
             // Act
-            var json = JsonSerializer.Serialize(errorInfo);
+            var json = JsonSerializer.Serialize(errorInfo,  JsonSerializationContext.RelaxedEscaping.ErrorInfo);
             var parsed = JsonDocument.Parse(json);
 
             // Assert
@@ -170,7 +170,7 @@ public class ErrorInfoTests
             };
 
             // Act
-            var json = JsonSerializer.Serialize(errorInfo);
+            var json = JsonSerializer.Serialize(errorInfo,  JsonSerializationContext.RelaxedEscaping.ErrorInfo);
             var parsed = JsonDocument.Parse(json);
 
             // Assert
@@ -189,7 +189,7 @@ public class ErrorInfoTests
             };
 
             // Act
-            var json = JsonSerializer.Serialize(errorInfo);
+            var json = JsonSerializer.Serialize(errorInfo,  JsonSerializationContext.RelaxedEscaping.ErrorInfo);
             var parsed = JsonDocument.Parse(json);
 
             // Assert
@@ -209,7 +209,7 @@ public class ErrorInfoTests
             };
 
             // Act
-            var json = JsonSerializer.Serialize(errorInfo);
+            var json = JsonSerializer.Serialize(errorInfo,  JsonSerializationContext.RelaxedEscaping.ErrorInfo);
             var parsed = JsonDocument.Parse(json);
 
             // Assert
@@ -238,7 +238,7 @@ public class ErrorInfoTests
             };
 
             // Act
-            var json = JsonSerializer.Serialize(errorInfo);
+            var json = JsonSerializer.Serialize(errorInfo,  JsonSerializationContext.RelaxedEscaping.ErrorInfo);
             var parsed = JsonDocument.Parse(json);
 
             // Assert
@@ -260,7 +260,7 @@ public class ErrorInfoTests
             };
 
             // Act
-            var json = JsonSerializer.Serialize(errorInfo);
+            var json = JsonSerializer.Serialize(errorInfo,  JsonSerializationContext.RelaxedEscaping.ErrorInfo);
 
             // Assert
             json.Should().Contain("\"code\"");
@@ -288,7 +288,7 @@ public class ErrorInfoTests
             }";
 
             // Act
-            var errorInfo = JsonSerializer.Deserialize<ErrorInfo>(json);
+            var errorInfo = JsonSerializer.Deserialize(json,  JsonSerializationContext.RelaxedEscaping.ErrorInfo);
 
             // Assert
             errorInfo.Should().NotBeNull();
@@ -311,7 +311,7 @@ public class ErrorInfoTests
             }";
 
             // Act
-            var errorInfo = JsonSerializer.Deserialize<ErrorInfo>(json);
+            var errorInfo = JsonSerializer.Deserialize(json,  JsonSerializationContext.RelaxedEscaping.ErrorInfo);
 
             // Assert
             errorInfo.Should().NotBeNull();
@@ -329,7 +329,7 @@ public class ErrorInfoTests
             var json = "{}";
 
             // Act
-            var errorInfo = JsonSerializer.Deserialize<ErrorInfo>(json);
+            var errorInfo = JsonSerializer.Deserialize(json,  JsonSerializationContext.RelaxedEscaping.ErrorInfo);
 
             // Assert
             errorInfo.Should().NotBeNull();
@@ -356,7 +356,7 @@ public class ErrorInfoTests
             }";
 
             // Act
-            var errorInfo = JsonSerializer.Deserialize<ErrorInfo>(json);
+            var errorInfo = JsonSerializer.Deserialize(json,  JsonSerializationContext.RelaxedEscaping.ErrorInfo);
 
             // Assert
             errorInfo.Should().NotBeNull();
@@ -391,8 +391,8 @@ public class ErrorInfoTests
             };
 
             // Act
-            var json = JsonSerializer.Serialize(original);
-            var deserialized = JsonSerializer.Deserialize<ErrorInfo>(json);
+            var json = JsonSerializer.Serialize(original,  JsonSerializationContext.RelaxedEscaping.ErrorInfo);
+            var deserialized = JsonSerializer.Deserialize(json, JsonSerializationContext.RelaxedEscaping.ErrorInfo);
 
             // Assert
             deserialized.Should().NotBeNull();
@@ -415,8 +415,8 @@ public class ErrorInfoTests
             };
 
             // Act
-            var json = JsonSerializer.Serialize(original);
-            var deserialized = JsonSerializer.Deserialize<ErrorInfo>(json);
+            var json = JsonSerializer.Serialize(original,  JsonSerializationContext.RelaxedEscaping.ErrorInfo);
+            var deserialized = JsonSerializer.Deserialize(json, JsonSerializationContext.RelaxedEscaping.ErrorInfo);
 
             // Assert
             deserialized.Should().NotBeNull();
@@ -446,8 +446,8 @@ public class ErrorInfoTests
             var errorInfo = new ErrorInfo { Category = category };
 
             // Act
-            var json = JsonSerializer.Serialize(errorInfo);
-            var deserialized = JsonSerializer.Deserialize<ErrorInfo>(json);
+            var json = JsonSerializer.Serialize(errorInfo,  JsonSerializationContext.RelaxedEscaping.ErrorInfo);
+            var deserialized = JsonSerializer.Deserialize(json, JsonSerializationContext.RelaxedEscaping.ErrorInfo);
 
             // Assert
             deserialized.Should().NotBeNull();

@@ -38,14 +38,15 @@ namespace RmqCli.Shared.Json;
 )]
 public partial class JsonSerializationContext : JsonSerializerContext
 {
-    // TODO: Make indentation configurable.
-    // Declare new JsonSerializerOptions with relaxed escaping for JSON serialization.
-    public static JsonSerializerOptions RelaxedEscapingOptions => new()
+    private static JsonSerializationContext? _relaxedEscaping;
+
+    // Singleton instance with relaxed escaping for JSON serialization.
+    public static JsonSerializationContext RelaxedEscaping => _relaxedEscaping ??= new JsonSerializationContext(new JsonSerializerOptions
     {
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         WriteIndented = false,
         NumberHandling = JsonNumberHandling.AllowReadingFromString,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         TypeInfoResolver = Default
-    };
+    });
 }

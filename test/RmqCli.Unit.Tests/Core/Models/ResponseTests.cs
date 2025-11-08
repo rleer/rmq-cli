@@ -1,5 +1,7 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using RmqCli.Core.Models;
+using RmqCli.Shared.Json;
 
 namespace RmqCli.Unit.Tests.Core.Models;
 
@@ -104,8 +106,8 @@ public class ResponseTests
             var response = new Response { Status = status };
 
             // Act
-            var json = JsonSerializer.Serialize(response);
-            var deserialized = JsonSerializer.Deserialize<Response>(json);
+            var json = JsonSerializer.Serialize(response, JsonSerializationContext.RelaxedEscaping.Response);
+            var deserialized = JsonSerializer.Deserialize(json, JsonSerializationContext.RelaxedEscaping.Response);
 
             // Assert
             deserialized.Should().NotBeNull();
@@ -119,8 +121,8 @@ public class ResponseTests
             var response = new Response { Status = "custom_status" };
 
             // Act
-            var json = JsonSerializer.Serialize(response);
-            var deserialized = JsonSerializer.Deserialize<Response>(json);
+            var json = JsonSerializer.Serialize(response, JsonSerializationContext.RelaxedEscaping.Response);
+            var deserialized = JsonSerializer.Deserialize(json, JsonSerializationContext.RelaxedEscaping.Response);
 
             // Assert
             deserialized.Should().NotBeNull();
@@ -152,7 +154,7 @@ public class ResponseTests
             };
 
             // Act
-            var json = JsonSerializer.Serialize(response);
+            var json = JsonSerializer.Serialize(response,  JsonSerializationContext.RelaxedEscaping.Response);
             var parsed = JsonDocument.Parse(json);
 
             // Assert
@@ -173,7 +175,7 @@ public class ResponseTests
             };
 
             // Act
-            var json = JsonSerializer.Serialize(response);
+            var json = JsonSerializer.Serialize(response, JsonSerializationContext.RelaxedEscaping.Response);
             var parsed = JsonDocument.Parse(json);
 
             // Assert
@@ -194,7 +196,7 @@ public class ResponseTests
             };
 
             // Act
-            var json = JsonSerializer.Serialize(response);
+            var json = JsonSerializer.Serialize(response, JsonSerializationContext.RelaxedEscaping.Response);
             var parsed = JsonDocument.Parse(json);
 
             // Assert
@@ -216,7 +218,7 @@ public class ResponseTests
             };
 
             // Act
-            var json = JsonSerializer.Serialize(response);
+            var json = JsonSerializer.Serialize(response, JsonSerializationContext.RelaxedEscaping.Response);
 
             // Assert
             json.Should().Contain("\"status\"");
@@ -246,7 +248,7 @@ public class ResponseTests
             }";
 
             // Act
-            var response = JsonSerializer.Deserialize<Response>(json);
+            var response = JsonSerializer.Deserialize(json,  JsonSerializationContext.RelaxedEscaping.Response);
 
             // Assert
             response.Should().NotBeNull();
@@ -268,7 +270,7 @@ public class ResponseTests
             }";
 
             // Act
-            var response = JsonSerializer.Deserialize<Response>(json);
+            var response = JsonSerializer.Deserialize(json, JsonSerializationContext.RelaxedEscaping.Response);
 
             // Assert
             response.Should().NotBeNull();
@@ -287,7 +289,7 @@ public class ResponseTests
             }";
 
             // Act
-            var response = JsonSerializer.Deserialize<Response>(json);
+            var response = JsonSerializer.Deserialize(json,  JsonSerializationContext.RelaxedEscaping.Response);
 
             // Assert
             response.Should().NotBeNull();
@@ -301,7 +303,7 @@ public class ResponseTests
             var json = "{}";
 
             // Act
-            var response = JsonSerializer.Deserialize<Response>(json);
+            var response = JsonSerializer.Deserialize(json, JsonSerializationContext.RelaxedEscaping.Response);
 
             // Assert
             response.Should().NotBeNull();
@@ -327,8 +329,8 @@ public class ResponseTests
             };
 
             // Act
-            var json = JsonSerializer.Serialize(original);
-            var deserialized = JsonSerializer.Deserialize<Response>(json);
+            var json = JsonSerializer.Serialize(original, JsonSerializationContext.RelaxedEscaping.Response);
+            var deserialized = JsonSerializer.Deserialize(json, JsonSerializationContext.RelaxedEscaping.Response);
 
             // Assert
             deserialized.Should().NotBeNull();
@@ -355,8 +357,8 @@ public class ResponseTests
             };
 
             // Act
-            var json = JsonSerializer.Serialize(original);
-            var deserialized = JsonSerializer.Deserialize<Response>(json);
+            var json = JsonSerializer.Serialize(original, JsonSerializationContext.RelaxedEscaping.Response);
+            var deserialized = JsonSerializer.Deserialize(json, JsonSerializationContext.RelaxedEscaping.Response);
 
             // Assert
             deserialized.Should().NotBeNull();
@@ -386,8 +388,8 @@ public class ResponseTests
             };
 
             // Act
-            var json = JsonSerializer.Serialize(original);
-            var deserialized = JsonSerializer.Deserialize<Response>(json);
+            var json = JsonSerializer.Serialize(original, JsonSerializationContext.RelaxedEscaping.Response);
+            var deserialized = JsonSerializer.Deserialize(json, JsonSerializationContext.RelaxedEscaping.Response);
 
             // Assert
             deserialized.Should().NotBeNull();
@@ -405,7 +407,7 @@ public class ResponseTests
         // Derived class for testing
         private class TestResponse : Response
         {
-            [System.Text.Json.Serialization.JsonPropertyName("test_data")]
+            [JsonPropertyName("test_data")]
             public string? TestData { get; set; }
         }
 

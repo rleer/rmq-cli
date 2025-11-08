@@ -105,15 +105,6 @@ public class StatusOutputService : IStatusOutputService
                 return;
             case OutputFormat.Json:
             {
-                var ctx = new JsonSerializationContext(new JsonSerializerOptions
-                {
-                    Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-                    WriteIndented = false,
-                    TypeInfoResolver = JsonSerializationContext.Default,
-                    NumberHandling = JsonNumberHandling.AllowReadingFromString,
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                });
-
                 var response = new Response
                 {
                     Status = "error",
@@ -121,8 +112,8 @@ public class StatusOutputService : IStatusOutputService
                     Error = errorInfo
                 };
 
-                var serializedError = JsonSerializer.Serialize(response, ctx.Response);
-                System.Console.Error.WriteLine(serializedError);
+                var serializedError = JsonSerializer.Serialize(response, JsonSerializationContext.RelaxedEscaping.Response);
+                Console.Error.WriteLine(serializedError);
                 break;
             }
         }

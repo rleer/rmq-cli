@@ -11,12 +11,12 @@ public static class JsonMessageFormatter
 {
     public static string FormatMessage(RetrievedMessage message)
     {
-        return JsonSerializer.Serialize(message, JsonSerializationContext.RelaxedEscapingOptions.GetTypeInfo(typeof(RetrievedMessage)));
+        return JsonSerializer.Serialize(message, JsonSerializationContext.RelaxedEscaping.RetrievedMessage);
     }
 
     public static string FormatMessages(IEnumerable<RetrievedMessage> messages)
     {
         var messageArr = messages.ToArray();
-        return JsonSerializer.Serialize(messageArr, JsonSerializationContext.RelaxedEscapingOptions.GetTypeInfo(typeof(RetrievedMessage[])));
+        return JsonSerializer.Serialize(messageArr, JsonSerializationContext.RelaxedEscaping.RetrievedMessageArray);
     }
 }

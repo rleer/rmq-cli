@@ -40,7 +40,7 @@ public class PublishOutputService : IPublishOutputService
 
     private void WritePublishResultInJsonFormat(PublishResponse response)
     {
-        var resultJson = JsonSerializer.Serialize(response, JsonSerializationContext.RelaxedEscapingOptions.GetTypeInfo(typeof(PublishResponse)));
+        var resultJson = JsonSerializer.Serialize(response, JsonSerializationContext.RelaxedEscaping.PublishResponse);
         Console.Out.WriteLine(resultJson);
     }
 
