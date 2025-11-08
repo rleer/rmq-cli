@@ -59,6 +59,7 @@ public class TomlConfigurationHelper
                [RabbitMq]
                Host = "localhost"
                Port = 5672
+               ManagementPort = 15672
                VirtualHost = "/"
                User = "guest"
                Password = "guest"
