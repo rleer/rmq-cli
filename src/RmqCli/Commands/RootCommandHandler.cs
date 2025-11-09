@@ -3,6 +3,7 @@ using RmqCli.Commands.Config;
 using RmqCli.Commands.Consume;
 using RmqCli.Commands.Peek;
 using RmqCli.Commands.Publish;
+using RmqCli.Commands.Purge;
 using RmqCli.Shared.Factories;
 
 namespace RmqCli.Commands;
@@ -121,6 +122,7 @@ public class RootCommandHandler
         _commandHandlers.Add(new ConsumeCommandHandler(_serviceFactory));
         _commandHandlers.Add(new PeekCommandHandler(_serviceFactory));
         _commandHandlers.Add(new PublishCommandHandler(_serviceFactory));
+        _commandHandlers.Add(new PurgeCommandHandler(_serviceFactory));
 
         foreach (var handler in _commandHandlers)
         {

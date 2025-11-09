@@ -3,7 +3,9 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using RmqCli.Commands.MessageRetrieval;
 using RmqCli.Commands.Publish;
+using RmqCli.Commands.Purge;
 using RmqCli.Core.Models;
+using RmqCli.Infrastructure.RabbitMq;
 
 namespace RmqCli.Shared.Json;
 
@@ -30,6 +32,8 @@ namespace RmqCli.Shared.Json;
 [JsonSerializable(typeof(PublishResult))]
 [JsonSerializable(typeof(MessageRetrievalResponse))]
 [JsonSerializable(typeof(MessageRetrievalResult))]
+[JsonSerializable(typeof(PurgeResponse))]
+[JsonSerializable(typeof(ManagementApiErrorResponse))]
 [JsonSerializable(typeof(ErrorInfo))]
 [JsonSerializable(typeof(List<string>))]
 [JsonSourceGenerationOptions(
