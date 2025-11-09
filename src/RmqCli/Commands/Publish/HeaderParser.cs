@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace RmqCli.Commands.Publish;
 
 /// <summary>
@@ -46,12 +48,12 @@ public static class HeaderParser
         if (bool.TryParse(value, out var boolValue))
             return boolValue;
 
-        // Try integer
-        if (long.TryParse(value, out var longValue))
+        // Try integer (culture-invariant)
+        if (long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var longValue))
             return longValue;
 
-        // Try decimal
-        if (double.TryParse(value, out var doubleValue))
+        // Try decimal (culture-invariant)
+        if (double.TryParse(value, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out var doubleValue))
             return doubleValue;
 
         // Default to string
