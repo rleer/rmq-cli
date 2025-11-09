@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using RmqCli.Infrastructure.Configuration.Models;
-using RmqCli.Shared;
 using RmqCli.Shared.Output;
 
 namespace RmqCli.Integration.Tests.Infrastructure.Output;

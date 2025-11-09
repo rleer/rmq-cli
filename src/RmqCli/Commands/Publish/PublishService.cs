@@ -6,7 +6,6 @@ using RabbitMQ.Client.Exceptions;
 using RmqCli.Core.Models;
 using RmqCli.Infrastructure.Configuration.Models;
 using RmqCli.Infrastructure.RabbitMq;
-using RmqCli.Shared;
 using RmqCli.Shared.Factories;
 using RmqCli.Shared.Output;
 using PublishErrorInfoFactory = RmqCli.Shared.Factories.PublishErrorInfoFactory;

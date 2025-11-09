@@ -63,10 +63,7 @@ public static class ServiceCollectionExtensions
 
         services.AddLogging(builder =>
         {
-            builder.AddConsole(options =>
-                {
-                    options.LogToStandardErrorThreshold = LogLevel.Trace;
-                })
+            builder.AddConsole(options => { options.LogToStandardErrorThreshold = LogLevel.Trace; })
                 .AddFilter("Microsoft", LogLevel.Warning)
                 .AddFilter("System", LogLevel.Warning)
                 .SetMinimumLevel(logLevel);

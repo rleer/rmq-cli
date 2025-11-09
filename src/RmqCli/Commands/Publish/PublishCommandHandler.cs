@@ -298,6 +298,7 @@ public class PublishCommandHandler : ICommandHandler
         var publishService = _serviceFactory.CreatePublishService(parseResult);
 
         // Extract publish-specific options
+        // TODO: Refactor to avoid double extraction
         var options = ServiceFactory.CreatePublishOptions(parseResult);
 
         var cts = CancellationHelper.LinkWithCtrlCHandler(cancellationToken);

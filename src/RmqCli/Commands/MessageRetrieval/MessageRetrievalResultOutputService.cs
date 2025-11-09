@@ -1,5 +1,4 @@
 using System.Text.Json;
-using RmqCli.Shared;
 using RmqCli.Shared.Json;
 using RmqCli.Shared.Output;
 using Spectre.Console;

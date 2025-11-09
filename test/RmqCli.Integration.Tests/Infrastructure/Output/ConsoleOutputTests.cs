@@ -3,7 +3,6 @@ using System.Threading.Channels;
 using Microsoft.Extensions.Logging.Abstractions;
 using RabbitMQ.Client;
 using RmqCli.Core.Models;
-using RmqCli.Shared;
 using RmqCli.Shared.Output;
 using RmqCli.Shared.Output.Formatters;
 using Xunit.Abstractions;

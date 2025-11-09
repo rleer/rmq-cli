@@ -2,7 +2,6 @@ using System.Text;
 using System.Text.Json;
 using RabbitMQ.Client;
 using RmqCli.Core.Models;
-using RmqCli.Shared;
 using RmqCli.Shared.Output;
 using RmqCli.Shared.Output.Formatters;
 using RmqCli.Unit.Tests.Helpers;

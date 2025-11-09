@@ -150,7 +150,9 @@ public class ServiceFactory
 
     /// <summary>
     /// Creates PublishOptions from ParseResult.
+    /// <param name="parseResult">The parse result containing CLI options.</param>
     /// </summary>
+    /// <returns>A configured publish options instance.</returns>
     public static PublishOptions CreatePublishOptions(ParseResult parseResult)
     {
         var exchangeName = parseResult.GetValue<string>("--exchange");

@@ -1,6 +1,4 @@
-using System.Text.Encodings.Web;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using RmqCli.Core.Models;
 using RmqCli.Shared.Json;
 using Spectre.Console;
