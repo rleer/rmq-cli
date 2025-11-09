@@ -236,7 +236,7 @@ public class ResponseTests
         {
             // Arrange
             var json = @"{
-                ""status"": ""error"",
+                ""status"": ""failure"",
                 ""timestamp"": ""2025-01-15T10:30:00Z"",
                 ""error"": {
                     ""error"": ""Test error""
@@ -248,7 +248,7 @@ public class ResponseTests
 
             // Assert
             response.Should().NotBeNull();
-            response.Status.Should().Be("error");
+            response.Status.Should().Be("failure");
             response.Timestamp.Year.Should().Be(2025);
             response.Timestamp.Month.Should().Be(1);
             response.Timestamp.Day.Should().Be(15);

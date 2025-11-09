@@ -5,7 +5,7 @@ namespace RmqCli.Core.Models;
 public class Response
 {
     [JsonPropertyName("status")]
-    public string Status { get; set; } = string.Empty; // "success", "partial", "error" 
+    public string Status { get; set; } = string.Empty; // "success", "partial", "failure" 
 
     [JsonPropertyName("timestamp")]
     public DateTime Timestamp { get; set; } = DateTime.Now;

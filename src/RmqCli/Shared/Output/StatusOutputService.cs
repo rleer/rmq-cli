@@ -104,7 +104,7 @@ public class StatusOutputService : IStatusOutputService
             {
                 var response = new Response
                 {
-                    Status = "error",
+                    Status = "failure",
                     Timestamp = DateTime.Now,
                     Error = errorInfo
                 };

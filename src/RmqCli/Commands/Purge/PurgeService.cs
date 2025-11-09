@@ -64,7 +64,7 @@ public class PurgeService : IPurgeService
         {
             Queue = _purgeOptions.Queue,
             Vhost = _rabbitMqConfig.VirtualHost,
-            Status = result.IsSuccess ? "success" : "error",
+            Status = result.IsSuccess ? "success" : "failure",
             Timestamp = DateTime.Now
         };
 
