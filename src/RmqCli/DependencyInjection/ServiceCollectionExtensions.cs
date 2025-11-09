@@ -41,6 +41,10 @@ public static class ServiceCollectionExtensions
         // Bind and register RabbitMQ configuration (uses source generation - no reflection needed at runtime)
         var rabbitMqConfig = new RabbitMqConfig();
         configuration.GetSection(RabbitMqConfig.RabbitMqConfigName).Bind(rabbitMqConfig);
+
+        // Override with CLI options if provided
+        ApplyRabbitMqConfigOverrides(rabbitMqConfig, parseResult);
+
         services.AddSingleton(rabbitMqConfig);
 
         // Bind and register file configuration (uses source generation - no reflection needed at runtime)
@@ -49,6 +53,39 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(fileConfig);
 
         return services;
+    }
+
+    private static void ApplyRabbitMqConfigOverrides(RabbitMqConfig config, ParseResult parseResult)
+    {
+        if (parseResult.GetValue<string>("--vhost") is { } vhost)
+        {
+            config.VirtualHost = vhost;
+        }
+
+        if (parseResult.GetValue<string>("--host") is { } host)
+        {
+            config.Host = host;
+        }
+
+        if (parseResult.GetValue<int>("--port") is var port && port != 0)
+        {
+            config.Port = port;
+        }
+
+        if (parseResult.GetValue<int>("--management-port") is var managementPort && managementPort != 0)
+        {
+            config.ManagementPort = managementPort;
+        }
+
+        if (parseResult.GetValue<string>("--user") is { } user)
+        {
+            config.User = user;
+        }
+
+        if (parseResult.GetValue<string>("--password") is { } password)
+        {
+            config.User = password;
+        }
     }
 
     /// <summary>

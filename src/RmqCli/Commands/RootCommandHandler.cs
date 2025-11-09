@@ -64,6 +64,48 @@ public class RootCommandHandler
         };
         _rootCommand.Add(configFileOption);
 
+        var vHostOption = new Option<string>("--vhost")
+        {
+            Description = "The RabbitMQ virtual host to use for this command. Overrides the value specified in the configuration file.",
+            Recursive = true
+        };
+        _rootCommand.Add(vHostOption);
+        
+        var hostOption = new Option<string>("--host")
+        {
+            Description = "The RabbitMQ host to use for this command. Overrides the value specified in the configuration file.",
+            Recursive = true
+        };
+        _rootCommand.Add(hostOption);
+        
+        var portOption = new Option<int>("--port")
+        {
+            Description = "The RabbitMQ port to use for this command. Overrides the value specified in the configuration file.",
+            Recursive = true
+        };
+        _rootCommand.Add(portOption);
+        
+        var managementPortOption = new Option<int>("--management-port")
+        {
+            Description = "The RabbitMQ management API port to use for this command. Overrides the value specified in the configuration file.",
+            Recursive = true
+        };
+        _rootCommand.Add(managementPortOption);
+        
+        var userOption = new Option<string>("--user")
+        {
+            Description = "The RabbitMQ user to use for this command. Overrides the value specified in the configuration file.",
+            Recursive = true
+        };
+        _rootCommand.Add(userOption);
+        
+        var passwordOption = new Option<string>("--password")
+        {
+            Description = "The RabbitMQ password to use for this command. Overrides the value specified in the configuration file.",
+            Recursive = true
+        };
+        _rootCommand.Add(passwordOption);
+
         _rootCommand.Validators.Add(result =>
         {
             if (result.GetValue(verboseOption) && result.GetValue(quietOption))

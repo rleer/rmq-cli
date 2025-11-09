@@ -50,10 +50,11 @@ The compiled binary will be in the `release/` directory.
 
 `rmq` uses TOML configuration files following standard CLI tool conventions. Configuration is loaded in the following priority order (highest priority wins):
 
-1. Environment variables (prefixed with `RMQCLI_`)
-2. Custom config file (via `--config` flag)
-3. User config file: `~/.config/rmq/config.toml`
-4. System-wide config file: `/etc/rmq/config.toml`
+1. CLI flags
+2. Environment variables (prefixed with `RMQCLI_`)
+3. Custom config file (via `--config` flag)
+4. User config file: `~/.config/rmq/config.toml`
+5. System-wide config file: `/etc/rmq/config.toml`
 
 ### Default Configuration
 
@@ -93,14 +94,14 @@ Override any configuration setting using environment variables with the `RMQCLI_
 
 ```bash
 # Override RabbitMQ host
-export RMQCLI_RabbitMqConfig__Host=production-rabbit
+export RMQCLI_RabbitMq__Host=production-rabbit
 
 # Override port
-export RMQCLI_RabbitMqConfig__Port=5673
+export RMQCLI_RabbitMq__Port=5673
 
 # Override user credentials
-export RMQCLI_RabbitMqConfig__User=myuser
-export RMQCLI_RabbitMqConfig__Password=mypassword
+export RMQCLI_RabbitMq__User=myuser
+export RMQCLI_RabbitMq__Password=mypassword
 ```
 
 Note: Use double underscores (`__`) to represent nested configuration sections.
