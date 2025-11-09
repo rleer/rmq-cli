@@ -91,7 +91,6 @@ public class StatusOutputService : IStatusOutputService
                     return;
 
                 _console.MarkupLine($"  Error: {EscapeMarkup(errorInfo.Error)}");
-                _console.MarkupLine($"  Category: {EscapeMarkup(errorInfo.Category)}");
                 if (!string.IsNullOrWhiteSpace(errorInfo.Suggestion))
                 {
                     _console.MarkupLine($"  Suggestion: {EscapeMarkup(errorInfo.Suggestion)}");

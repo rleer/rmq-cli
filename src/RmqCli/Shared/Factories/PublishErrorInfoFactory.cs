@@ -10,8 +10,6 @@ public static partial class PublishErrorInfoFactory
     {
         return new ErrorInfo
         {
-            Category = "routing",
-            Code = "NO_ROUTE",
             Error = "No route to destination",
             Suggestion = isQueue ? "Check if the queue exists" : "Check if the exchange and routing key exist"
         };
@@ -21,8 +19,6 @@ public static partial class PublishErrorInfoFactory
     {
         return new ErrorInfo
         {
-            Category = "routing",
-            Code = "EXCHANGE_NOT_FOUND",
             Error = "Exchange not found",
             Suggestion = "Check if the exchange exists and is correctly configured"
         };
@@ -40,8 +36,6 @@ public static partial class PublishErrorInfoFactory
 
         return new ErrorInfo
         {
-            Category = "validation",
-            Code = "MESSAGE_SIZE_EXCEEDED",
             Error = $"Message size {messageSizeString}exceeds maximum allowed size{maxSizeString}",
             Suggestion = $"Reduce the message size to {maxSize} bytes or less, or adapt RabbitMQ configuration",
             Details = new Dictionary<string, object>

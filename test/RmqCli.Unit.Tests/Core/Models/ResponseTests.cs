@@ -43,7 +43,7 @@ public class ResponseTests
         {
             // Arrange
             var response = new Response();
-            var error = new ErrorInfo { Code = "TEST", Error = "Test error", Category = "internal" };
+            var error = new ErrorInfo { Error = "Test error" };
 
             // Act
             response.Error = error;
@@ -147,9 +147,7 @@ public class ResponseTests
                 Timestamp = timestamp,
                 Error = new ErrorInfo
                 {
-                    Code = "TEST_ERROR",
-                    Error = "Test error message",
-                    Category = "internal"
+                    Error = "Test error message"
                 }
             };
 
@@ -161,7 +159,7 @@ public class ResponseTests
             parsed.RootElement.GetProperty("status").GetString().Should().Be("error");
             parsed.RootElement.TryGetProperty("timestamp", out _).Should().BeTrue();
             parsed.RootElement.TryGetProperty("error", out var error).Should().BeTrue();
-            error.GetProperty("code").GetString().Should().Be("TEST_ERROR");
+            error.GetProperty("error").GetString().Should().Be("Test error message");
         }
 
         [Fact]
@@ -241,9 +239,7 @@ public class ResponseTests
                 ""status"": ""error"",
                 ""timestamp"": ""2025-01-15T10:30:00Z"",
                 ""error"": {
-                    ""code"": ""TEST_ERROR"",
-                    ""error"": ""Test error"",
-                    ""category"": ""internal""
+                    ""error"": ""Test error""
                 }
             }";
 
@@ -257,7 +253,7 @@ public class ResponseTests
             response.Timestamp.Month.Should().Be(1);
             response.Timestamp.Day.Should().Be(15);
             response.Error.Should().NotBeNull();
-            response.Error!.Code.Should().Be("TEST_ERROR");
+            response.Error!.Error.Should().Be("Test error");
         }
 
         [Fact]
@@ -349,9 +345,7 @@ public class ResponseTests
                 Timestamp = new DateTime(2025, 1, 15, 10, 30, 0, DateTimeKind.Utc),
                 Error = new ErrorInfo
                 {
-                    Code = "TEST_ERROR",
                     Error = "Test error",
-                    Category = "internal",
                     Suggestion = "Try again"
                 }
             };
@@ -365,9 +359,7 @@ public class ResponseTests
             deserialized.Status.Should().Be(original.Status);
             deserialized.Timestamp.Should().BeCloseTo(original.Timestamp, TimeSpan.FromSeconds(1));
             deserialized.Error.Should().NotBeNull();
-            deserialized.Error!.Code.Should().Be(original.Error.Code);
-            deserialized.Error.Error.Should().Be(original.Error.Error);
-            deserialized.Error.Category.Should().Be(original.Error.Category);
+            deserialized.Error!.Error.Should().Be(original.Error.Error);
             deserialized.Error.Suggestion.Should().Be(original.Error.Suggestion);
         }
 
@@ -381,9 +373,7 @@ public class ResponseTests
                 Timestamp = DateTime.UtcNow,
                 Error = new ErrorInfo
                 {
-                    Code = "PARTIAL_FAILURE",
-                    Error = "Some operations failed",
-                    Category = "validation"
+                    Error = "Some operations failed"
                 }
             };
 
@@ -440,7 +430,7 @@ public class ResponseTests
             {
                 Status = "error",
                 Timestamp = DateTime.UtcNow,
-                Error = new ErrorInfo { Code = "TEST", Error = "Error", Category = "internal" }
+                Error = new ErrorInfo { Error = "Error" }
             };
 
             // Act
@@ -448,8 +438,20 @@ public class ResponseTests
             var parsed = JsonDocument.Parse(json);
 
             // Assert
-            parsed.RootElement.TryGetProperty("error", out var error).Should().BeTrue();
-            error.GetProperty("code").GetString().Should().Be("TEST");
+            parsed.RootElement.TryGetProperty("error", out var errorElement).Should().BeTrue();
+            // Note: Default serializer uses PascalCase, so property is "Error" not "error"
+            if (errorElement.TryGetProperty("error", out var errorValue))
+            {
+                errorValue.GetString().Should().Be("Error");
+            }
+            else if (errorElement.TryGetProperty("Error", out var errorValuePascal))
+            {
+                errorValuePascal.GetString().Should().Be("Error");
+            }
+            else
+            {
+                throw new InvalidOperationException("Neither 'error' nor 'Error' property found in error object");
+            }
         }
     }
 

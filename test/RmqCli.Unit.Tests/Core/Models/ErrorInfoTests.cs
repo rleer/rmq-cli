@@ -11,19 +11,6 @@ public class ErrorInfoTests
     public class PropertyTests
     {
         [Fact]
-        public void AllowsSettingCode()
-        {
-            // Arrange
-            var errorInfo = new ErrorInfo();
-
-            // Act
-            errorInfo.Code = "TEST_CODE";
-
-            // Assert
-            errorInfo.Code.Should().Be("TEST_CODE");
-        }
-
-        [Fact]
         public void AllowsSettingError()
         {
             // Arrange
@@ -50,19 +37,6 @@ public class ErrorInfoTests
         }
 
         [Fact]
-        public void AllowsSettingCategory()
-        {
-            // Arrange
-            var errorInfo = new ErrorInfo();
-
-            // Act
-            errorInfo.Category = "validation";
-
-            // Assert
-            errorInfo.Category.Should().Be("validation");
-        }
-
-        [Fact]
         public void AllowsSettingDetails()
         {
             // Arrange
@@ -77,16 +51,6 @@ public class ErrorInfoTests
         }
 
         [Fact]
-        public void InitializesCodeAsEmpty()
-        {
-            // Act
-            var errorInfo = new ErrorInfo();
-
-            // Assert
-            errorInfo.Code.Should().BeEmpty();
-        }
-
-        [Fact]
         public void InitializesErrorAsEmpty()
         {
             // Act
@@ -94,16 +58,6 @@ public class ErrorInfoTests
 
             // Assert
             errorInfo.Error.Should().BeEmpty();
-        }
-
-        [Fact]
-        public void InitializesCategoryAsEmpty()
-        {
-            // Act
-            var errorInfo = new ErrorInfo();
-
-            // Assert
-            errorInfo.Category.Should().BeEmpty();
         }
 
         [Fact]
@@ -138,10 +92,8 @@ public class ErrorInfoTests
             // Arrange
             var errorInfo = new ErrorInfo
             {
-                Code = "TEST_CODE",
                 Error = "Test error",
                 Suggestion = "Test suggestion",
-                Category = "validation",
                 Details = new Dictionary<string, object> { { "key", "value" } }
             };
 
@@ -150,10 +102,8 @@ public class ErrorInfoTests
             var parsed = JsonDocument.Parse(json);
 
             // Assert
-            parsed.RootElement.GetProperty("code").GetString().Should().Be("TEST_CODE");
             parsed.RootElement.GetProperty("error").GetString().Should().Be("Test error");
             parsed.RootElement.GetProperty("suggestion").GetString().Should().Be("Test suggestion");
-            parsed.RootElement.GetProperty("category").GetString().Should().Be("validation");
             parsed.RootElement.TryGetProperty("details", out var details).Should().BeTrue();
             details.GetProperty("key").GetString().Should().Be("value");
         }
@@ -164,9 +114,7 @@ public class ErrorInfoTests
             // Arrange
             var errorInfo = new ErrorInfo
             {
-                Code = "CODE",
-                Error = "Error",
-                Category = "internal"
+                Error = "Error"
             };
 
             // Act
@@ -183,9 +131,7 @@ public class ErrorInfoTests
             // Arrange
             var errorInfo = new ErrorInfo
             {
-                Code = "CODE",
-                Error = "Error",
-                Category = "internal"
+                Error = "Error"
             };
 
             // Act
@@ -202,9 +148,7 @@ public class ErrorInfoTests
             // Arrange
             var errorInfo = new ErrorInfo
             {
-                Code = "",
                 Error = "",
-                Category = "",
                 Suggestion = ""
             };
 
@@ -213,9 +157,7 @@ public class ErrorInfoTests
             var parsed = JsonDocument.Parse(json);
 
             // Assert
-            parsed.RootElement.GetProperty("code").GetString().Should().BeEmpty();
             parsed.RootElement.GetProperty("error").GetString().Should().BeEmpty();
-            parsed.RootElement.GetProperty("category").GetString().Should().BeEmpty();
             parsed.RootElement.GetProperty("suggestion").GetString().Should().BeEmpty();
         }
 
@@ -225,9 +167,7 @@ public class ErrorInfoTests
             // Arrange
             var errorInfo = new ErrorInfo
             {
-                Code = "CODE",
                 Error = "Error",
-                Category = "internal",
                 Details = new Dictionary<string, object>
                 {
                     { "string_value", "text" },
@@ -254,18 +194,14 @@ public class ErrorInfoTests
             // Arrange - Note: ErrorInfo uses explicit JsonPropertyName attributes with snake_case
             var errorInfo = new ErrorInfo
             {
-                Code = "CODE",
-                Error = "Error",
-                Category = "internal"
+                Error = "Error"
             };
 
             // Act
             var json = JsonSerializer.Serialize(errorInfo,  JsonSerializationContext.RelaxedEscaping.ErrorInfo);
 
             // Assert
-            json.Should().Contain("\"code\"");
             json.Should().Contain("\"error\"");
-            json.Should().Contain("\"category\"");
         }
     }
 
@@ -280,10 +216,8 @@ public class ErrorInfoTests
         {
             // Arrange
             var json = @"{
-                ""code"": ""TEST_CODE"",
                 ""error"": ""Test error"",
                 ""suggestion"": ""Test suggestion"",
-                ""category"": ""validation"",
                 ""details"": { ""key"": ""value"" }
             }";
 
@@ -292,10 +226,8 @@ public class ErrorInfoTests
 
             // Assert
             errorInfo.Should().NotBeNull();
-            errorInfo!.Code.Should().Be("TEST_CODE");
-            errorInfo.Error.Should().Be("Test error");
+            errorInfo!.Error.Should().Be("Test error");
             errorInfo.Suggestion.Should().Be("Test suggestion");
-            errorInfo.Category.Should().Be("validation");
             errorInfo.Details.Should().NotBeNull();
             errorInfo.Details!["key"].ToString().Should().Be("value");
         }
@@ -305,9 +237,7 @@ public class ErrorInfoTests
         {
             // Arrange
             var json = @"{
-                ""code"": ""CODE"",
-                ""error"": ""Error"",
-                ""category"": ""internal""
+                ""error"": ""Error""
             }";
 
             // Act
@@ -315,9 +245,7 @@ public class ErrorInfoTests
 
             // Assert
             errorInfo.Should().NotBeNull();
-            errorInfo!.Code.Should().Be("CODE");
-            errorInfo.Error.Should().Be("Error");
-            errorInfo.Category.Should().Be("internal");
+            errorInfo!.Error.Should().Be("Error");
             errorInfo.Suggestion.Should().BeNull();
             errorInfo.Details.Should().BeNull();
         }
@@ -333,9 +261,7 @@ public class ErrorInfoTests
 
             // Assert
             errorInfo.Should().NotBeNull();
-            errorInfo!.Code.Should().BeEmpty();
-            errorInfo.Error.Should().BeEmpty();
-            errorInfo.Category.Should().BeEmpty();
+            errorInfo!.Error.Should().BeEmpty();
             errorInfo.Suggestion.Should().BeNull();
             errorInfo.Details.Should().BeNull();
         }
@@ -345,9 +271,7 @@ public class ErrorInfoTests
         {
             // Arrange
             var json = @"{
-                ""code"": ""CODE"",
                 ""error"": ""Error"",
-                ""category"": ""internal"",
                 ""details"": {
                     ""string_value"": ""text"",
                     ""int_value"": 42,
@@ -379,10 +303,8 @@ public class ErrorInfoTests
             // Arrange
             var original = new ErrorInfo
             {
-                Code = "TEST_CODE",
                 Error = "Test error",
                 Suggestion = "Test suggestion",
-                Category = "validation",
                 Details = new Dictionary<string, object>
                 {
                     { "key1", "value1" },
@@ -396,10 +318,8 @@ public class ErrorInfoTests
 
             // Assert
             deserialized.Should().NotBeNull();
-            deserialized!.Code.Should().Be(original.Code);
-            deserialized.Error.Should().Be(original.Error);
+            deserialized!.Error.Should().Be(original.Error);
             deserialized.Suggestion.Should().Be(original.Suggestion);
-            deserialized.Category.Should().Be(original.Category);
             deserialized.Details.Should().NotBeNull();
         }
 
@@ -409,9 +329,7 @@ public class ErrorInfoTests
             // Arrange
             var original = new ErrorInfo
             {
-                Code = "CODE",
-                Error = "Error",
-                Category = "internal"
+                Error = "Error"
             };
 
             // Act
@@ -420,38 +338,9 @@ public class ErrorInfoTests
 
             // Assert
             deserialized.Should().NotBeNull();
-            deserialized!.Code.Should().Be(original.Code);
-            deserialized.Error.Should().Be(original.Error);
-            deserialized.Category.Should().Be(original.Category);
+            deserialized!.Error.Should().Be(original.Error);
             deserialized.Suggestion.Should().BeNull();
             deserialized.Details.Should().BeNull();
-        }
-    }
-
-    #endregion
-
-    #region Category Tests
-
-    public class CategoryTests
-    {
-        [Theory]
-        [InlineData("validation")]
-        [InlineData("connection")]
-        [InlineData("routing")]
-        [InlineData("internal")]
-        [InlineData("authentication")]
-        public void SupportsCommonCategories(string category)
-        {
-            // Arrange
-            var errorInfo = new ErrorInfo { Category = category };
-
-            // Act
-            var json = JsonSerializer.Serialize(errorInfo,  JsonSerializationContext.RelaxedEscaping.ErrorInfo);
-            var deserialized = JsonSerializer.Deserialize(json, JsonSerializationContext.RelaxedEscaping.ErrorInfo);
-
-            // Assert
-            deserialized.Should().NotBeNull();
-            deserialized!.Category.Should().Be(category);
         }
     }
 

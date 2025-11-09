@@ -172,9 +172,7 @@ public class RabbitChannelFactory : IRabbitChannelFactory
             default:
                 var genericError = ErrorInfoFactory.GenericErrorInfo(
                     "Unexpected connection error",
-                    "RABBITMQ_CONNECTION_ERROR",
                     "Check RabbitMQ server status and configuration",
-                    "connection",
                     specificException);
                 _logger.LogError(specificException, "Unexpected RabbitMQ connection error");
                 _output.ShowError("Connection failed", genericError);

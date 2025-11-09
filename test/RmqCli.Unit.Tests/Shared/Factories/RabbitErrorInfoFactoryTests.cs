@@ -18,8 +18,6 @@ public class RabbitErrorInfoFactoryTests
             var result = RabbitErrorInfoFactory.QueueNotFound(queueName);
 
             // Assert
-            result.Code.Should().Be("QUEUE_NOT_FOUND");
-            result.Category.Should().Be("routing");
             result.Error.Should().Be("Queue 'test-queue' not found");
             result.Suggestion.Should().Be("Check if the queue exists and is correctly configured");
         }
@@ -61,19 +59,6 @@ public class RabbitErrorInfoFactoryTests
 
             // Assert
             result.Error.Should().Contain(queueName);
-        }
-
-        [Fact]
-        public void HasRoutingCategory()
-        {
-            // Arrange
-            var queueName = "test-queue";
-
-            // Act
-            var result = RabbitErrorInfoFactory.QueueNotFound(queueName);
-
-            // Assert
-            result.Category.Should().Be("routing");
         }
 
         [Fact]
@@ -120,8 +105,6 @@ public class RabbitErrorInfoFactoryTests
             var result = RabbitErrorInfoFactory.OperationInterrupted(reason, code);
 
             // Assert
-            result.Code.Should().Be("RABBITMQ_OPERATION_INTERRUPTED");
-            result.Category.Should().Be("connection");
             result.Error.Should().Be($"{reason} ({code})");
             result.Suggestion.Should().Be("Check RabbitMQ server status and network connectivity");
         }
@@ -171,8 +154,6 @@ public class RabbitErrorInfoFactoryTests
             var result = RabbitErrorInfoFactory.VirtualHostNotFound(vhost);
 
             // Assert
-            result.Code.Should().Be("VIRTUAL_HOST_NOT_FOUND");
-            result.Category.Should().Be("connection");
             result.Error.Should().Be("Virtual host '/test-vhost' not found");
             result.Suggestion.Should().Be("Check if the virtual host exists and is correctly configured");
         }
@@ -221,8 +202,6 @@ public class RabbitErrorInfoFactoryTests
             var result = RabbitErrorInfoFactory.AccessDenied(user, vhost);
 
             // Assert
-            result.Code.Should().Be("ACCESS_DENIED");
-            result.Category.Should().Be("connection");
             result.Error.Should().Be("Access denied for user 'testuser' to virtual host '/test'");
             result.Suggestion.Should().Be("Check user permissions and virtual host configuration");
         }
@@ -272,8 +251,6 @@ public class RabbitErrorInfoFactoryTests
             var result = RabbitErrorInfoFactory.AuthenticationFailed(user);
 
             // Assert
-            result.Code.Should().Be("AUTHENTICATION_FAILED");
-            result.Category.Should().Be("connection");
             result.Error.Should().Be("Authentication failed for user 'testuser'");
             result.Suggestion.Should().Be("Check username and password");
         }
@@ -322,8 +299,6 @@ public class RabbitErrorInfoFactoryTests
             var result = RabbitErrorInfoFactory.ConnectionFailed(host, port);
 
             // Assert
-            result.Code.Should().Be("CONNECTION_FAILED");
-            result.Category.Should().Be("connection");
             result.Error.Should().Be("Could not connect to RabbitMQ at localhost:5672");
             result.Suggestion.Should().Be("Check RabbitMQ server status and network connectivity");
         }
@@ -388,8 +363,6 @@ public class RabbitErrorInfoFactoryTests
             var result = RabbitErrorInfoFactory.BrokerUnreachable(host, port);
 
             // Assert
-            result.Code.Should().Be("BROKER_UNREACHABLE");
-            result.Category.Should().Be("connection");
             result.Error.Should().Be("RabbitMQ broker unreachable at localhost:5672");
             result.Suggestion.Should().Be("Check RabbitMQ server status and network connectivity");
         }
@@ -429,42 +402,6 @@ public class RabbitErrorInfoFactoryTests
 
     public class ConsistencyTests
     {
-        [Fact]
-        public void AllConnectionErrors_HaveConnectionCategory()
-        {
-            // Act
-            var errors = new[]
-            {
-                RabbitErrorInfoFactory.OperationInterrupted("reason", "code"),
-                RabbitErrorInfoFactory.VirtualHostNotFound("vhost"),
-                RabbitErrorInfoFactory.AccessDenied("user", "vhost"),
-                RabbitErrorInfoFactory.AuthenticationFailed("user"),
-                RabbitErrorInfoFactory.ConnectionFailed("host", 5672),
-                RabbitErrorInfoFactory.BrokerUnreachable("host", 5672)
-            };
-
-            // Assert
-            errors.Should().AllSatisfy(error => error.Category.Should().Be("connection"));
-        }
-
-        [Fact]
-        public void AllErrors_HaveNonEmptyCode()
-        {
-            // Act
-            var errors = new[]
-            {
-                RabbitErrorInfoFactory.OperationInterrupted("reason", "code"),
-                RabbitErrorInfoFactory.VirtualHostNotFound("vhost"),
-                RabbitErrorInfoFactory.AccessDenied("user", "vhost"),
-                RabbitErrorInfoFactory.AuthenticationFailed("user"),
-                RabbitErrorInfoFactory.ConnectionFailed("host", 5672),
-                RabbitErrorInfoFactory.BrokerUnreachable("host", 5672)
-            };
-
-            // Assert
-            errors.Should().AllSatisfy(error => error.Code.Should().NotBeNullOrEmpty());
-        }
-
         [Fact]
         public void AllErrors_HaveSuggestions()
         {
