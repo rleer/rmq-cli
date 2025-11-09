@@ -7,6 +7,17 @@
 
 `rmq` is a command line tool for RabbitMQ focused on developers working with RabbitMQ. 
 
+## Features
+
+- **Publish Messages**: Send messages to RabbitMQ queues with options for message content, headers, and properties. Supports publishing from files or standard input.
+- **Consume Messages**: Retrieve messages from RabbitMQ queues and display them in the console or save to a file. Supports different acknowledgment modes and consumption via AMQP push or pull API.
+- **Message Format**: Supports plain text and JSON message formats.
+- **Purge Queues**: Clear all messages from a specified queue.
+- **Configuration Management**: Easily manage RabbitMQ connection settings via configuration files, environment variables, or command-line flags.
+- **Cross-Platform**: Works on Windows, macOS, and Linux.
+- **Lightweight**: Minimal dependencies and easy to install as a .NET global tool or native binary.
+
+For detailed usage instructions, see the [Usage](#usage) section below.
 
 ## Installation
 
@@ -31,7 +42,7 @@ dotnet tool uninstall -g rmq
 
 ### Build Native Binary
 
-To create a self-contained, AOT-compiled native binary (no .NET runtime required):
+To create a self-contained, AOT-compiled native binary (no .NET runtime required when running), use the following command:
 
 ```bash
 dotnet publish src/RmqCli/RmqCli.csproj -c Release -r osx-arm64 -o release
@@ -67,26 +78,7 @@ On first run, `rmq` automatically creates a default configuration file at `~/.co
 - **System-wide (Linux/macOS)**: `/etc/rmq/config.toml`
 - **System-wide (Windows)**: `%PROGRAMDATA%/rmq/config.toml`
 
-### Configuration Management
 
-Use the built-in configuration commands to manage your settings:
-
-```bash
-# Show configuration file location
-rmq config path
-
-# Display current configuration
-rmq config show
-
-# Open configuration in default editor
-rmq config edit
-
-# Reset configuration to defaults
-rmq config reset
-
-# Use a custom configuration file
-rmq --config /path/to/custom-config.toml <command>
-```
 
 ### Environment Variables
 
@@ -128,7 +120,28 @@ rmq --config production-config.toml publish --queue myqueue --message "Hello"
 rmq consume --queue myqueue
 
 # Consume messages and save to file
-rmq consume --queue myqueue --output file --file messages.txt
+rmq consume --queue myqueue --output json --file messages.txt
+```
+
+### Configuration Management
+
+Use the built-in configuration commands to manage your settings:
+
+```bash
+# Show configuration file location
+rmq config path
+
+# Display current configuration
+rmq config show
+
+# Open configuration in default editor
+rmq config edit
+
+# Reset configuration to defaults
+rmq config reset
+
+# Use a custom configuration file
+rmq --config /path/to/custom-config.toml <command>
 ```
 
 ## Development
@@ -141,7 +154,9 @@ docker run -d --hostname rmq --name rabbit-server -p 8080:15672 -p 5672:5672 rab
 
 You can open the RabbitMQ management interface at [http://localhost:8080](http://localhost:8080) with the default username and password both set to `guest`.
 
-### Building
+Check the scripts in the `dev/` directory for scripts to populate queues with test messages.
+
+### Building and Running Locally
 
 ```bash
 # Restore dependencies
@@ -157,3 +172,4 @@ dotnet test
 dotnet run -- <command>
 ```
 
+Check the `justfile` for more shortcuts to common tasks.
