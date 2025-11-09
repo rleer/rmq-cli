@@ -4,8 +4,6 @@ namespace RmqCli.Unit.Tests.Shared.Factories;
 
 public class RabbitErrorInfoFactoryTests
 {
-    #region QueueNotFound
-
     public class QueueNotFound
     {
         [Fact]
@@ -88,10 +86,6 @@ public class RabbitErrorInfoFactoryTests
         }
     }
 
-    #endregion
-
-    #region OperationInterrupted
-
     public class OperationInterrupted
     {
         [Fact]
@@ -138,10 +132,6 @@ public class RabbitErrorInfoFactoryTests
         }
     }
 
-    #endregion
-
-    #region VirtualHostNotFound
-
     public class VirtualHostNotFound
     {
         [Fact]
@@ -184,10 +174,6 @@ public class RabbitErrorInfoFactoryTests
             result.Error.Should().Be("Virtual host '' not found");
         }
     }
-
-    #endregion
-
-    #region AccessDenied
 
     public class AccessDenied
     {
@@ -235,10 +221,6 @@ public class RabbitErrorInfoFactoryTests
         }
     }
 
-    #endregion
-
-    #region AuthenticationFailed
-
     public class AuthenticationFailed
     {
         [Fact]
@@ -281,10 +263,6 @@ public class RabbitErrorInfoFactoryTests
             result.Error.Should().Be("Authentication failed for user ''");
         }
     }
-
-    #endregion
-
-    #region ConnectionFailed
 
     public class ConnectionFailed
     {
@@ -346,10 +324,6 @@ public class RabbitErrorInfoFactoryTests
         }
     }
 
-    #endregion
-
-    #region BrokerUnreachable
-
     public class BrokerUnreachable
     {
         [Fact]
@@ -396,10 +370,6 @@ public class RabbitErrorInfoFactoryTests
         }
     }
 
-    #endregion
-
-    #region Consistency Tests
-
     public class ConsistencyTests
     {
         [Fact]
@@ -420,6 +390,4 @@ public class RabbitErrorInfoFactoryTests
             errors.Should().AllSatisfy(error => error.Suggestion.Should().NotBeNullOrEmpty());
         }
     }
-
-    #endregion
 }

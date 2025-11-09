@@ -10,8 +10,6 @@ namespace RmqCli.Unit.Tests.Infrastructure.Output.Formatters;
 
 public class JsonMessageFormatterTests
 {
-    #region FormatMessage
-
     public class FormatMessage
     {
         [Fact]
@@ -529,10 +527,6 @@ public class JsonMessageFormatterTests
         }
     }
 
-    #endregion
-
-    #region FormatMessages
-
     public class FormatMessages
     {
         [Fact]
@@ -645,8 +639,6 @@ public class JsonMessageFormatterTests
             array[1].GetProperty("properties").GetProperty("messageId").GetString().Should().Be("msg-2");
         }
     }
-
-    #endregion
 
     #region Test Helpers
 

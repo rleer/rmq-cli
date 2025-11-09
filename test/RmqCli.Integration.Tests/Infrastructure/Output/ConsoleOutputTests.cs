@@ -11,8 +11,6 @@ namespace RmqCli.Integration.Tests.Infrastructure.Output;
 
 public class ConsoleOutputTests
 {
-    #region WriteMessagesAsync
-
     public class WriteMessagesAsync : IDisposable
     {
         private readonly ITestOutputHelper _testOutputHelper;
@@ -289,8 +287,6 @@ public class ConsoleOutputTests
             result.ProcessedCount.Should().Be(1);
         }
     }
-
-    #endregion
 
     #region Test Helpers
 

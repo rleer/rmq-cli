@@ -6,8 +6,6 @@ namespace RmqCli.Unit.Tests.Core.Models;
 
 public class DestinationInfoTests
 {
-    #region Property Tests
-
     public class PropertyTests
     {
         [Fact]
@@ -102,10 +100,6 @@ public class DestinationInfoTests
             destination.Exchange.Should().BeNull();
         }
     }
-
-    #endregion
-
-    #region JSON Serialization
 
     public class JsonSerialization
     {
@@ -259,10 +253,6 @@ public class DestinationInfoTests
         }
     }
 
-    #endregion
-
-    #region JSON Deserialization
-
     public class JsonDeserialization
     {
         [Fact]
@@ -343,10 +333,6 @@ public class DestinationInfoTests
         }
     }
 
-    #endregion
-
-    #region Round-trip Tests
-
     public class RoundTripTests
     {
         [Fact]
@@ -407,6 +393,4 @@ public class DestinationInfoTests
             deserialized.Queue.Should().Be(original.Queue);
         }
     }
-
-    #endregion
 }

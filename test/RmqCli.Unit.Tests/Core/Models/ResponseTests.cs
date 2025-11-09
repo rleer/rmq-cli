@@ -7,8 +7,6 @@ namespace RmqCli.Unit.Tests.Core.Models;
 
 public class ResponseTests
 {
-    #region Property Tests
-
     public class PropertyTests
     {
         [Fact]
@@ -90,10 +88,6 @@ public class ResponseTests
         }
     }
 
-    #endregion
-
-    #region Status Values
-
     public class StatusValues
     {
         [Theory]
@@ -129,10 +123,6 @@ public class ResponseTests
             deserialized.Status.Should().Be("custom_status");
         }
     }
-
-    #endregion
-
-    #region JSON Serialization
 
     public class JsonSerialization
     {
@@ -225,10 +215,6 @@ public class ResponseTests
         }
     }
 
-    #endregion
-
-    #region JSON Deserialization
-
     public class JsonDeserialization
     {
         [Fact]
@@ -308,10 +294,6 @@ public class ResponseTests
         }
     }
 
-    #endregion
-
-    #region Round-trip Tests
-
     public class RoundTripTests
     {
         [Fact]
@@ -388,10 +370,6 @@ public class ResponseTests
         }
     }
 
-    #endregion
-
-    #region Inheritance Tests
-
     public class InheritanceTests
     {
         // Derived class for testing
@@ -454,6 +432,4 @@ public class ResponseTests
             }
         }
     }
-
-    #endregion
 }

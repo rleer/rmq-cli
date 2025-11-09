@@ -4,8 +4,6 @@ namespace RmqCli.Unit.Tests.Shared;
 
 public class OutputUtilitiesTests
 {
-    #region ToSizeString
-
     public class ToSizeString
     {
         [Theory]
@@ -80,10 +78,6 @@ public class OutputUtilitiesTests
         }
     }
 
-    #endregion
-
-    #region GetDigitCount
-
     public class GetDigitCount
     {
         [Theory]
@@ -153,10 +147,6 @@ public class OutputUtilitiesTests
         }
     }
 
-    #endregion
-
-    #region GetMessageCountString
-
     public class GetMessageCountString
     {
         [Fact]
@@ -222,10 +212,6 @@ public class OutputUtilitiesTests
             result.Should().Be($"{count} messages");
         }
     }
-
-    #endregion
-
-    #region GetElapsedTimeString
 
     public class GetElapsedTimeString
     {
@@ -333,6 +319,4 @@ public class OutputUtilitiesTests
             result.Should().Be("0ms");
         }
     }
-
-    #endregion
 }

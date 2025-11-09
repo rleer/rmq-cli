@@ -6,8 +6,6 @@ namespace RmqCli.Integration.Tests.Infrastructure.Configuration;
 
 public class ConfigurationPriorityTests
 {
-    #region ConfigurationPriority
-
     public class ConfigurationPriority : IDisposable
     {
         private readonly string _tempDir;
@@ -319,6 +317,4 @@ public class ConfigurationPriorityTests
             fileConfig.MessagesPerFile.Should().Be(8000);
         }
     }
-
-    #endregion
 }

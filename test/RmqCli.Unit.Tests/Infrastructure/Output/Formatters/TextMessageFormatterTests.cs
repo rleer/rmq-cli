@@ -10,8 +10,6 @@ namespace RmqCli.Unit.Tests.Infrastructure.Output.Formatters;
 
 public class TextMessageFormatterTests
 {
-    #region FormatMessage
-
     public class FormatMessage
     {
         [Fact]
@@ -564,10 +562,6 @@ public class TextMessageFormatterTests
         }
     }
 
-    #endregion
-
-    #region FormatMessages
-
     public class FormatMessages
     {
         [Fact]
@@ -680,8 +674,6 @@ public class TextMessageFormatterTests
             result.Should().Contain("== Message #2 ==");
         }
     }
-
-    #endregion
 
     #region Test Helpers
 

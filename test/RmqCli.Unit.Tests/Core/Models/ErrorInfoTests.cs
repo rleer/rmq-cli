@@ -6,8 +6,6 @@ namespace RmqCli.Unit.Tests.Core.Models;
 
 public class ErrorInfoTests
 {
-    #region Property Tests
-
     public class PropertyTests
     {
         [Fact]
@@ -81,9 +79,6 @@ public class ErrorInfoTests
         }
     }
 
-    #endregion
-
-    #region JSON Serialization
     public class JsonSerialization
     {
         [Fact]
@@ -98,7 +93,7 @@ public class ErrorInfoTests
             };
 
             // Act
-            var json = JsonSerializer.Serialize(errorInfo,  JsonSerializationContext.RelaxedEscaping.ErrorInfo);
+            var json = JsonSerializer.Serialize(errorInfo, JsonSerializationContext.RelaxedEscaping.ErrorInfo);
             var parsed = JsonDocument.Parse(json);
 
             // Assert
@@ -118,7 +113,7 @@ public class ErrorInfoTests
             };
 
             // Act
-            var json = JsonSerializer.Serialize(errorInfo,  JsonSerializationContext.RelaxedEscaping.ErrorInfo);
+            var json = JsonSerializer.Serialize(errorInfo, JsonSerializationContext.RelaxedEscaping.ErrorInfo);
             var parsed = JsonDocument.Parse(json);
 
             // Assert
@@ -135,7 +130,7 @@ public class ErrorInfoTests
             };
 
             // Act
-            var json = JsonSerializer.Serialize(errorInfo,  JsonSerializationContext.RelaxedEscaping.ErrorInfo);
+            var json = JsonSerializer.Serialize(errorInfo, JsonSerializationContext.RelaxedEscaping.ErrorInfo);
             var parsed = JsonDocument.Parse(json);
 
             // Assert
@@ -153,7 +148,7 @@ public class ErrorInfoTests
             };
 
             // Act
-            var json = JsonSerializer.Serialize(errorInfo,  JsonSerializationContext.RelaxedEscaping.ErrorInfo);
+            var json = JsonSerializer.Serialize(errorInfo, JsonSerializationContext.RelaxedEscaping.ErrorInfo);
             var parsed = JsonDocument.Parse(json);
 
             // Assert
@@ -178,7 +173,7 @@ public class ErrorInfoTests
             };
 
             // Act
-            var json = JsonSerializer.Serialize(errorInfo,  JsonSerializationContext.RelaxedEscaping.ErrorInfo);
+            var json = JsonSerializer.Serialize(errorInfo, JsonSerializationContext.RelaxedEscaping.ErrorInfo);
             var parsed = JsonDocument.Parse(json);
 
             // Assert
@@ -198,16 +193,12 @@ public class ErrorInfoTests
             };
 
             // Act
-            var json = JsonSerializer.Serialize(errorInfo,  JsonSerializationContext.RelaxedEscaping.ErrorInfo);
+            var json = JsonSerializer.Serialize(errorInfo, JsonSerializationContext.RelaxedEscaping.ErrorInfo);
 
             // Assert
             json.Should().Contain("\"error\"");
         }
     }
-
-    #endregion
-
-    #region JSON Deserialization
 
     public class JsonDeserialization
     {
@@ -222,7 +213,7 @@ public class ErrorInfoTests
             }";
 
             // Act
-            var errorInfo = JsonSerializer.Deserialize(json,  JsonSerializationContext.RelaxedEscaping.ErrorInfo);
+            var errorInfo = JsonSerializer.Deserialize(json, JsonSerializationContext.RelaxedEscaping.ErrorInfo);
 
             // Assert
             errorInfo.Should().NotBeNull();
@@ -241,7 +232,7 @@ public class ErrorInfoTests
             }";
 
             // Act
-            var errorInfo = JsonSerializer.Deserialize(json,  JsonSerializationContext.RelaxedEscaping.ErrorInfo);
+            var errorInfo = JsonSerializer.Deserialize(json, JsonSerializationContext.RelaxedEscaping.ErrorInfo);
 
             // Assert
             errorInfo.Should().NotBeNull();
@@ -257,7 +248,7 @@ public class ErrorInfoTests
             var json = "{}";
 
             // Act
-            var errorInfo = JsonSerializer.Deserialize(json,  JsonSerializationContext.RelaxedEscaping.ErrorInfo);
+            var errorInfo = JsonSerializer.Deserialize(json, JsonSerializationContext.RelaxedEscaping.ErrorInfo);
 
             // Assert
             errorInfo.Should().NotBeNull();
@@ -280,7 +271,7 @@ public class ErrorInfoTests
             }";
 
             // Act
-            var errorInfo = JsonSerializer.Deserialize(json,  JsonSerializationContext.RelaxedEscaping.ErrorInfo);
+            var errorInfo = JsonSerializer.Deserialize(json, JsonSerializationContext.RelaxedEscaping.ErrorInfo);
 
             // Assert
             errorInfo.Should().NotBeNull();
@@ -290,10 +281,6 @@ public class ErrorInfoTests
             errorInfo.Details.Should().ContainKey("bool_value");
         }
     }
-
-    #endregion
-
-    #region Round-trip Tests
 
     public class RoundTripTests
     {
@@ -313,7 +300,7 @@ public class ErrorInfoTests
             };
 
             // Act
-            var json = JsonSerializer.Serialize(original,  JsonSerializationContext.RelaxedEscaping.ErrorInfo);
+            var json = JsonSerializer.Serialize(original, JsonSerializationContext.RelaxedEscaping.ErrorInfo);
             var deserialized = JsonSerializer.Deserialize(json, JsonSerializationContext.RelaxedEscaping.ErrorInfo);
 
             // Assert
@@ -333,7 +320,7 @@ public class ErrorInfoTests
             };
 
             // Act
-            var json = JsonSerializer.Serialize(original,  JsonSerializationContext.RelaxedEscaping.ErrorInfo);
+            var json = JsonSerializer.Serialize(original, JsonSerializationContext.RelaxedEscaping.ErrorInfo);
             var deserialized = JsonSerializer.Deserialize(json, JsonSerializationContext.RelaxedEscaping.ErrorInfo);
 
             // Assert
@@ -343,6 +330,4 @@ public class ErrorInfoTests
             deserialized.Details.Should().BeNull();
         }
     }
-
-    #endregion
 }

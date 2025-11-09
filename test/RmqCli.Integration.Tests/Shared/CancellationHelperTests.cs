@@ -4,8 +4,6 @@ namespace RmqCli.Integration.Tests.Shared;
 
 public class CancellationHelperTests
 {
-    #region LinkWithCtrlCHandler
-
     public class LinkWithCtrlCHandler
     {
         [Fact]
@@ -243,6 +241,4 @@ public class CancellationHelperTests
         // The Ctrl+C handling can be manually tested by running the application and
         // pressing Ctrl+C, or in E2E tests that can send signals to the process.
     }
-
-    #endregion
 }

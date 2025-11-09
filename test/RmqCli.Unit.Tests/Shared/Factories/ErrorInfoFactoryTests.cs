@@ -4,8 +4,6 @@ namespace RmqCli.Unit.Tests.Shared.Factories;
 
 public class ErrorInfoFactoryTests
 {
-    #region GenericErrorInfo
-
     public class GenericErrorInfo
     {
         [Fact]
@@ -140,6 +138,4 @@ public class ErrorInfoFactoryTests
             result.Details.Should().ContainKeys("exception_type", "exception_message");
         }
     }
-
-    #endregion
 }

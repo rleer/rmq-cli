@@ -6,8 +6,6 @@ namespace RmqCli.Unit.Tests.Commands.Publish;
 
 public class PublishResponseFactoryTests
 {
-    #region Success
-
     public class Success
     {
         [Fact]
@@ -234,10 +232,6 @@ public class PublishResponseFactoryTests
         }
     }
 
-    #endregion
-
-    #region Partial
-
     public class Partial
     {
         [Fact]
@@ -332,10 +326,6 @@ public class PublishResponseFactoryTests
             response.Result!.MessagesPerSecond.Should().Be(1.0);
         }
     }
-
-    #endregion
-
-    #region Failure
 
     public class Failure
     {
@@ -433,8 +423,6 @@ public class PublishResponseFactoryTests
             response.Destination!.RoutingKey.Should().Be("routing.key");
         }
     }
-
-    #endregion
 
     #region Test Helpers
 

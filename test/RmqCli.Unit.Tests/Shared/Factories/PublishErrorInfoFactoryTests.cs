@@ -4,8 +4,6 @@ namespace RmqCli.Unit.Tests.Shared.Factories;
 
 public class PublishErrorInfoFactoryTests
 {
-    #region NoRouteErrorInfo
-
     public class NoRouteErrorInfo
     {
         [Fact]
@@ -42,10 +40,6 @@ public class PublishErrorInfoFactoryTests
         }
     }
 
-    #endregion
-
-    #region ExchangeNotFoundErrorInfo
-
     public class ExchangeNotFoundErrorInfo
     {
         [Fact]
@@ -69,10 +63,6 @@ public class PublishErrorInfoFactoryTests
             result.Details.Should().BeNull();
         }
     }
-
-    #endregion
-
-    #region MaxSizeExceededErrorInfo
 
     public class MaxSizeExceededErrorInfo
     {
@@ -176,6 +166,4 @@ public class PublishErrorInfoFactoryTests
             result.Error.Should().Be("Message size exceeds maximum allowed size");
         }
     }
-
-    #endregion
 }

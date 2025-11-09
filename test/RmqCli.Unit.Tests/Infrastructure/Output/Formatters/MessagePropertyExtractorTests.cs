@@ -6,8 +6,6 @@ namespace RmqCli.Unit.Tests.Infrastructure.Output.Formatters;
 
 public class MessagePropertyExtractorTests
 {
-    #region ExtractProperties
-
     public class ExtractProperties
     {
         [Fact]
@@ -244,10 +242,6 @@ public class MessagePropertyExtractorTests
         }
     }
 
-    #endregion
-
-    #region Header Conversion
-
     public class HeaderConversion
     {
         [Fact]
@@ -478,10 +472,6 @@ public class MessagePropertyExtractorTests
         }
     }
 
-    #endregion
-
-    #region Edge Cases
-
     public class EdgeCases
     {
         [Fact]
@@ -596,8 +586,6 @@ public class MessagePropertyExtractorTests
             result.Timestamp.Should().Be(2000000000L);
         }
     }
-
-    #endregion
 
     #region Test Helpers
 

@@ -4,8 +4,6 @@ namespace RmqCli.Integration.Tests.Infrastructure.Configuration;
 
 public class TomlConfigurationProviderTests
 {
-    #region Load
-
     public class Load : IDisposable
     {
         private readonly string _tempDir;
@@ -314,6 +312,4 @@ public class TomlConfigurationProviderTests
             messagesPerFile.Should().Be("10000");
         }
     }
-
-    #endregion
 }

@@ -7,8 +7,6 @@ namespace RmqCli.Integration.Tests.Infrastructure.Output;
 
 public class MessageOutputFactoryTests
 {
-    #region Create
-
     public class Create
     {
         [Fact]
@@ -281,6 +279,4 @@ public class MessageOutputFactoryTests
             result.Should().BeOfType<FileOutput>();
         }
     }
-
-    #endregion
 }

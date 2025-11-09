@@ -19,8 +19,6 @@ public class FileOutputTests
         Directory.CreateDirectory(_tempDir);
     }
 
-    #region WriteMessagesAsync - Single File Mode
-
     public class SingleFileMode : IDisposable
     {
         private readonly string _tempDir;
@@ -190,10 +188,6 @@ public class FileOutputTests
             result.TotalBytes.Should().Be(expectedBytes);
         }
     }
-
-    #endregion
-
-    #region WriteMessagesAsync - Rotating File Mode
 
     public class RotatingFileMode : IDisposable
     {
@@ -417,10 +411,6 @@ public class FileOutputTests
         }
     }
 
-    #endregion
-
-    #region Common Scenarios
-
     public class CommonScenarios : IDisposable
     {
         private readonly string _tempDir;
@@ -549,8 +539,6 @@ public class FileOutputTests
             result.ProcessedCount.Should().BeLessThan(totalMessages, "cancellation should stop processing before all messages are consumed");
         }
     }
-
-    #endregion
 
     #region Test Helpers
 
