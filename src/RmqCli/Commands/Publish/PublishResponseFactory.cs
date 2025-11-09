@@ -1,5 +1,5 @@
 using RmqCli.Core.Models;
-using RmqCli.Shared;
+using RmqCli.Shared.Output;
 
 namespace RmqCli.Commands.Publish;
 

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using RmqCli.Core.Models;
+using RmqCli.Shared.Json;
 
 namespace RmqCli.Unit.Tests.Core.Models;
 
@@ -119,7 +120,7 @@ public class DestinationInfoTests
             };
 
             // Act
-            var json = JsonSerializer.Serialize(destination);
+            var json = JsonSerializer.Serialize(destination, JsonSerializationContext.RelaxedEscaping.DestinationInfo);
             var parsed = JsonDocument.Parse(json);
 
             // Assert
@@ -140,7 +141,7 @@ public class DestinationInfoTests
             };
 
             // Act
-            var json = JsonSerializer.Serialize(destination);
+            var json = JsonSerializer.Serialize(destination, JsonSerializationContext.RelaxedEscaping.DestinationInfo);
             var parsed = JsonDocument.Parse(json);
 
             // Assert
@@ -161,7 +162,7 @@ public class DestinationInfoTests
             };
 
             // Act
-            var json = JsonSerializer.Serialize(destination);
+            var json = JsonSerializer.Serialize(destination, JsonSerializationContext.RelaxedEscaping.DestinationInfo);
             var parsed = JsonDocument.Parse(json);
 
             // Assert
@@ -178,7 +179,7 @@ public class DestinationInfoTests
             };
 
             // Act
-            var json = JsonSerializer.Serialize(destination);
+            var json = JsonSerializer.Serialize(destination, JsonSerializationContext.RelaxedEscaping.DestinationInfo);
             var parsed = JsonDocument.Parse(json);
 
             // Assert
@@ -195,7 +196,7 @@ public class DestinationInfoTests
             };
 
             // Act
-            var json = JsonSerializer.Serialize(destination);
+            var json = JsonSerializer.Serialize(destination, JsonSerializationContext.RelaxedEscaping.DestinationInfo);
             var parsed = JsonDocument.Parse(json);
 
             // Assert
@@ -213,7 +214,7 @@ public class DestinationInfoTests
             };
 
             // Act
-            var json = JsonSerializer.Serialize(destination);
+            var json = JsonSerializer.Serialize(destination, JsonSerializationContext.RelaxedEscaping.DestinationInfo);
 
             // Assert
             json.Should().Contain("\"routing_key\"");
@@ -229,7 +230,7 @@ public class DestinationInfoTests
             var destination = new DestinationInfo();
 
             // Act
-            var json = JsonSerializer.Serialize(destination);
+            var json = JsonSerializer.Serialize(destination, JsonSerializationContext.RelaxedEscaping.DestinationInfo);
             var parsed = JsonDocument.Parse(json);
 
             // Assert
@@ -251,7 +252,7 @@ public class DestinationInfoTests
             // Act & Assert
             foreach (var destination in destinations)
             {
-                var json = JsonSerializer.Serialize(destination);
+                var json = JsonSerializer.Serialize(destination, JsonSerializationContext.RelaxedEscaping.DestinationInfo);
                 var parsed = JsonDocument.Parse(json);
                 parsed.RootElement.TryGetProperty("type", out _).Should().BeFalse();
             }
@@ -271,7 +272,7 @@ public class DestinationInfoTests
             var json = "{\"queue\":\"test-queue\"}";
 
             // Act
-            var destination = JsonSerializer.Deserialize<DestinationInfo>(json);
+            var destination = JsonSerializer.Deserialize(json, JsonSerializationContext.RelaxedEscaping.DestinationInfo);
 
             // Assert
             destination.Should().NotBeNull();
@@ -287,7 +288,7 @@ public class DestinationInfoTests
             var json = "{\"routing_key\":\"test-key\",\"exchange\":\"test-exchange\"}";
 
             // Act
-            var destination = JsonSerializer.Deserialize<DestinationInfo>(json);
+            var destination = JsonSerializer.Deserialize(json, JsonSerializationContext.RelaxedEscaping.DestinationInfo);
 
             // Assert
             destination.Should().NotBeNull();
@@ -303,7 +304,7 @@ public class DestinationInfoTests
             var json = "{}";
 
             // Act
-            var destination = JsonSerializer.Deserialize<DestinationInfo>(json);
+            var destination = JsonSerializer.Deserialize(json, JsonSerializationContext.RelaxedEscaping.DestinationInfo);
 
             // Assert
             destination.Should().NotBeNull();
@@ -319,7 +320,7 @@ public class DestinationInfoTests
             var json = "{\"type\":\"queue\",\"queue\":\"test-queue\"}";
 
             // Act
-            var destination = JsonSerializer.Deserialize<DestinationInfo>(json);
+            var destination = JsonSerializer.Deserialize(json, JsonSerializationContext.RelaxedEscaping.DestinationInfo);
 
             // Assert
             destination.Should().NotBeNull();
@@ -334,7 +335,7 @@ public class DestinationInfoTests
             var json = "{\"queue\":\"test\",\"unknown\":\"value\"}";
 
             // Act
-            var destination = JsonSerializer.Deserialize<DestinationInfo>(json);
+            var destination = JsonSerializer.Deserialize(json, JsonSerializationContext.RelaxedEscaping.DestinationInfo);
 
             // Assert
             destination.Should().NotBeNull();
@@ -358,8 +359,8 @@ public class DestinationInfoTests
             };
 
             // Act
-            var json = JsonSerializer.Serialize(original);
-            var deserialized = JsonSerializer.Deserialize<DestinationInfo>(json);
+            var json = JsonSerializer.Serialize(original, JsonSerializationContext.RelaxedEscaping.DestinationInfo);
+            var deserialized = JsonSerializer.Deserialize(json, JsonSerializationContext.RelaxedEscaping.DestinationInfo);
 
             // Assert
             deserialized.Should().NotBeNull();
@@ -377,8 +378,8 @@ public class DestinationInfoTests
             };
 
             // Act
-            var json = JsonSerializer.Serialize(original);
-            var deserialized = JsonSerializer.Deserialize<DestinationInfo>(json);
+            var json = JsonSerializer.Serialize(original, JsonSerializationContext.RelaxedEscaping.DestinationInfo);
+            var deserialized = JsonSerializer.Deserialize(json, JsonSerializationContext.RelaxedEscaping.DestinationInfo);
 
             // Assert
             deserialized.Should().NotBeNull();
@@ -397,8 +398,8 @@ public class DestinationInfoTests
             };
 
             // Act
-            var json = JsonSerializer.Serialize(original);
-            var deserialized = JsonSerializer.Deserialize<DestinationInfo>(json);
+            var json = JsonSerializer.Serialize(original, JsonSerializationContext.RelaxedEscaping.DestinationInfo);
+            var deserialized = JsonSerializer.Deserialize(json, JsonSerializationContext.RelaxedEscaping.DestinationInfo);
 
             // Assert
             deserialized.Should().NotBeNull();

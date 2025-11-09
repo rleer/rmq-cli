@@ -1,13 +1,10 @@
-using System.Text.Encodings.Web;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using RmqCli.Core.Models;
-using RmqCli.Shared;
 using RmqCli.Shared.Json;
 using Spectre.Console;
 using AnsiConsoleFactory = RmqCli.Shared.Factories.AnsiConsoleFactory;
 
-namespace RmqCli.Infrastructure.Output;
+namespace RmqCli.Shared.Output;
 
 public interface IStatusOutputService
 {
@@ -94,7 +91,6 @@ public class StatusOutputService : IStatusOutputService
                     return;
 
                 _console.MarkupLine($"  Error: {EscapeMarkup(errorInfo.Error)}");
-                _console.MarkupLine($"  Category: {EscapeMarkup(errorInfo.Category)}");
                 if (!string.IsNullOrWhiteSpace(errorInfo.Suggestion))
                 {
                     _console.MarkupLine($"  Suggestion: {EscapeMarkup(errorInfo.Suggestion)}");
@@ -106,15 +102,6 @@ public class StatusOutputService : IStatusOutputService
                 return;
             case OutputFormat.Json:
             {
-                var ctx = new JsonSerializationContext(new JsonSerializerOptions
-                {
-                    Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-                    WriteIndented = false,
-                    TypeInfoResolver = JsonSerializationContext.Default,
-                    NumberHandling = JsonNumberHandling.AllowReadingFromString,
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                });
-
                 var response = new Response
                 {
                     Status = "error",
@@ -122,8 +109,8 @@ public class StatusOutputService : IStatusOutputService
                     Error = errorInfo
                 };
 
-                var serializedError = JsonSerializer.Serialize(response, ctx.Response);
-                System.Console.Error.WriteLine(serializedError);
+                var serializedError = JsonSerializer.Serialize(response, JsonSerializationContext.RelaxedEscaping.Response);
+                Console.Error.WriteLine(serializedError);
                 break;
             }
         }

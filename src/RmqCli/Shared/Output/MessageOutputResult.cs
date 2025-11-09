@@ -1,4 +1,4 @@
-namespace RmqCli.Infrastructure.Output;
+namespace RmqCli.Shared.Output;
 
 /// <summary>
 /// Contains statistics about messages that were processed by a MessageOutput implementation

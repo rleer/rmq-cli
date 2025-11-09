@@ -1,6 +1,6 @@
 using System.Text;
 using RabbitMQ.Client;
-using RmqCli.Infrastructure.Output.Formatters;
+using RmqCli.Shared.Output.Formatters;
 
 namespace RmqCli.Unit.Tests.Infrastructure.Output.Formatters;
 

@@ -1,7 +1,6 @@
 using System.Text.Json;
-using RmqCli.Infrastructure.Output;
-using RmqCli.Shared;
 using RmqCli.Shared.Json;
+using RmqCli.Shared.Output;
 using Spectre.Console;
 using AnsiConsoleFactory = RmqCli.Shared.Factories.AnsiConsoleFactory;
 
@@ -60,7 +59,7 @@ public class MessageRetrievalResultOutputService
 
     private void WriteMessageRetrievalResultInJsonFormat(MessageRetrievalResponse response)
     {
-        var resultJson = JsonSerializer.Serialize(response, JsonSerializationContext.RelaxedEscapingOptions.GetTypeInfo(typeof(MessageRetrievalResponse)));
+        var resultJson = JsonSerializer.Serialize(response, JsonSerializationContext.RelaxedEscaping.MessageRetrievalResponse);
         Console.Error.WriteLine(resultJson);
     }
 

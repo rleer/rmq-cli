@@ -2,7 +2,7 @@ using System.Text;
 using RabbitMQ.Client;
 using RmqCli.Core.Models;
 
-namespace RmqCli.Infrastructure.Output.Formatters;
+namespace RmqCli.Shared.Output.Formatters;
 
 /// <summary>
 /// Formats RabbitMQ messages as plain text with key-value pairs.

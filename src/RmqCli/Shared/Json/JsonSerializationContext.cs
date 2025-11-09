@@ -3,7 +3,9 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using RmqCli.Commands.MessageRetrieval;
 using RmqCli.Commands.Publish;
+using RmqCli.Commands.Purge;
 using RmqCli.Core.Models;
+using RmqCli.Infrastructure.RabbitMq;
 
 namespace RmqCli.Shared.Json;
 
@@ -30,6 +32,8 @@ namespace RmqCli.Shared.Json;
 [JsonSerializable(typeof(PublishResult))]
 [JsonSerializable(typeof(MessageRetrievalResponse))]
 [JsonSerializable(typeof(MessageRetrievalResult))]
+[JsonSerializable(typeof(PurgeResponse))]
+[JsonSerializable(typeof(ManagementApiErrorResponse))]
 [JsonSerializable(typeof(ErrorInfo))]
 [JsonSerializable(typeof(List<string>))]
 [JsonSourceGenerationOptions(
@@ -38,14 +42,15 @@ namespace RmqCli.Shared.Json;
 )]
 public partial class JsonSerializationContext : JsonSerializerContext
 {
-    // TODO: Make indentation configurable.
-    // Declare new JsonSerializerOptions with relaxed escaping for JSON serialization.
-    public static JsonSerializerOptions RelaxedEscapingOptions => new()
+    private static JsonSerializationContext? _relaxedEscaping;
+
+    // Singleton instance with relaxed escaping for JSON serialization.
+    public static JsonSerializationContext RelaxedEscaping => _relaxedEscaping ??= new JsonSerializationContext(new JsonSerializerOptions
     {
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         WriteIndented = false,
         NumberHandling = JsonNumberHandling.AllowReadingFromString,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         TypeInfoResolver = Default
-    };
+    });
 }

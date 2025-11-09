@@ -2,9 +2,9 @@ using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 using RmqCli.Commands.MessageRetrieval;
 using RmqCli.Core.Models;
-using RmqCli.Core.Services;
-using RmqCli.Infrastructure.Output;
+using RmqCli.Infrastructure.RabbitMq;
 using RmqCli.Shared;
+using RmqCli.Shared.Output;
 
 namespace RmqCli.Commands.Consume;
 

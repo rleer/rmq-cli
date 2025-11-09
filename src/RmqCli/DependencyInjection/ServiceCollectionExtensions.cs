@@ -7,11 +7,12 @@ using RmqCli.Commands.MessageRetrieval;
 using RmqCli.Commands.MessageRetrieval.Strategies;
 using RmqCli.Commands.Peek;
 using RmqCli.Commands.Publish;
-using RmqCli.Core.Services;
+using RmqCli.Commands.Purge;
 using RmqCli.Infrastructure.Configuration;
 using RmqCli.Infrastructure.Configuration.Models;
-using RmqCli.Infrastructure.Output;
+using RmqCli.Infrastructure.RabbitMq;
 using RmqCli.Shared;
+using RmqCli.Shared.Output;
 
 namespace RmqCli.DependencyInjection;
 
@@ -41,6 +42,10 @@ public static class ServiceCollectionExtensions
         // Bind and register RabbitMQ configuration (uses source generation - no reflection needed at runtime)
         var rabbitMqConfig = new RabbitMqConfig();
         configuration.GetSection(RabbitMqConfig.RabbitMqConfigName).Bind(rabbitMqConfig);
+
+        // Override with CLI options if provided
+        ApplyRabbitMqConfigOverrides(rabbitMqConfig, parseResult);
+
         services.AddSingleton(rabbitMqConfig);
 
         // Bind and register file configuration (uses source generation - no reflection needed at runtime)
@@ -49,6 +54,39 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(fileConfig);
 
         return services;
+    }
+
+    private static void ApplyRabbitMqConfigOverrides(RabbitMqConfig config, ParseResult parseResult)
+    {
+        if (parseResult.GetValue<string>("--vhost") is { } vhost)
+        {
+            config.VirtualHost = vhost;
+        }
+
+        if (parseResult.GetValue<string>("--host") is { } host)
+        {
+            config.Host = host;
+        }
+
+        if (parseResult.GetValue<int>("--port") is var port && port != 0)
+        {
+            config.Port = port;
+        }
+
+        if (parseResult.GetValue<int>("--management-port") is var managementPort && managementPort != 0)
+        {
+            config.ManagementPort = managementPort;
+        }
+
+        if (parseResult.GetValue<string>("--user") is { } user)
+        {
+            config.User = user;
+        }
+
+        if (parseResult.GetValue<string>("--password") is { } password)
+        {
+            config.User = password;
+        }
     }
 
     /// <summary>
@@ -63,10 +101,7 @@ public static class ServiceCollectionExtensions
 
         services.AddLogging(builder =>
         {
-            builder.AddConsole(options =>
-                {
-                    options.LogToStandardErrorThreshold = LogLevel.Trace;
-                })
+            builder.AddConsole(options => { options.LogToStandardErrorThreshold = LogLevel.Trace; })
                 .AddFilter("Microsoft", LogLevel.Warning)
                 .AddFilter("System", LogLevel.Warning)
                 .SetMinimumLevel(logLevel);
@@ -87,10 +122,19 @@ public static class ServiceCollectionExtensions
     /// Includes RabbitMQ channel factory and status output service.
     /// </summary>
     /// <param name="services">The service collection to add services to.</param>
+    /// <param name="useManagementClient">Toggles between library API client and management API</param>
     /// <returns>The service collection for chaining.</returns>
-    private static IServiceCollection AddRmqCoreServices(this IServiceCollection services)
+    private static IServiceCollection AddRmqCoreServices(this IServiceCollection services, bool useManagementClient = false)
     {
-        services.AddSingleton<IRabbitChannelFactory, RabbitChannelFactory>();
+        if (useManagementClient)
+        {
+            services.AddSingleton<IRabbitManagementClient, RabbitManagementClient>();
+        }
+        else
+        {
+            services.AddSingleton<IRabbitChannelFactory, RabbitChannelFactory>();
+        }
+
         services.AddSingleton<IStatusOutputService, StatusOutputService>();
 
         return services;
@@ -147,6 +191,18 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IPeekService, PeekService>();
         services.AddSingleton<IMessageRetrievalStrategy, PollingStrategy>();
 
+        return services;
+    }
+
+    /// <summary>
+    /// Adds purge command services to the service collection.
+    /// </summary>
+    /// <param name="services">The service collection to add services to.</param>
+    /// <returns>The service collection for chaining.</returns>
+    private static IServiceCollection AddPurgeServices(this IServiceCollection services)
+    {
+        services.AddSingleton<IPurgeService, PurgeService>();
+        services.AddSingleton<IPurgeOutputService, PurgeOutputService>();
         return services;
     }
 
@@ -232,6 +288,35 @@ public static class ServiceCollectionExtensions
         services.AddRmqCoreServices();
         services.AddMessageRetrievalServices();
         services.AddPeekServices();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Adds all RmqCli services required for purge command to the service collection.
+    /// This is a convenience method that calls all required registration methods.
+    /// </summary>
+    /// <param name="services">The service collection to add services to.</param>
+    /// <param name="parseResult">The parse result containing CLI options.</param>
+    /// <param name="purgeOptions">Purge-specific options.</param>
+    /// <param name="outputOptions">Output formatting options.</param>
+    /// <returns>The service collection for chaining.</returns>
+    /// <returns>The service collection for chaining.</returns>
+    public static IServiceCollection AddRmqPurge(
+        this IServiceCollection services,
+        ParseResult parseResult,
+        PurgeOptions purgeOptions,
+        OutputOptions outputOptions)
+    {
+        services.AddRmqLogging(outputOptions.Verbose);
+        services.AddRmqConfiguration(parseResult);
+
+        // Register command-specific options as singletons
+        services.AddSingleton(purgeOptions);
+        services.AddSingleton(outputOptions);
+
+        services.AddRmqCoreServices(useManagementClient: true);
+        services.AddPurgeServices();
 
         return services;
     }

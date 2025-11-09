@@ -4,11 +4,10 @@ using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Exceptions;
 using RmqCli.Core.Models;
-using RmqCli.Core.Services;
 using RmqCli.Infrastructure.Configuration.Models;
-using RmqCli.Infrastructure.Output;
-using RmqCli.Shared;
+using RmqCli.Infrastructure.RabbitMq;
 using RmqCli.Shared.Factories;
+using RmqCli.Shared.Output;
 using PublishErrorInfoFactory = RmqCli.Shared.Factories.PublishErrorInfoFactory;
 
 namespace RmqCli.Commands.Publish;
@@ -77,9 +76,8 @@ public class PublishService : IPublishService
                 _logger.LogError(ex, "Failed to parse inline JSON message");
                 var errorInfo = ErrorInfoFactory.GenericErrorInfo(
                     ex.Message,
-                    "INVALID_JSON",
                     "Ensure the inline JSON message is correctly formatted",
-                    exception: ex);
+                    ex);
                 _statusOutput.ShowError($"Failed to parse inline JSON message", errorInfo);
                 return 1;
             }
@@ -338,9 +336,8 @@ public class PublishService : IPublishService
 
             var genericError = ErrorInfoFactory.GenericErrorInfo(
                 "An error occurred while publishing messages",
-                "PUBLISH_ERROR",
                 "Check RabbitMQ server logs or re-run with debug logs for more details",
-                exception: ex);
+                ex);
 
             _statusOutput.ShowError($"Failed to publish to {GetDestinationString(dest)}", genericError);
             throw;
@@ -358,9 +355,8 @@ public class PublishService : IPublishService
 
             var genericError = ErrorInfoFactory.GenericErrorInfo(
                 "An error occurred while publishing messages",
-                "PUBLISH_ERROR",
                 "Check RabbitMQ server logs or re-run with debug logs for more details",
-                exception: ex);
+                ex);
 
             _statusOutput.ShowError($"Failed to publish to {GetDestinationString(dest)}", genericError);
             _logger.LogDebug("Caught publish exception that is not due to 'basic.return'");

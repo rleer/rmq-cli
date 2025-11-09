@@ -59,6 +59,7 @@ public class TomlConfigurationHelper
                [RabbitMq]
                Host = "localhost"
                Port = 5672
+               ManagementPort = 15672
                VirtualHost = "/"
                User = "guest"
                Password = "guest"
@@ -66,6 +67,7 @@ public class TomlConfigurationHelper
                ClientName = "rmq-cli-tool"
 
                [FileConfig]
+               ## Number of messages to write per file before rotating
                MessagesPerFile = 10000
                ## Default value is the OS specific newline character
                # MessageDelimiter="\n"

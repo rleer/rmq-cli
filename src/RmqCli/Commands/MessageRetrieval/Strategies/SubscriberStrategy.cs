@@ -4,8 +4,8 @@ using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using RmqCli.Core.Models;
-using RmqCli.Infrastructure.Output.Formatters;
-using RmqCli.Shared;
+using RmqCli.Shared.Output;
+using RmqCli.Shared.Output.Formatters;
 
 namespace RmqCli.Commands.MessageRetrieval.Strategies;
 

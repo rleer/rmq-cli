@@ -16,28 +16,24 @@ public static class JsonMessageParser
     {
         try
         {
-            var message = JsonSerializer.Deserialize(
-                json,
-                JsonSerializationContext.RelaxedEscapingOptions.GetTypeInfo(typeof(Message)));
+            var message = JsonSerializer.Deserialize(json, JsonSerializationContext.RelaxedEscaping.Message);
 
             if (message == null)
             {
                 throw new ArgumentException("Failed to parse JSON message: result was null");
             }
 
-            var result = (Message)message;
-
             // Convert JsonElement header values to actual types for RabbitMQ serialization
-            if (result.Headers != null)
+            if (message.Headers != null)
             {
-                var normalizedHeaders = NormalizeHeaderValues(result.Headers);
-                result = result with
+                var normalizedHeaders = NormalizeHeaderValues(message.Headers);
+                message = message with
                 {
                     Headers = normalizedHeaders
                 };
             }
 
-            return result;
+            return message;
         }
         catch (JsonException ex)
         {

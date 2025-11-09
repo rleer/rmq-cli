@@ -1,7 +1,6 @@
 using System.Text.Json;
-using RmqCli.Infrastructure.Output;
-using RmqCli.Shared;
 using RmqCli.Shared.Json;
+using RmqCli.Shared.Output;
 using Spectre.Console;
 using AnsiConsoleFactory = RmqCli.Shared.Factories.AnsiConsoleFactory;
 
@@ -20,7 +19,7 @@ public class PublishOutputService : IPublishOutputService
     public PublishOutputService(OutputOptions outputOptions)
     {
         _outputOptions = outputOptions;
-        _console = AnsiConsoleFactory.CreateStdoutConsole();
+        _console = AnsiConsoleFactory.CreateStderrConsole();
     }
 
     public void WritePublishResult(PublishResponse response)
@@ -40,8 +39,8 @@ public class PublishOutputService : IPublishOutputService
 
     private void WritePublishResultInJsonFormat(PublishResponse response)
     {
-        var resultJson = JsonSerializer.Serialize(response, JsonSerializationContext.RelaxedEscapingOptions.GetTypeInfo(typeof(PublishResponse)));
-        Console.Out.WriteLine(resultJson);
+        var resultJson = JsonSerializer.Serialize(response, JsonSerializationContext.RelaxedEscaping.PublishResponse);
+        Console.Error.WriteLine(resultJson);
     }
 
     private void WritePublishResultInPlainFormat(PublishResponse response)

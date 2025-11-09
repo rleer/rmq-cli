@@ -2,7 +2,7 @@ using System.Text;
 using RabbitMQ.Client;
 using RmqCli.Core.Models;
 
-namespace RmqCli.Infrastructure.Output.Formatters;
+namespace RmqCli.Shared.Output.Formatters;
 
 /// <summary>
 /// Extracts and converts RabbitMQ message properties into a common format

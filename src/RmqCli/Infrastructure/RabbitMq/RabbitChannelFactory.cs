@@ -3,10 +3,10 @@ using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using RabbitMQ.Client.Exceptions;
 using RmqCli.Infrastructure.Configuration.Models;
-using RmqCli.Infrastructure.Output;
 using RmqCli.Shared.Factories;
+using RmqCli.Shared.Output;
 
-namespace RmqCli.Core.Services;
+namespace RmqCli.Infrastructure.RabbitMq;
 
 public interface IRabbitChannelFactory
 {
@@ -172,9 +172,7 @@ public class RabbitChannelFactory : IRabbitChannelFactory
             default:
                 var genericError = ErrorInfoFactory.GenericErrorInfo(
                     "Unexpected connection error",
-                    "RABBITMQ_CONNECTION_ERROR",
                     "Check RabbitMQ server status and configuration",
-                    "connection",
                     specificException);
                 _logger.LogError(specificException, "Unexpected RabbitMQ connection error");
                 _output.ShowError("Connection failed", genericError);

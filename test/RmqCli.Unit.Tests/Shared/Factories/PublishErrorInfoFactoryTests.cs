@@ -15,8 +15,6 @@ public class PublishErrorInfoFactoryTests
             var result = PublishErrorInfoFactory.NoRouteErrorInfo(isQueue: true);
 
             // Assert
-            result.Code.Should().Be("NO_ROUTE");
-            result.Category.Should().Be("routing");
             result.Error.Should().Be("No route to destination");
             result.Suggestion.Should().Be("Check if the queue exists");
         }
@@ -28,22 +26,18 @@ public class PublishErrorInfoFactoryTests
             var result = PublishErrorInfoFactory.NoRouteErrorInfo(isQueue: false);
 
             // Assert
-            result.Code.Should().Be("NO_ROUTE");
-            result.Category.Should().Be("routing");
             result.Error.Should().Be("No route to destination");
             result.Suggestion.Should().Be("Check if the exchange and routing key exist");
         }
 
         [Fact]
-        public void ReturnsConsistentCode_RegardlessOfIsQueueValue()
+        public void ReturnsConsistentError_RegardlessOfIsQueueValue()
         {
             // Act
             var resultQueue = PublishErrorInfoFactory.NoRouteErrorInfo(isQueue: true);
             var resultExchange = PublishErrorInfoFactory.NoRouteErrorInfo(isQueue: false);
 
             // Assert
-            resultQueue.Code.Should().Be(resultExchange.Code);
-            resultQueue.Category.Should().Be(resultExchange.Category);
             resultQueue.Error.Should().Be(resultExchange.Error);
         }
     }
@@ -61,8 +55,6 @@ public class PublishErrorInfoFactoryTests
             var result = PublishErrorInfoFactory.ExchangeNotFoundErrorInfo();
 
             // Assert
-            result.Code.Should().Be("EXCHANGE_NOT_FOUND");
-            result.Category.Should().Be("routing");
             result.Error.Should().Be("Exchange not found");
             result.Suggestion.Should().Be("Check if the exchange exists and is correctly configured");
         }
@@ -94,8 +86,6 @@ public class PublishErrorInfoFactoryTests
             var result = PublishErrorInfoFactory.MaxSizeExceededErrorInfo(errorText);
 
             // Assert
-            result.Code.Should().Be("MESSAGE_SIZE_EXCEEDED");
-            result.Category.Should().Be("validation");
             result.Error.Should().Contain("1 MB");
             result.Error.Should().Contain("512 KB");
             result.Details.Should().NotBeNull();
@@ -113,8 +103,6 @@ public class PublishErrorInfoFactoryTests
             var result = PublishErrorInfoFactory.MaxSizeExceededErrorInfo(errorText);
 
             // Assert
-            result.Code.Should().Be("MESSAGE_SIZE_EXCEEDED");
-            result.Category.Should().Be("validation");
             result.Error.Should().Be("Message size exceeds maximum allowed size");
             result.Suggestion.Should().Contain("Reduce the message size");
         }
@@ -185,7 +173,6 @@ public class PublishErrorInfoFactoryTests
             var result = PublishErrorInfoFactory.MaxSizeExceededErrorInfo(errorText);
 
             // Assert
-            result.Code.Should().Be("MESSAGE_SIZE_EXCEEDED");
             result.Error.Should().Be("Message size exceeds maximum allowed size");
         }
     }

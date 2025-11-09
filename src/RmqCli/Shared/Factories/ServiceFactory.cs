@@ -5,12 +5,12 @@ using RmqCli.Commands.Consume;
 using RmqCli.Commands.MessageRetrieval;
 using RmqCli.Commands.Peek;
 using RmqCli.Commands.Publish;
+using RmqCli.Commands.Purge;
 using RmqCli.Core.Models;
 using RmqCli.DependencyInjection;
-using RmqCli.Infrastructure.Output;
-using RmqCli.Shared;
+using RmqCli.Shared.Output;
 
-namespace RmqCli;
+namespace RmqCli.Shared.Factories;
 
 /// <summary>
 /// Factory for creating command-specific services with dependency injection.
@@ -151,7 +151,9 @@ public class ServiceFactory
 
     /// <summary>
     /// Creates PublishOptions from ParseResult.
+    /// <param name="parseResult">The parse result containing CLI options.</param>
     /// </summary>
+    /// <returns>A configured publish options instance.</returns>
     public static PublishOptions CreatePublishOptions(ParseResult parseResult)
     {
         var exchangeName = parseResult.GetValue<string>("--exchange");
@@ -219,6 +221,38 @@ public class ServiceFactory
             UserId = userId,
             Headers = headers,
             JsonMessage = jsonMessage
+        };
+    }
+
+    /// <summary>
+    /// Creates a configured purge service with all required dependencies.
+    /// Extracts options from ParseResult and registers them in the DI container.
+    /// </summary>
+    /// <param name="parseResult">The parse result containing CLI options.</param>
+    /// <returns>A configured purge service instance.</returns>
+    public IPurgeService CreatePurgeService(ParseResult parseResult)
+    {
+        var purgeOptions = CreatePurgeOptions(parseResult);
+        var outputOptions = CreateOutputOptions(parseResult);
+
+        var services = new ServiceCollection();
+        services.AddRmqPurge(parseResult, purgeOptions, outputOptions);
+
+        var serviceProvider = services.BuildServiceProvider();
+        return serviceProvider.GetRequiredService<IPurgeService>();
+    }
+   
+    /// <summary>
+    /// Creates PurgeOptions from ParseResult.
+    /// </summary>
+    /// <param name="parseResult">The parse result containing CLI options.</param>
+    /// <returns>A configured purge options instance.</returns>
+    private static PurgeOptions CreatePurgeOptions(ParseResult parseResult)
+    {
+        return new PurgeOptions
+        {
+            Queue = parseResult.GetRequiredValue<string>("queue"),
+            Force = parseResult.GetValue<bool>("--force")
         };
     }
 }

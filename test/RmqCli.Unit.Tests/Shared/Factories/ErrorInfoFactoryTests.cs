@@ -13,34 +13,15 @@ public class ErrorInfoFactoryTests
         {
             // Arrange
             var error = "Something went wrong";
-            var code = "ERROR_CODE";
             var suggestion = "Try again later";
-            var category = "custom";
 
             // Act
-            var result = ErrorInfoFactory.GenericErrorInfo(error, code, suggestion, category);
+            var result = ErrorInfoFactory.GenericErrorInfo(error, suggestion);
 
             // Assert
             result.Error.Should().Be(error);
-            result.Code.Should().Be(code);
             result.Suggestion.Should().Be(suggestion);
-            result.Category.Should().Be(category);
             result.Details.Should().BeNull();
-        }
-
-        [Fact]
-        public void UsesDefaultCategory_WhenNotProvided()
-        {
-            // Arrange
-            var error = "Error";
-            var code = "CODE";
-            var suggestion = "Suggestion";
-
-            // Act
-            var result = ErrorInfoFactory.GenericErrorInfo(error, code, suggestion);
-
-            // Assert
-            result.Category.Should().Be("internal");
         }
 
         [Fact]
@@ -48,12 +29,11 @@ public class ErrorInfoFactoryTests
         {
             // Arrange
             var error = "Error occurred";
-            var code = "EXCEPTION_CODE";
             var suggestion = "Check logs";
             var exception = new InvalidOperationException("Test exception");
 
             // Act
-            var result = ErrorInfoFactory.GenericErrorInfo(error, code, suggestion, exception: exception);
+            var result = ErrorInfoFactory.GenericErrorInfo(error, suggestion, exception: exception);
 
             // Assert
             result.Details.Should().NotBeNull();
@@ -68,11 +48,10 @@ public class ErrorInfoFactoryTests
         {
             // Arrange
             var error = "Error";
-            var code = "CODE";
             var suggestion = "Suggestion";
 
             // Act
-            var result = ErrorInfoFactory.GenericErrorInfo(error, code, suggestion);
+            var result = ErrorInfoFactory.GenericErrorInfo(error, suggestion);
 
             // Assert
             result.Details.Should().BeNull();
@@ -83,11 +62,10 @@ public class ErrorInfoFactoryTests
         {
             // Arrange
             var error = "Error";
-            var code = "CODE";
             var suggestion = "Suggestion";
 
             // Act
-            var result = ErrorInfoFactory.GenericErrorInfo(error, code, suggestion, exception: null);
+            var result = ErrorInfoFactory.GenericErrorInfo(error, suggestion, exception: null);
 
             // Assert
             result.Details.Should().BeNull();
@@ -101,7 +79,7 @@ public class ErrorInfoFactoryTests
             var exception = new InvalidOperationException("Outer exception", innerException);
 
             // Act
-            var result = ErrorInfoFactory.GenericErrorInfo("Error", "CODE", "Suggestion", exception: exception);
+            var result = ErrorInfoFactory.GenericErrorInfo("Error", "Suggestion", exception: exception);
 
             // Assert
             result.Details.Should().NotBeNull();
@@ -124,7 +102,7 @@ public class ErrorInfoFactoryTests
             // Act & Assert
             foreach (var exception in exceptions)
             {
-                var result = ErrorInfoFactory.GenericErrorInfo("Error", "CODE", "Suggestion", exception: exception);
+                var result = ErrorInfoFactory.GenericErrorInfo("Error", "Suggestion", exception: exception);
 
                 result.Details.Should().NotBeNull();
                 result.Details!["exception_type"].Should().Be(exception.GetType().Name);
@@ -137,31 +115,14 @@ public class ErrorInfoFactoryTests
         {
             // Arrange
             var error = "";
-            var code = "";
             var suggestion = "";
 
             // Act
-            var result = ErrorInfoFactory.GenericErrorInfo(error, code, suggestion);
+            var result = ErrorInfoFactory.GenericErrorInfo(error, suggestion);
 
             // Assert
             result.Error.Should().BeEmpty();
-            result.Code.Should().BeEmpty();
             result.Suggestion.Should().BeEmpty();
-            result.Category.Should().Be("internal");
-        }
-
-        [Fact]
-        public void AllowsCustomCategories()
-        {
-            // Arrange
-            var categories = new[] { "validation", "connection", "routing", "authentication", "custom" };
-
-            // Act & Assert
-            foreach (var category in categories)
-            {
-                var result = ErrorInfoFactory.GenericErrorInfo("Error", "CODE", "Suggestion", category);
-                result.Category.Should().Be(category);
-            }
         }
 
         [Fact]
@@ -171,7 +132,7 @@ public class ErrorInfoFactoryTests
             var exception = new InvalidOperationException("Test");
 
             // Act
-            var result = ErrorInfoFactory.GenericErrorInfo("Error", "CODE", "Suggestion", exception: exception);
+            var result = ErrorInfoFactory.GenericErrorInfo("Error", "Suggestion", exception: exception);
 
             // Assert
             result.Details.Should().NotBeNull();

@@ -11,17 +11,17 @@ public class ConfigCommandHandler : ICommandHandler
         const string description = """
                                    Manage configuration files for the rmq CLI tool.
 
-                                   This command allows you to view, initialize, edit, and reset the configuration files used by RmqCli.
+                                   This command allows you to view, initialize, edit, and reset the configuration files used by rmq.
 
                                    On the first run, a default configuration file is created in the user's home directory.
                                    The configuration file is in TOML format. All available options are documented in the default configuration file.
 
-                                   Example usage:
-                                     rmq config show
-                                     rmq config init
-                                     rmq config path
-                                     rmq config edit
-                                     rmq config reset
+                                   Configuration is loaded in the following priority order (highest priority wins):
+                                   1. CLI flags
+                                   2. Environment variables (prefixed with `RMQCLI_`)
+                                   3. Custom config file (via `--config` flag)
+                                   4. User config file: `~/.config/rmq/config.toml`
+                                   5. System-wide config file: `/etc/rmq/config.toml`
                                    """;
 
         var configCommand = new Command("config", description);
