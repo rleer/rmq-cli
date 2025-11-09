@@ -18,18 +18,23 @@ public class PeekCommandHandler : ICommandHandler
     public void Configure(RootCommand rootCommand)
     {
         var description = """
-                          Peek (inspect) messages from a queue without removing them.
+                          Peek (inspect) messages from a queue without removing them. Uses the AMQP pull API.
 
-                          Messages are fetched using polling (basic.get) and automatically requeued (un'acked).
+                          Messages are fetched using polling (basic.get) and automatically requeued.
                           This is useful when you want to limit the number of messages in-flight and avoid overwhelming the client.
 
                           Note: Un'acknowledged messages will be marked as redelivered by RabbitMQ!
 
-                          Warning: Fetching messages one by one is highly discouraged as it is very inefficient compared to regular long-lived consumers. 
-                          As with any polling-based algorithm, it will be extremely wasteful in systems where message publishing is sporadic and queues 
-                          can stay empty for prolonged periods of time.
-
-                          Example usage:
+                          WARNING:
+                            Fetching messages one by one is highly discouraged as it is very inefficient compared to regular long-lived consumers. 
+                            As with any polling-based algorithm, it will be extremely wasteful in systems where message publishing is sporadic and 
+                            queues can stay empty for prolonged periods of time.
+                          
+                          OUTPUT:
+                            Messages can be printed to standard output (STDOUT) or saved to a file using the --to-file option.
+                            Diagnostic information is written to standard error (STDERR).
+                          
+                          EXAMPLES:
                             rmq peek --queue my-queue
                             rmq peek --queue my-queue --count 10
                             rmq peek --queue my-queue --to-file inspect.txt
@@ -81,7 +86,7 @@ public class PeekCommandHandler : ICommandHandler
 
         var outputFileOption = new Option<string>("--to-file")
         {
-            Description = "Path to output file to save peeked messages. If not specified, messages will be printed to standard output (STDOUT).",
+            Description = "Path to output file to save peeked messages. The MessagesPerFile config option controls the number of messages per file before rotating.",
         };
 
         var compactOption = new Option<bool>("--compact")

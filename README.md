@@ -48,12 +48,7 @@ To create a self-contained, AOT-compiled native binary (no .NET runtime required
 dotnet publish src/RmqCli/RmqCli.csproj -c Release -r osx-arm64 -o release
 ```
 
-Replace `osx-arm64` with your target runtime identifier:
-- **macOS ARM64**: `osx-arm64`
-- **macOS x64**: `osx-x64`
-- **Linux x64**: `linux-x64`
-- **Linux ARM64**: `linux-arm64`
-- **Windows x64**: `win-x64`
+Replace `osx-arm64` with your target runtime identifier: `osx-arm64`, `osx-x64`, `linux-x64`, `linux-arm64`, `win-x64`.
 
 The compiled binary will be in the `release/` directory.
 
@@ -79,7 +74,6 @@ On first run, `rmq` automatically creates a default configuration file at `~/.co
 - **System-wide (Windows)**: `%PROGRAMDATA%/rmq/config.toml`
 
 
-
 ### Environment Variables
 
 Override any configuration setting using environment variables with the `RMQCLI_` prefix:
@@ -100,49 +94,120 @@ Note: Use double underscores (`__`) to represent nested configuration sections.
 
 ## Usage
 
-### Publishing Messages
-
 ```bash
-# Publish a simple text message
-rmq publish --queue myqueue --message "Hello, World!"
-
-# Publish from a file
-rmq publish --queue myqueue --file message.txt
-
-# Use custom RabbitMQ settings
-rmq --config production-config.toml publish --queue myqueue --message "Hello"
+rmq [command] [options]
 ```
 
-### Consuming Messages
+### Global Options
+
+- `--host`, `--port`, `--vhost`, `--user`, `--password` - Override connection settings
+- `--management-port` - Override Management API port
+- `--config <path>` - Use custom configuration file
+- `--verbose` / `--quiet` - Control output verbosity
+- `--no-color` - Disable colored output
+
+Run `rmq --help` to see all global options.
+
+### Commands
+
+#### Publish Messages
+
+Publish messages to queues or exchanges with support for message properties and custom headers.
 
 ```bash
-# Consume messages and display to console
-rmq consume --queue myqueue
+# Simple message
+rmq publish -q my-queue --body "Hello, World!"
 
-# Consume messages and save to file
-rmq consume --queue myqueue --output json --file messages.txt
+# With properties and headers
+rmq publish -q orders --body "order" --priority 5 -H "x-tenant:acme"
+
+# From file (auto-detects JSON/NDJSON or plain text)
+rmq publish -q orders --message-file batch.ndjson
+
+# From STDIN
+cat messages.txt | rmq publish -q orders
+
+# Via exchange
+rmq publish -e my-exchange --routing-key my.key --message '{"body":"order","properties":{"priority":5}}'
 ```
 
-### Configuration Management
+- **Input modes:** `--body`, `--message` (JSON), `--message-file`, or STDIN
+- **Properties:** `--priority`, `--content-type`, `--correlation-id`, `--delivery-mode`, etc.
+- **Headers:** `-H "key:value"` (repeatable)
 
-Use the built-in configuration commands to manage your settings:
+See `rmq publish --help` for all options.
+
+---
+
+#### Consume Messages
+
+Consume messages from a queue with configurable acknowledgment and output formats.
 
 ```bash
-# Show configuration file location
-rmq config path
+# Basic consumption
+rmq consume -q my-queue
 
-# Display current configuration
-rmq config show
+# Limit message count
+rmq consume -q my-queue --count 10
 
-# Open configuration in default editor
-rmq config edit
+# Requeue messages (non-destructive)
+rmq consume -q my-queue --ack-mode requeue
 
-# Reset configuration to defaults
-rmq config reset
-
-# Use a custom configuration file
-rmq --config /path/to/custom-config.toml <command>
+# JSON output to file
+rmq consume -q my-queue --output json --to-file output.json
 ```
+
+- **Ack modes:** `Ack` (default), `Reject`, `Requeue`
+- **Output formats:** `table` (default), `json`, `plain`
+- **Options:** `--count`, `--prefetch-count`, `--compact`, `--to-file`
+
+See `rmq consume --help` for all options.
+
+---
+
+#### Inspect Messages
+
+Non-destructive message inspection using polling. Messages are automatically requeued.
+
+```bash
+rmq peek -q my-queue --count 10 --output json
+```
+
+Uses polling (inefficient for high-volume scenarios). Peeked messages marked as redelivered.
+
+See `rmq peek --help` for all options.
+
+---
+
+#### Purge Queue
+
+Delete all ready messages from a queue via RabbitMQ's Management API.
+
+```bash
+# With confirmation
+rmq purge orders
+
+# Skip confirmation
+rmq purge orders --force
+```
+
+See `rmq purge --help` for all options.
+
+---
+
+#### Manage Configuration
+
+Manage TOML configuration files for connection settings.
+
+```bash
+rmq config show    # View current config
+rmq config init    # Create default config
+rmq config path    # Show config file location
+rmq config edit    # Edit in default editor
+rmq config reset   # Reset to defaults
+```
+
+See `rmq config --help` for all options.
 
 ## Development
 
@@ -172,4 +237,4 @@ dotnet test
 dotnet run -- <command>
 ```
 
-Check the `justfile` for more shortcuts to common tasks.
+Check the `justfile` for more shortcuts to common tasks by running `just --list`.

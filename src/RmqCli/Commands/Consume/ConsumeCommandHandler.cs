@@ -19,15 +19,18 @@ public class ConsumeCommandHandler : ICommandHandler
     public void Configure(RootCommand rootCommand)
     {
         var description = """
-                          Consume messages from a queue.
+                          Consume messages from a queue via the AMQP push API by registering a consumer to the queue. 
+                          This follows the recommended way of consuming messages in RabbitMQ.
 
                           By default, messages are acknowledged after they are consumed. You can change the acknowledgment mode using the --ack-mode option.
 
                           Note: Unacknowledged messages will be marked as redelivered by RabbitMQ!
 
-                          Consumed messages can be printed to standard output (STDOUT) or saved to a file using the --to-file option.
-
-                          Example usage:
+                          OUTPUT:
+                            Messages can be printed to standard output (STDOUT) or saved to a file using the --to-file option.
+                            Diagnostic information is written to standard error (STDERR).
+                          
+                          EXAMPLES:
                             rmq consume --queue my-queue
                             rmq consume --queue my-queue --ack-mode requeue
                             rmq consume --queue my-queue --count 10
@@ -74,7 +77,7 @@ public class ConsumeCommandHandler : ICommandHandler
 
         var outputFileOption = new Option<string>("--to-file")
         {
-            Description = "Path to output file to save consumed messages. If not specified, messages will be printed to standard output (STDOUT).",
+            Description = "Path to output file to save consumed messages. The MessagesPerFile config option controls the number of messages per file before rotating.",
         };
 
         var compactOption = new Option<bool>("--compact")
