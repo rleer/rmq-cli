@@ -45,7 +45,7 @@ jobs:
       if: runner.os == 'macOS'
       run: |
         # Install Docker and Colima
-        brew install docker colima
+        brew install docker colima qemu
 
         # Start Colima with QEMU driver (more compatible with CI)
         colima start --cpu 2 --memory 4 --vm-type=qemu --mount-type=sshfs
