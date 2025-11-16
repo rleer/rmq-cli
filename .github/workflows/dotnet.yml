@@ -47,11 +47,11 @@ jobs:
         # Install Docker and Colima
         brew install docker colima
 
-        # Start Colima with docker runtime
-        colima start --cpu 2 --memory 4
+        # Start Colima with QEMU driver (more compatible with CI)
+        colima start --cpu 2 --memory 4 --vm-type=qemu --mount-type=sshfs
 
         # Wait for Docker to be ready
-        timeout 60 sh -c 'until docker ps; do sleep 1; done'
+        timeout 120 sh -c 'until docker ps; do sleep 2; done'
 
         # Verify Docker is working
         docker --version
