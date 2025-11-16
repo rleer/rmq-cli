@@ -13,112 +13,120 @@ jobs:
   build-and-test:
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
       fail-fast: false
 
     runs-on: ${{ matrix.os }}
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 8.0.x
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
 
-    - name: Cache NuGet packages
-      uses: actions/cache@v4
-      with:
-        path: ~/.nuget/packages
-        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
-        restore-keys: |
-          ${{ runner.os }}-nuget-
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
 
-    - name: Restore dependencies
-      run: dotnet restore
+      - name: Restore dependencies
+        run: dotnet restore
 
-    - name: Build
-      run: dotnet build --no-restore --configuration Release
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
 
-    - name: Run Unit Tests
-      run: dotnet test test/RmqCli.Unit.Tests/RmqCli.Unit.Tests.csproj --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=unit-tests.trx"
+      - name: Run Unit Tests
+        run: dotnet test test/RmqCli.Unit.Tests/RmqCli.Unit.Tests.csproj --no-build --configuration Release -v normal --logger "trx;LogFileName=unit-tests.trx"
 
-    - name: Run Integration Tests
-      run: dotnet test test/RmqCli.Integration.Tests/RmqCli.Integration.Tests.csproj --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=integration-tests.trx"
+      - name: Run Integration Tests
+        run: dotnet test test/RmqCli.Integration.Tests/RmqCli.Integration.Tests.csproj --no-build --configuration Release -v normal --logger "trx;LogFileName=integration-tests.trx"
 
-    - name: Upload Test Results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: test-results-${{ matrix.os }}
-        path: "**/*.trx"
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ matrix.os }}
+          path: "**/*.trx"
 
   e2e-tests:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 8.0.x
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
 
-    - name: Cache NuGet packages
-      uses: actions/cache@v4
-      with:
-        path: ~/.nuget/packages
-        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
-        restore-keys: |
-          ${{ runner.os }}-nuget-
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
 
-    - name: Restore dependencies
-      run: dotnet restore
+      - name: Restore dependencies
+        run: dotnet restore
 
-    - name: Build
-      run: dotnet build --no-restore --configuration Release
+      - name: Build
+        run: dotnet build --no-restore -c Release
 
-    - name: Publish rmq executable for E2E Tests
-      run: dotnet publish src/RmqCli/RmqCli.csproj -c Release -r linux-x64 -o test/RmqCli.E2E.Tests/bin/rmq-published
+      - name: Publish rmq executable for E2E Tests
+        run: dotnet publish src/RmqCli/RmqCli.csproj -c Release -r linux-x64 -o test/RmqCli.E2E.Tests/bin/rmq-published
 
-    - name: Run E2E Tests
-      run: dotnet test test/RmqCli.E2E.Tests/RmqCli.E2E.Tests.csproj --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=e2e-tests.trx"
+      - name: Run E2E Tests
+        run: dotnet test test/RmqCli.E2E.Tests/RmqCli.E2E.Tests.csproj --no-build -c Release -v normal --logger "trx;LogFileName=e2e-tests.trx"
 
-    - name: Upload E2E Test Results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: e2e-test-results
-        path: "**/*e2e-tests.trx"
+      - name: Upload E2E Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-test-results
+          path: "**/*e2e-tests.trx"
 
-#  code-coverage:
-#    runs-on: ubuntu-latest
-#
-#    steps:
-#    - name: Checkout code
-#      uses: actions/checkout@v4
-#
-#    - name: Setup .NET
-#      uses: actions/setup-dotnet@v4
-#      with:
-#        dotnet-version: 8.0.x
-#
-#    - name: Restore dependencies
-#      run: dotnet restore
-#
-#    - name: Build
-#      run: dotnet build --no-restore --configuration Release
-#
-#    - name: Run Tests with Coverage
-#      run: dotnet test --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./coverage
-#
-#    - name: Upload Coverage to Codecov
-#      uses: codecov/codecov-action@v4
-#      with:
-#        files: ./coverage/**/coverage.cobertura.xml
-#        flags: unittests
-#        name: codecov-umbrella
-#        fail_ci_if_error: false
-#        token: ${{ secrets.CODECOV_TOKEN }}
+  code-coverage:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore -c Release
+
+      - name: Run Tests with Coverage
+        run: dotnet test --no-build -c Release -v normal --collect:"XPlat Code Coverage" --results-directory ./coverage
+
+      - name: Upload Coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage/**/coverage.cobertura.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
