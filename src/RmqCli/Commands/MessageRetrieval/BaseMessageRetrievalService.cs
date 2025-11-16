@@ -103,7 +103,7 @@ public abstract class BaseMessageRetrievalService
         var formattedMode = StatusOutput.NoColor ? Strategy.StrategyName.ToLower() : $"[orange1]{Strategy.StrategyName.ToLower()}[/]";
         var statusMessage = messageCount > 0
             ? $"Retrieving up to {OutputUtilities.GetMessageCountString(messageCount, StatusOutput.NoColor)} from queue {formattedQueueName} in {formattedMode} mode (Ctrl+C to stop)"
-            : $"Retrieving messages from queue '{formattedQueueName}' in {formattedMode} mode (Ctrl+C to stop)";
+            : $"Retrieving messages from queue {formattedQueueName} in {formattedMode} mode (Ctrl+C to stop)";
         StatusOutput.ShowStatus(statusMessage);
     }
 
