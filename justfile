@@ -12,6 +12,10 @@ build:
 test:
     dotnet test
 
+prepare-e2e-test:
+    rm -rf test/RmqCli.E2E.Tests/bin/rmq-published
+    dotnet publish src/RmqCli/RmqCli.csproj -c Release -r osx-arm64 -o test/RmqCli.E2E.Tests/bin/rmq-published
+
 # Build and run tests
 check: build test
 
