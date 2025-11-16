@@ -47,6 +47,12 @@ jobs:
     - name: Run Integration Tests
       run: dotnet test test/RmqCli.Integration.Tests/RmqCli.Integration.Tests.csproj --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=integration-tests.trx"
 
+    - name: Publish rmq executable for E2E Tests
+      run: dotnet publish src/RmqCli/RmqCli.csproj -c Release -r ${{ runner.OS }} -o test/RmqCli.E2E.Tests/bin/rmq-published
+
+    - name: Run E2E Tests
+      run: dotnet test test/RmqCli.E2E.Tests/RmqCli.E2E.Tests.csproj --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=e2e-tests.trx"
+    
     - name: Upload Test Results
       uses: actions/upload-artifact@v4
       if: always()
