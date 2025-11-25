@@ -11,4 +11,7 @@ public class RabbitMqConfig
     public string Password { get; set; } = "guest";
     public string Exchange { get; set; } = "amq.direct";
     public string ClientName { get; set; } = "rmq-cli-client";
+    public bool UseTls { get; set; }
+    public string? TlsServerName { get; set; }
+    public bool TlsAcceptAllCertificates { get; set; }
 }

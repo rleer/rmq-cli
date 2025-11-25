@@ -29,8 +29,4 @@
     <ProjectReference Include="..\..\src\RmqCli\RmqCli.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Using Include="Xunit" />
-  </ItemGroup>
-
 </Project>

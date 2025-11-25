@@ -5,6 +5,8 @@ using RabbitMQ.Client.Exceptions;
 using RmqCli.Infrastructure.Configuration.Models;
 using RmqCli.Shared.Factories;
 using RmqCli.Shared.Output;
+using System.Net.Security;
+using System.Security.Authentication;
 
 namespace RmqCli.Infrastructure.RabbitMq;
 
@@ -38,6 +40,20 @@ public class RabbitChannelFactory : IRabbitChannelFactory
             VirtualHost = _config.VirtualHost,
             ClientProvidedName = _config.ClientName
         };
+
+        // Configure TLS/SSL if enabled
+        if (_config.UseTls)
+        {
+            _connectionFactory.Ssl = new SslOption
+            {
+                Enabled = true,
+                ServerName = _config.TlsServerName ?? _config.Host,
+                Version = SslProtocols.Tls12 | SslProtocols.Tls13,
+                AcceptablePolicyErrors = _config.TlsAcceptAllCertificates 
+                    ? SslPolicyErrors.RemoteCertificateChainErrors | SslPolicyErrors.RemoteCertificateNameMismatch
+                    : SslPolicyErrors.None
+            };
+        }
     }
 
     public async Task<IChannel> GetChannelAsync()

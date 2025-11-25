@@ -55,7 +55,6 @@ public class TomlConfigurationHelper
         return """
                # rmq Configuration File
                # This file contains default settings for the rmq CLI tool
-
                [RabbitMq]
                Host = "localhost"
                Port = 5672
@@ -65,7 +64,12 @@ public class TomlConfigurationHelper
                Password = "guest"
                Exchange = "amq.direct"
                ClientName = "rmq-cli-tool"
-
+               UseTls = false
+               ## Optional: defaults to Host if not specified
+               # TlsServerName = "amqp.example.com"
+               ## Optional: set to true to accept self-signed certificates (NOT recommended for production)
+               # TlsAcceptAllCertificates = false   
+                
                [FileConfig]
                ## Number of messages to write per file before rotating
                MessagesPerFile = 10000
