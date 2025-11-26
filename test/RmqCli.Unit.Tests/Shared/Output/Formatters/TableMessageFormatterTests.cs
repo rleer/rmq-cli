@@ -1,0 +1,695 @@
+using System.Text;
+using RabbitMQ.Client;
+using RmqCli.Core.Models;
+using RmqCli.Shared.Output;
+using RmqCli.Shared.Output.Formatters;
+
+namespace RmqCli.Unit.Tests.Shared.Output.Formatters;
+
+public class TableMessageFormatterTests
+{
+    public class FormatMessage
+    {
+        [Fact]
+        public void IncludesMessageDeliveryTagAsHeader()
+        {
+            // Arrange
+            var message = CreateRetrievedMessage("test", deliveryTag: 42);
+
+            // Act
+            var result = TableMessageFormatter.FormatMessage(message);
+
+            // Assert
+            result.Should().Contain("Message #42");
+        }
+
+        [Fact]
+        public void IncludesQueue()
+        {
+            // Arrange
+            var message = CreateRetrievedMessage("Test message body", queue: "my-queue");
+
+            // Act
+            var result = TableMessageFormatter.FormatMessage(message);
+
+            // Assert
+            result.Should().Contain("my-queue");
+        }
+
+        [Fact]
+        public void IncludesRoutingKey()
+        {
+            // Arrange
+            var message = CreateRetrievedMessage("Test message body", routingKey: "test.routing.key");
+
+            // Act
+            var result = TableMessageFormatter.FormatMessage(message);
+
+            // Assert
+            result.Should().Contain("test.routing.key");
+        }
+
+        [Fact]
+        public void IncludesExchange()
+        {
+            // Arrange
+            var message = CreateRetrievedMessage("Test message body", exchange: "test.exchange");
+
+            // Act
+            var result = TableMessageFormatter.FormatMessage(message);
+
+            // Assert
+            result.Should().Contain("test.exchange");
+        }
+
+        [Fact]
+        public void ShowsDashForEmptyExchange()
+        {
+            // Arrange
+            var message = CreateRetrievedMessage("Test message body", exchange: "");
+
+            // Act
+            var result = TableMessageFormatter.FormatMessage(message);
+
+            // Assert
+            result.Should().Contain("-");
+        }
+
+        [Fact]
+        public void IncludesRedeliveredStatus_WhenTrue()
+        {
+            // Arrange
+            var message = CreateRetrievedMessage("test", redelivered: true);
+
+            // Act
+            var result = TableMessageFormatter.FormatMessage(message);
+
+            // Assert
+            result.Should().Contain("Yes");
+        }
+
+        [Fact]
+        public void IncludesRedeliveredStatus_WhenFalse()
+        {
+            // Arrange
+            var message = CreateRetrievedMessage("test", redelivered: false);
+
+            // Act
+            var result = TableMessageFormatter.FormatMessage(message);
+
+            // Assert
+            result.Should().Contain("No");
+        }
+
+        [Fact]
+        public void IncludesMessageBody()
+        {
+            // Arrange
+            var message = CreateRetrievedMessage("Test message body");
+
+            // Act
+            var result = TableMessageFormatter.FormatMessage(message);
+
+            // Assert
+            result.Should().Contain("Test message body");
+        }
+
+        [Fact]
+        public void IncludesBodySize()
+        {
+            // Arrange
+            var message = CreateRetrievedMessage("Test");
+
+            // Act
+            var result = TableMessageFormatter.FormatMessage(message);
+
+            // Assert
+            result.Should().Contain("4 bytes");
+        }
+
+        [Fact]
+        public void HandlesEmptyBody()
+        {
+            // Arrange
+            var message = CreateRetrievedMessage("");
+
+            // Act
+            var result = TableMessageFormatter.FormatMessage(message);
+
+            // Assert
+            result.Should().NotBeNullOrWhiteSpace();
+            result.Should().Contain("0 bytes");
+        }
+
+        [Fact]
+        public void EscapesMarkupCharactersInBody()
+        {
+            // Arrange
+            var bodyWithMarkup = "[bold]This should not be bold[/]";
+            var message = CreateRetrievedMessage(bodyWithMarkup);
+
+            // Act
+            var result = TableMessageFormatter.FormatMessage(message);
+
+            // Assert
+            // The markup should be escaped and visible as plain text
+            result.Should().Contain("[bold]This should not be bold[/]");
+        }
+
+        [Fact]
+        public void HandlesMultilineBody()
+        {
+            // Arrange
+            var multilineBody = "Line 1\nLine 2\nLine 3";
+            var message = CreateRetrievedMessage(multilineBody);
+
+            // Act
+            var result = TableMessageFormatter.FormatMessage(message);
+
+            // Assert
+            result.Should().Contain("Line 1");
+            result.Should().Contain("Line 2");
+            result.Should().Contain("Line 3");
+        }
+    }
+
+    public class FormatMessageWithProperties
+    {
+        [Fact]
+        public void ShowsPropertiesSection_WhenPropertiesExist()
+        {
+            // Arrange
+            var props = Substitute.For<IReadOnlyBasicProperties>();
+            props.IsMessageIdPresent().Returns(true);
+            props.MessageId.Returns("msg-123");
+
+            var message = CreateRetrievedMessage("test", props: props);
+
+            // Act
+            var result = TableMessageFormatter.FormatMessage(message);
+
+            // Assert
+            result.Should().Contain("Properties");
+            result.Should().Contain("msg-123");
+        }
+
+        [Fact]
+        public void ShowsMessageId_WhenPresent()
+        {
+            // Arrange
+            var props = Substitute.For<IReadOnlyBasicProperties>();
+            props.IsMessageIdPresent().Returns(true);
+            props.MessageId.Returns("msg-001");
+
+            var message = CreateRetrievedMessage("test", props: props);
+
+            // Act
+            var result = TableMessageFormatter.FormatMessage(message);
+
+            // Assert
+            result.Should().Contain("msg-001");
+        }
+
+        [Fact]
+        public void ShowsCorrelationId_WhenPresent()
+        {
+            // Arrange
+            var props = Substitute.For<IReadOnlyBasicProperties>();
+            props.IsCorrelationIdPresent().Returns(true);
+            props.CorrelationId.Returns("corr-123");
+
+            var message = CreateRetrievedMessage("test", props: props);
+
+            // Act
+            var result = TableMessageFormatter.FormatMessage(message);
+
+            // Assert
+            result.Should().Contain("corr-123");
+        }
+
+        [Fact]
+        public void ShowsTimestamp_WhenPresent()
+        {
+            // Arrange
+            var timestamp = new DateTimeOffset(2024, 1, 15, 10, 30, 45, TimeSpan.Zero);
+            var props = Substitute.For<IReadOnlyBasicProperties>();
+            props.IsTimestampPresent().Returns(true);
+            props.Timestamp.Returns(new AmqpTimestamp(timestamp.ToUnixTimeSeconds()));
+
+            var message = CreateRetrievedMessage("test", props: props);
+
+            // Act
+            var result = TableMessageFormatter.FormatMessage(message);
+
+            // Assert
+            result.Should().Contain("2024-01-15 10:30:45 UTC");
+        }
+
+        [Fact]
+        public void ShowsContentType_WhenPresent()
+        {
+            // Arrange
+            var props = Substitute.For<IReadOnlyBasicProperties>();
+            props.IsContentTypePresent().Returns(true);
+            props.ContentType.Returns("application/json");
+
+            var message = CreateRetrievedMessage("test", props: props);
+
+            // Act
+            var result = TableMessageFormatter.FormatMessage(message);
+
+            // Assert
+            result.Should().Contain("application/json");
+        }
+
+        [Fact]
+        public void ShowsContentEncoding_WhenPresent()
+        {
+            // Arrange
+            var props = Substitute.For<IReadOnlyBasicProperties>();
+            props.IsContentEncodingPresent().Returns(true);
+            props.ContentEncoding.Returns("utf-8");
+
+            var message = CreateRetrievedMessage("test", props: props);
+
+            // Act
+            var result = TableMessageFormatter.FormatMessage(message);
+
+            // Assert
+            result.Should().Contain("utf-8");
+        }
+
+        [Fact]
+        public void ShowsDeliveryMode_Transient()
+        {
+            // Arrange
+            var props = Substitute.For<IReadOnlyBasicProperties>();
+            props.IsDeliveryModePresent().Returns(true);
+            props.DeliveryMode.Returns(DeliveryModes.Transient);
+
+            var message = CreateRetrievedMessage("test", props: props);
+
+            // Act
+            var result = TableMessageFormatter.FormatMessage(message);
+
+            // Assert
+            result.Should().Contain("Non-persistent (1)");
+        }
+
+        [Fact]
+        public void ShowsDeliveryMode_Persistent()
+        {
+            // Arrange
+            var props = Substitute.For<IReadOnlyBasicProperties>();
+            props.IsDeliveryModePresent().Returns(true);
+            props.DeliveryMode.Returns(DeliveryModes.Persistent);
+
+            var message = CreateRetrievedMessage("test", props: props);
+
+            // Act
+            var result = TableMessageFormatter.FormatMessage(message);
+
+            // Assert
+            result.Should().Contain("Persistent (2)");
+        }
+
+        [Fact]
+        public void ShowsPriority_WhenPresent()
+        {
+            // Arrange
+            var props = Substitute.For<IReadOnlyBasicProperties>();
+            props.IsPriorityPresent().Returns(true);
+            props.Priority.Returns((byte)5);
+
+            var message = CreateRetrievedMessage("test", props: props);
+
+            // Act
+            var result = TableMessageFormatter.FormatMessage(message);
+
+            // Assert
+            result.Should().Contain("5");
+        }
+
+        [Fact]
+        public void ShowsExpiration_WhenPresent()
+        {
+            // Arrange
+            var props = Substitute.For<IReadOnlyBasicProperties>();
+            props.IsExpirationPresent().Returns(true);
+            props.Expiration.Returns("60000");
+
+            var message = CreateRetrievedMessage("test", props: props);
+
+            // Act
+            var result = TableMessageFormatter.FormatMessage(message);
+
+            // Assert
+            result.Should().Contain("60000");
+        }
+
+        [Fact]
+        public void ShowsReplyTo_WhenPresent()
+        {
+            // Arrange
+            var props = Substitute.For<IReadOnlyBasicProperties>();
+            props.IsReplyToPresent().Returns(true);
+            props.ReplyTo.Returns("reply-queue");
+
+            var message = CreateRetrievedMessage("test", props: props);
+
+            // Act
+            var result = TableMessageFormatter.FormatMessage(message);
+
+            // Assert
+            result.Should().Contain("reply-queue");
+        }
+
+        [Fact]
+        public void ShowsType_WhenPresent()
+        {
+            // Arrange
+            var props = Substitute.For<IReadOnlyBasicProperties>();
+            props.IsTypePresent().Returns(true);
+            props.Type.Returns("user.created");
+
+            var message = CreateRetrievedMessage("test", props: props);
+
+            // Act
+            var result = TableMessageFormatter.FormatMessage(message);
+
+            // Assert
+            result.Should().Contain("user.created");
+        }
+
+        [Fact]
+        public void ShowsAppId_WhenPresent()
+        {
+            // Arrange
+            var props = Substitute.For<IReadOnlyBasicProperties>();
+            props.IsAppIdPresent().Returns(true);
+            props.AppId.Returns("my-app");
+
+            var message = CreateRetrievedMessage("test", props: props);
+
+            // Act
+            var result = TableMessageFormatter.FormatMessage(message);
+
+            // Assert
+            result.Should().Contain("my-app");
+        }
+
+        [Fact]
+        public void ShowsUserId_WhenPresent()
+        {
+            // Arrange
+            var props = Substitute.For<IReadOnlyBasicProperties>();
+            props.IsUserIdPresent().Returns(true);
+            props.UserId.Returns("guest");
+
+            var message = CreateRetrievedMessage("test", props: props);
+
+            // Act
+            var result = TableMessageFormatter.FormatMessage(message);
+
+            // Assert
+            result.Should().Contain("guest");
+        }
+
+        [Fact]
+        public void ShowsClusterId_WhenPresent()
+        {
+            // Arrange
+            var props = Substitute.For<IReadOnlyBasicProperties>();
+            props.IsClusterIdPresent().Returns(true);
+            props.ClusterId.Returns("cluster-1");
+
+            var message = CreateRetrievedMessage("test", props: props);
+
+            // Act
+            var result = TableMessageFormatter.FormatMessage(message);
+
+            // Assert
+            result.Should().Contain("cluster-1");
+        }
+    }
+
+    public class FormatMessageWithHeaders
+    {
+        [Fact]
+        public void ShowsCustomHeadersSection_WhenHeadersExist()
+        {
+            // Arrange
+            var props = Substitute.For<IReadOnlyBasicProperties>();
+            props.IsHeadersPresent().Returns(true);
+            props.Headers.Returns(new Dictionary<string, object?>
+            {
+                ["x-custom"] = "custom-value"
+            });
+
+            var message = CreateRetrievedMessage("test", props: props);
+
+            // Act
+            var result = TableMessageFormatter.FormatMessage(message);
+
+            // Assert
+            result.Should().Contain("Custom Headers");
+            result.Should().Contain("x-custom");
+            result.Should().Contain("custom-value");
+        }
+
+        [Fact]
+        public void ShowsMultipleHeaders()
+        {
+            // Arrange
+            var props = Substitute.For<IReadOnlyBasicProperties>();
+            props.IsHeadersPresent().Returns(true);
+            props.Headers.Returns(new Dictionary<string, object?>
+            {
+                ["x-header-1"] = "value1",
+                ["x-header-2"] = "value2",
+                ["x-header-3"] = "value3"
+            });
+
+            var message = CreateRetrievedMessage("test", props: props);
+
+            // Act
+            var result = TableMessageFormatter.FormatMessage(message);
+
+            // Assert
+            result.Should().Contain("x-header-1");
+            result.Should().Contain("value1");
+            result.Should().Contain("x-header-2");
+            result.Should().Contain("value2");
+            result.Should().Contain("x-header-3");
+            result.Should().Contain("value3");
+        }
+
+        [Fact]
+        public void DoesNotShowHeadersSection_WhenNoHeaders()
+        {
+            // Arrange
+            var message = CreateRetrievedMessage("test", props: null);
+
+            // Act
+            var result = TableMessageFormatter.FormatMessage(message);
+
+            // Assert
+            result.Should().NotContain("Custom Headers");
+        }
+
+        [Fact]
+        public void DoesNotShowHeadersSection_WhenHeadersEmpty()
+        {
+            // Arrange
+            var props = Substitute.For<IReadOnlyBasicProperties>();
+            props.IsHeadersPresent().Returns(true);
+            props.Headers.Returns(new Dictionary<string, object?>());
+
+            var message = CreateRetrievedMessage("test", props: props);
+
+            // Act
+            var result = TableMessageFormatter.FormatMessage(message);
+
+            // Assert
+            result.Should().NotContain("Custom Headers");
+        }
+    }
+
+    public class FormatMessageCompactMode
+    {
+        [Fact]
+        public void CompactMode_ShowsOnlyPropertiesWithValues()
+        {
+            // Arrange
+            var props = Substitute.For<IReadOnlyBasicProperties>();
+            props.IsMessageIdPresent().Returns(true);
+            props.MessageId.Returns("msg-123");
+            props.IsCorrelationIdPresent().Returns(false);
+
+            var message = CreateRetrievedMessage("test", props: props);
+
+            // Act
+            var result = TableMessageFormatter.FormatMessage(message, compact: true);
+
+            // Assert
+            result.Should().Contain("msg-123");
+            result.Should().Contain("Properties");
+        }
+
+        [Fact]
+        public void CompactMode_HidesPropertiesSection_WhenNoPropertiesSet()
+        {
+            // Arrange
+            var props = Substitute.For<IReadOnlyBasicProperties>();
+            // No properties set
+            var message = CreateRetrievedMessage("test", props: props);
+
+            // Act
+            var result = TableMessageFormatter.FormatMessage(message, compact: true);
+
+            // Assert
+            result.Should().NotContain("Properties");
+        }
+
+        [Fact]
+        public void NonCompactMode_ShowsAllProperties_WithDashesForMissing()
+        {
+            // Arrange
+            var props = Substitute.For<IReadOnlyBasicProperties>();
+            props.IsMessageIdPresent().Returns(true);
+            props.MessageId.Returns("msg-123");
+            // Other properties not set
+
+            var message = CreateRetrievedMessage("test", props: props);
+
+            // Act
+            var result = TableMessageFormatter.FormatMessage(message, compact: false);
+
+            // Assert
+            result.Should().Contain("msg-123");
+            // Should show Properties section even if some are missing
+            result.Should().Contain("Properties");
+        }
+
+        [Fact]
+        public void NonCompactMode_ShowsPropertiesSection_EvenWhenNoPropertiesSet()
+        {
+            // Arrange
+            var props = Substitute.For<IReadOnlyBasicProperties>();
+            var message = CreateRetrievedMessage("test", props: props);
+
+            // Act
+            var result = TableMessageFormatter.FormatMessage(message, compact: false);
+
+            // Assert
+            result.Should().Contain("Properties");
+        }
+    }
+
+    public class FormatMessages
+    {
+        [Fact]
+        public void FormatsMultipleMessages_SeparatedByBlankLine()
+        {
+            // Arrange
+            var messages = new[]
+            {
+                CreateRetrievedMessage("Message 1", deliveryTag: 1),
+                CreateRetrievedMessage("Message 2", deliveryTag: 2),
+                CreateRetrievedMessage("Message 3", deliveryTag: 3)
+            };
+
+            // Act
+            var result = TableMessageFormatter.FormatMessages(messages);
+
+            // Assert
+            result.Should().Contain("Message #1");
+            result.Should().Contain("Message #2");
+            result.Should().Contain("Message #3");
+            result.Should().Contain("Message 1");
+            result.Should().Contain("Message 2");
+            result.Should().Contain("Message 3");
+        }
+
+        [Fact]
+        public void ReturnsEmptyString_WhenNoMessages()
+        {
+            // Arrange
+            var messages = Array.Empty<RetrievedMessage>();
+
+            // Act
+            var result = TableMessageFormatter.FormatMessages(messages);
+
+            // Assert
+            result.Should().BeEmpty();
+        }
+
+        [Fact]
+        public void HandlesSingleMessage()
+        {
+            // Arrange
+            var messages = new[] { CreateRetrievedMessage("Only one", deliveryTag: 99) };
+
+            // Act
+            var result = TableMessageFormatter.FormatMessages(messages);
+
+            // Assert
+            result.Should().Contain("Message #99");
+            result.Should().Contain("Only one");
+        }
+
+        [Fact]
+        public void AppliesCompactMode_ToAllMessages()
+        {
+            // Arrange
+            var props = Substitute.For<IReadOnlyBasicProperties>();
+            props.IsMessageIdPresent().Returns(true);
+            props.MessageId.Returns("msg-1");
+
+            var messages = new[]
+            {
+                CreateRetrievedMessage("First", deliveryTag: 1, props: props),
+                CreateRetrievedMessage("Second", deliveryTag: 2, props: props)
+            };
+
+            // Act
+            var result = TableMessageFormatter.FormatMessages(messages, compact: true);
+
+            // Assert
+            result.Should().Contain("msg-1");
+            result.Should().Contain("Message #1");
+            result.Should().Contain("Message #2");
+        }
+    }
+
+    #region Test Helpers
+
+    private static RetrievedMessage CreateRetrievedMessage(
+        string body,
+        string exchange = "exchange",
+        string routingKey = "routing.key",
+        string queue = "test-queue",
+        ulong deliveryTag = 1,
+        IReadOnlyBasicProperties? props = null,
+        bool redelivered = false)
+    {
+        var (properties, headers) = MessagePropertyExtractor.ExtractPropertiesAndHeaders(props);
+        var bodySizeBytes = Encoding.UTF8.GetByteCount(body);
+
+        return new RetrievedMessage
+        {
+            Body = body,
+            Exchange = exchange,
+            RoutingKey = routingKey,
+            Queue = queue,
+            DeliveryTag = deliveryTag,
+            Properties = properties,
+            Headers = headers,
+            Redelivered = redelivered,
+            BodySizeBytes = bodySizeBytes,
+            BodySize = OutputUtilities.ToSizeString(bodySizeBytes)
+        };
+    }
+
+    #endregion
+}
