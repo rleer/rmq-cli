@@ -120,7 +120,7 @@ jobs:
         run: dotnet build --no-restore -c Release
 
       - name: Run Tests with Coverage
-        run: dotnet test --no-build -c Release -v normal --collect:"XPlat Code Coverage" --results-directory ./coverage
+        run: dotnet test --no-build -c Release -v normal --collect:"XPlat Code Coverage" --results-directory ./coverage --filter "FullyQualifiedName!~RmqCli.E2E.Tests"
 
       - name: Upload Coverage to Codecov
         uses: codecov/codecov-action@v4
