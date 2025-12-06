@@ -614,7 +614,8 @@ public class TableMessageFormatterTests
 
             // Act
             var result = TableMessageFormatter.FormatMessage(message, compact: true, AnsiSupport.No);
-
+            _output.WriteLine(result);
+            
             // Assert
             const string msg = """
                                ╭─Message #1───────────────────────────────────────────────────────────────────╮
@@ -633,6 +634,11 @@ public class TableMessageFormatterTests
 
     public class FormatMessageCompactMode
     {
+        private readonly ITestOutputHelper _output;
+        public FormatMessageCompactMode(ITestOutputHelper output)
+        {
+            _output = output;
+        }
         [Fact]
         public void CompactMode_ShowsOnlyPropertiesWithValues()
         {
@@ -646,7 +652,8 @@ public class TableMessageFormatterTests
 
             // Act
             var result = TableMessageFormatter.FormatMessage(message, compact: true, AnsiSupport.No);
-
+            _output.WriteLine(result);
+            
             // Assert
             const string msg = """
                                ╭─Message #1───────────────────────────────────────────────────────────────────╮
@@ -673,6 +680,7 @@ public class TableMessageFormatterTests
 
             // Act
             var result = TableMessageFormatter.FormatMessage(message, compact: true, AnsiSupport.No);
+            _output.WriteLine(result);
 
             // Assert
             const string msg = """
