@@ -18,7 +18,8 @@ public static class TableMessageFormatter
     /// </summary>
     /// <param name="message">The message to format</param>
     /// <param name="compact">If true, only show properties with values. If false, show all properties with "-" for empty values.</param>
-    public static string FormatMessage(RetrievedMessage message, bool compact = false)
+    /// <param name="ansiSupport">Determines ANSI escape sequence support</param>
+    public static string FormatMessage(RetrievedMessage message, bool compact = false, AnsiSupport ansiSupport = AnsiSupport.Detect)
     {
         var panel = CreateMessagePanel(message, compact);
 
@@ -26,7 +27,7 @@ public static class TableMessageFormatter
         var stringWriter = new StringWriter();
         var console = AnsiConsole.Create(new AnsiConsoleSettings
         {
-            Ansi = AnsiSupport.Detect,
+            Ansi = ansiSupport,
             ColorSystem = ColorSystemSupport.Detect,
             Out = new AnsiConsoleOutput(stringWriter)
         });
@@ -38,7 +39,7 @@ public static class TableMessageFormatter
     /// <summary>
     /// Formats multiple messages separated by newlines.
     /// </summary>
-    public static string FormatMessages(IEnumerable<RetrievedMessage> messages, bool compact = false)
+    public static string FormatMessages(IEnumerable<RetrievedMessage> messages, bool compact = false, AnsiSupport ansiSupport = AnsiSupport.Detect)
     {
         var messageList = messages.ToList();
         var sb = new StringBuilder();
@@ -49,7 +50,7 @@ public static class TableMessageFormatter
             {
                 sb.AppendLine(); // Blank line between messages
             }
-            sb.Append(FormatMessage(messageList[i], compact));
+            sb.Append(FormatMessage(messageList[i], compact, ansiSupport));
         }
 
         return sb.ToString();

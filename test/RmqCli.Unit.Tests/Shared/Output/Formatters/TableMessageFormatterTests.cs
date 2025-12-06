@@ -4,6 +4,8 @@ using RmqCli.Core.Models;
 using RmqCli.Shared.Output;
 using RmqCli.Shared.Output.Formatters;
 using RmqCli.Unit.Tests.Helpers;
+using Spectre.Console;
+using Xunit.Abstractions;
 
 namespace RmqCli.Unit.Tests.Shared.Output.Formatters;
 
@@ -70,7 +72,7 @@ public class TableMessageFormatterTests
             var message = CreateRetrievedMessage("Test message body", exchange: "");
 
             // Act
-            var result = TableMessageFormatter.FormatMessage(message, compact: true);
+            var result = TableMessageFormatter.FormatMessage(message, compact: true, AnsiSupport.No);
 
             // Assert
             const string msg = """
@@ -145,7 +147,7 @@ public class TableMessageFormatterTests
             var message = CreateRetrievedMessage("");
 
             // Act
-            var result = TableMessageFormatter.FormatMessage(message, compact: true);
+            var result = TableMessageFormatter.FormatMessage(message, compact: true, AnsiSupport.No);
 
             // Assert
             const string msg = """
@@ -183,7 +185,7 @@ public class TableMessageFormatterTests
             var message = CreateRetrievedMessage(multilineBody);
 
             // Act
-            var result = TableMessageFormatter.FormatMessage(message, compact: true);
+            var result = TableMessageFormatter.FormatMessage(message, compact: true, AnsiSupport.No);
 
             // Assert
             const string msg = """
@@ -464,6 +466,12 @@ public class TableMessageFormatterTests
 
     public class FormatMessageWithHeaders
     {
+        private readonly ITestOutputHelper _output;
+
+        public FormatMessageWithHeaders(ITestOutputHelper output)
+        {
+            _output = output;
+        }
         [Fact]
         public void ShowsCustomHeadersSection_WhenHeadersExist()
         {
@@ -478,7 +486,7 @@ public class TableMessageFormatterTests
             var message = CreateRetrievedMessage("test", props: props);
 
             // Act
-            var result = TableMessageFormatter.FormatMessage(message, compact: true);
+            var result = TableMessageFormatter.FormatMessage(message, compact: true, AnsiSupport.No);
 
             // Assert
             const string msg = """
@@ -512,7 +520,7 @@ public class TableMessageFormatterTests
             var message = CreateRetrievedMessage("test", props: props);
 
             // Act
-            var result = TableMessageFormatter.FormatMessage(message, compact: true);
+            var result = TableMessageFormatter.FormatMessage(message, compact: true, AnsiSupport.No);
 
             // Assert
             const string msg = """
@@ -550,7 +558,7 @@ public class TableMessageFormatterTests
             var message = CreateRetrievedMessage("test", props: props);
 
             // Act
-            var result = TableMessageFormatter.FormatMessage(message, compact: true);
+            var result = TableMessageFormatter.FormatMessage(message, compact: true, AnsiSupport.No);
 
             // Assert - Verify proper multi-line formatting with correct indentation (platform-independent)
             const string msg = """
@@ -578,8 +586,8 @@ public class TableMessageFormatterTests
             var message = CreateRetrievedMessage("test", props: null);
 
             // Act
-            var result = TableMessageFormatter.FormatMessage(message, compact: true);
-
+            var result = TableMessageFormatter.FormatMessage(message, compact: true, AnsiSupport.No);
+            _output.WriteLine(result);
             // Assert
             const string msg = """
                                ╭─Message #1───────────────────────────────────────────────────────────────────╮
@@ -605,7 +613,7 @@ public class TableMessageFormatterTests
             var message = CreateRetrievedMessage("test", props: props);
 
             // Act
-            var result = TableMessageFormatter.FormatMessage(message, compact: true);
+            var result = TableMessageFormatter.FormatMessage(message, compact: true, AnsiSupport.No);
 
             // Assert
             const string msg = """
@@ -637,7 +645,7 @@ public class TableMessageFormatterTests
             var message = CreateRetrievedMessage("test", props: props);
 
             // Act
-            var result = TableMessageFormatter.FormatMessage(message, compact: true);
+            var result = TableMessageFormatter.FormatMessage(message, compact: true, AnsiSupport.No);
 
             // Assert
             const string msg = """
@@ -664,7 +672,7 @@ public class TableMessageFormatterTests
             var message = CreateRetrievedMessage("test", props: props);
 
             // Act
-            var result = TableMessageFormatter.FormatMessage(message, compact: true);
+            var result = TableMessageFormatter.FormatMessage(message, compact: true, AnsiSupport.No);
 
             // Assert
             const string msg = """
@@ -692,7 +700,7 @@ public class TableMessageFormatterTests
             var message = CreateRetrievedMessage("test", props: props);
 
             // Act
-            var result = TableMessageFormatter.FormatMessage(message, compact: false);
+            var result = TableMessageFormatter.FormatMessage(message, compact: false, AnsiSupport.No);
 
             // Assert
             const string msg = """
@@ -730,7 +738,7 @@ public class TableMessageFormatterTests
             var message = CreateRetrievedMessage("test", props: props);
 
             // Act
-            var result = TableMessageFormatter.FormatMessage(message, compact: false);
+            var result = TableMessageFormatter.FormatMessage(message, compact: false, AnsiSupport.No);
 
             // Assert
             const string msg = """
@@ -768,7 +776,7 @@ public class TableMessageFormatterTests
             var message = CreateRetrievedMessage("test", props: props);
 
             // Act
-            var result = TableMessageFormatter.FormatMessage(message, compact: true);
+            var result = TableMessageFormatter.FormatMessage(message, compact: true, AnsiSupport.No);
 
             // Assert
             result.Should().Contain("""
@@ -814,7 +822,7 @@ public class TableMessageFormatterTests
             var messages = new[] { CreateRetrievedMessage("Only one", deliveryTag: 99) };
 
             // Act
-            var result = TableMessageFormatter.FormatMessages(messages);
+            var result = TableMessageFormatter.FormatMessages(messages, ansiSupport: AnsiSupport.No);
 
             // Assert
             const string msg = """
@@ -859,7 +867,7 @@ public class TableMessageFormatterTests
             };
 
             // Act
-            var result = TableMessageFormatter.FormatMessages(messages, compact: true);
+            var result = TableMessageFormatter.FormatMessages(messages, compact: true, ansiSupport: AnsiSupport.No);
 
             // Assert
             const string msg1 = """
