@@ -131,8 +131,6 @@ public class JsonMessageFormatterTests
             var json = JsonDocument.Parse(result);
             json.RootElement.GetProperty("queue").GetString().Should().Be("notifications-queue");
             json.RootElement.GetProperty("routingKey").GetString().Should().Be("user.created");
-            // Verify they are not the same
-            json.RootElement.GetProperty("queue").GetString().Should().NotBe(json.RootElement.GetProperty("routingKey").GetString());
         }
 
         [Fact]
@@ -230,6 +228,7 @@ public class JsonMessageFormatterTests
             properties.GetProperty("expiration").GetString().Should().Be("60000");
             properties.GetProperty("priority").GetByte().Should().Be(5);
             properties.GetProperty("replyTo").GetString().Should().Be("reply-queue");
+            properties.GetProperty("userId").GetString().Should().Be("user-123");
             properties.GetProperty("timestamp").GetInt64().Should().BeGreaterThan(0);
 
             json.RootElement.TryGetProperty("headers", out var headers).Should().BeTrue();
