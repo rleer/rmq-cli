@@ -28,7 +28,7 @@ public static class TableMessageFormatter
         var console = AnsiConsole.Create(new AnsiConsoleSettings
         {
             Ansi = ansiSupport,
-            ColorSystem = ColorSystemSupport.Detect,
+            ColorSystem = ansiSupport == AnsiSupport.No ? ColorSystemSupport.NoColors : ColorSystemSupport.Detect,
             Out = new AnsiConsoleOutput(stringWriter)
         });
 
