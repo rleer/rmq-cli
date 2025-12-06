@@ -11,7 +11,7 @@ public class TomlConfigurationHelper
         return Environment.OSVersion.Platform switch
         {
             PlatformID.Unix or PlatformID.MacOSX => Path.Combine(homeDir, ".config", Constants.AppName),
-            _ => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Constants.AppName)
+            _ => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), Constants.AppName)
         };
     }
 
@@ -25,7 +25,7 @@ public class TomlConfigurationHelper
         return Environment.OSVersion.Platform switch
         {
             PlatformID.Unix or PlatformID.MacOSX => $"/etc/{Constants.AppName}/config.toml",
-            _ => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Constants.AppName, "config.toml")
+            _ => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), Constants.AppName, "config.toml")
         };
     }
 
