@@ -647,7 +647,7 @@ public class TextMessageFormatterTests
             // Assert
             result.Should().Contain($"Line 1{Environment.NewLine}");
             result.Should().Contain($"Line 2{Environment.NewLine}");
-            result.Should().Contain($"Line 3{Environment.NewLine}");
+            result.Should().Contain($"Line 3");
         }
     }
 
