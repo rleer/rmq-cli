@@ -106,8 +106,6 @@ public class TextMessageFormatterTests
             // Assert
             result.Should().Contain("Queue: notifications-queue");
             result.Should().Contain("Routing Key: user.created");
-            // Verify they are not the same
-            result.IndexOf("Queue: notifications-queue", StringComparison.Ordinal).Should().NotBe(result.IndexOf("Routing Key: user.created", StringComparison.Ordinal));
         }
 
         [Fact]
@@ -130,11 +128,19 @@ public class TextMessageFormatterTests
             var message = CreateRetrievedMessage("");
 
             // Act
-            var result = TextMessageFormatter.FormatMessage(message);
+            var result = TextMessageFormatter.FormatMessage(message, compact: true);
 
             // Assert
-            result.Should().Contain($"== Body (0 bytes) =={Environment.NewLine}");
-            result.Should().EndWith("");
+            const string msg = """
+                               == Message #1 ==
+                               Queue: test-queue
+                               Routing Key: routing.key
+                               Exchange: exchange
+                               Redelivered: No
+                               == Body (0 bytes) ==
+
+                               """;
+            result.Should().Be(msg);
         }
 
         [Fact]
@@ -197,21 +203,63 @@ public class TextMessageFormatterTests
             var result = TextMessageFormatter.FormatMessage(message);
 
             // Assert
-            result.Should().Contain("== Properties ==");
-            result.Should().Contain("Type: test.type");
-            result.Should().Contain("Message ID: msg-001");
-            result.Should().Contain("App ID: test-app");
-            result.Should().Contain("Cluster ID: cluster-1");
-            result.Should().Contain("Content Type: application/json");
-            result.Should().Contain("Content Encoding: utf-8");
-            result.Should().Contain("Correlation ID: corr-123");
-            result.Should().Contain("Delivery Mode: Persistent (2)");
-            result.Should().Contain("Expiration: 60000");
-            result.Should().Contain("Priority: 5");
-            result.Should().Contain("Reply To: reply-queue");
-            result.Should().Contain("Timestamp:");
-            result.Should().Contain("== Custom Headers ==");
-            result.Should().Contain("x-custom: custom-value");
+            const string msg = """
+                               == Message #1 ==
+                               Queue: test-queue
+                               Routing Key: routing.key
+                               Exchange: exchange
+                               Redelivered: No
+                               == Properties ==
+                               Message ID: msg-001
+                               Correlation ID: corr-123
+                               Timestamp: 2025-12-06 00:00:00 UTC
+                               Content Type: application/json
+                               Content Encoding: utf-8
+                               Delivery Mode: Persistent (2)
+                               Priority: 5
+                               Expiration: 60000
+                               Reply To: reply-queue
+                               Type: test.type
+                               App ID: test-app
+                               User ID: user-123
+                               Cluster ID: cluster-1
+                               == Custom Headers ==
+                               x-custom: custom-value
+                               == Body (4 bytes) ==
+                               test
+                               """;
+            result.TrimEnd().Should().Be(msg);
+        }
+
+        [Fact]
+        public void IncludesAllProperties_InComapctMode_WhenAllPresent()
+        {
+            // Arrange
+            var props = RabbitMessageTestHelper.CreateFullyPopulatedProperties();
+            var message = CreateRetrievedMessage("test", props: props);
+
+            // Act
+            var result = TextMessageFormatter.FormatMessage(message, compact: true);
+
+            // Assert
+            result.Should().Contain("""
+                                    == Properties ==
+                                    Message ID: msg-001
+                                    Correlation ID: corr-123
+                                    Timestamp: 2025-12-06 00:00:00 UTC
+                                    Content Type: application/json
+                                    Content Encoding: utf-8
+                                    Delivery Mode: Persistent (2)
+                                    Priority: 5
+                                    Expiration: 60000
+                                    Reply To: reply-queue
+                                    Type: test.type
+                                    App ID: test-app
+                                    User ID: user-123
+                                    Cluster ID: cluster-1
+                                    == Custom Headers ==
+                                    x-custom: custom-value
+                                    """);
         }
 
         [Fact]
@@ -245,8 +293,8 @@ public class TextMessageFormatterTests
             props.IsHeadersPresent().Returns(true);
             props.Headers.Returns(new Dictionary<string, object?>
             {
-                ["x-valid"] = "value"
-                // null values are not stored in RabbitMQ headers
+                ["x-valid"] = "value",
+                ["x-null"] = null // null values are not stored in RabbitMQ headers
             });
 
             var message = CreateRetrievedMessage("test", props: props);
@@ -347,15 +395,17 @@ public class TextMessageFormatterTests
             var result = TextMessageFormatter.FormatMessage(message);
 
             // Assert - Verify multi-line array with proper indentation (platform-independent)
-            result.Should().Contain("== Custom Headers ==");
-            result.Should().Contain("x-large-array: [");
-            result.Should().Contain("  1");
-            result.Should().Contain("  2");
-            result.Should().Contain("  3");
-            result.Should().Contain("  4");
-            result.Should().Contain("  5");
-            result.Should().Contain("  6");
-            result.Should().Contain("]");
+            result.Should().Contain("""
+                                    == Custom Headers ==
+                                    x-large-array: [
+                                      1
+                                      2
+                                      3
+                                      4
+                                      5
+                                      6
+                                    ]
+                                    """);
         }
 
         [Fact]
@@ -379,11 +429,13 @@ public class TextMessageFormatterTests
             var result = TextMessageFormatter.FormatMessage(message);
 
             // Assert - Verify proper multi-line formatting with correct indentation (platform-independent)
-            result.Should().Contain("== Custom Headers ==");
-            result.Should().Contain("x-array-of-objects: [");
-            result.Should().Contain("  {name: Alice, age: 30}");
-            result.Should().Contain("  {name: Bob, age: 25}");
-            result.Should().Contain("]");
+            result.Should().Contain("""
+                                    == Custom Headers ==
+                                    x-array-of-objects: [
+                                      {name: Alice, age: 30}
+                                      {name: Bob, age: 25}
+                                    ]
+                                    """);
         }
 
         [Fact]
@@ -462,11 +514,13 @@ public class TextMessageFormatterTests
             var result = TextMessageFormatter.FormatMessage(message);
 
             // Assert - Verify nested dictionary formatting (platform-independent)
-            result.Should().Contain("== Custom Headers ==");
-            result.Should().Contain("x-nested: {");
-            result.Should().Contain("  user: {name: Alice, role: admin}");
-            result.Should().Contain("  timestamp: 1234567890");
-            result.Should().Contain("}");
+            result.Should().Contain("""
+                                    == Custom Headers ==
+                                    x-nested: {
+                                      user: {name: Alice, role: admin}
+                                      timestamp: 1234567890
+                                    }
+                                    """);
         }
 
         [Fact]
@@ -500,16 +554,18 @@ public class TextMessageFormatterTests
             var result = TextMessageFormatter.FormatMessage(message, compact: true);
 
             // Assert - Verify proper indentation at each nesting level (platform-independent)
-            result.Should().Contain("== Custom Headers ==");
-            result.Should().Contain("x-deep: {");
-            result.Should().Contain("  level1: {");
-            result.Should().Contain("    level2: {");
-            result.Should().Contain("      level3: {value: deep-value}");
-            result.Should().Contain("    }");
-            result.Should().Contain("    anotherKey: anotherValue");
-            result.Should().Contain("  }");
-            result.Should().Contain("  simpleKey: simpleValue");
-            result.Should().Contain("}");
+            result.Should().Contain("""
+                                    == Custom Headers ==
+                                    x-deep: {
+                                      level1: {
+                                        level2: {
+                                          level3: {value: deep-value}
+                                        }
+                                        anotherKey: anotherValue
+                                      }
+                                      simpleKey: simpleValue
+                                    }
+                                    """);
         }
 
         [Fact]
@@ -555,44 +611,17 @@ public class TextMessageFormatterTests
             var result = TextMessageFormatter.FormatMessage(message);
 
             // Assert - Platform-independent check
-            result.Should().Contain("== Body (20 bytes) ==");
-            result.Should().Contain("Line 1");
-            result.Should().Contain("Line 2");
-            result.Should().Contain("Line 3");
+            result.Should().Contain("""
+                                    == Body (20 bytes) ==
+                                    Line 1
+                                    Line 2
+                                    Line 3
+                                    """);
         }
     }
 
     public class FormatMessages
     {
-        [Fact]
-        public void JoinsMultipleMessages_WithNewlines()
-        {
-            // Arrange
-            var messages = new[]
-            {
-                CreateRetrievedMessage("Message 1", exchange: "amq.direct", routingKey: "key.1", deliveryTag: 1),
-                CreateRetrievedMessage("Message 2", exchange: "amq.topic", routingKey: "key.2", deliveryTag: 2),
-                CreateRetrievedMessage("Message 3", exchange: "amq.fanout", routingKey: "key.3", deliveryTag: 3)
-            };
-
-            // Act
-            var result = TextMessageFormatter.FormatMessages(messages);
-
-            // Assert
-            result.Should().Contain("Exchange: amq.direct");
-            result.Should().Contain("Exchange: amq.topic");
-            result.Should().Contain("Exchange: amq.fanout");
-            result.Should().Contain("Routing Key: key.1");
-            result.Should().Contain("Routing Key: key.2");
-            result.Should().Contain("Routing Key: key.3");
-            result.Should().Contain("== Message #1 ==");
-            result.Should().Contain("== Message #2 ==");
-            result.Should().Contain("== Message #3 ==");
-            result.Should().Contain($"== Body (9 bytes) =={Environment.NewLine}Message 1");
-            result.Should().Contain($"== Body (9 bytes) =={Environment.NewLine}Message 2");
-            result.Should().Contain($"== Body (9 bytes) =={Environment.NewLine}Message 3");
-        }
-
         [Fact]
         public void JoinsMessages_WithNewline()
         {
@@ -607,14 +636,52 @@ public class TextMessageFormatterTests
             var result = TextMessageFormatter.FormatMessages(messages);
 
             // Assert
-            result.Should().Contain("== Message #1 ==");
-            result.Should().Contain("== Message #2 ==");
-            result.Should().Contain("Exchange: amq.direct");
-            result.Should().Contain("Exchange: amq.topic");
-            result.Should().Contain("Routing Key: key.1");
-            result.Should().Contain("Routing Key: key.2");
-            result.Should().Contain($"== Body (5 bytes) =={Environment.NewLine}First");
-            result.Should().Contain($"== Body (6 bytes) =={Environment.NewLine}Second");
+            result.TrimEnd().Should().Be(
+                """
+                == Message #1 ==
+                Queue: test-queue
+                Routing Key: key.1
+                Exchange: amq.direct
+                Redelivered: No
+                == Properties ==
+                Message ID: -
+                Correlation ID: -
+                Timestamp: -
+                Content Type: -
+                Content Encoding: -
+                Delivery Mode: -
+                Priority: -
+                Expiration: -
+                Reply To: -
+                Type: -
+                App ID: -
+                User ID: -
+                Cluster ID: -
+                == Body (5 bytes) ==
+                First
+
+                == Message #2 ==
+                Queue: test-queue
+                Routing Key: key.2
+                Exchange: amq.topic
+                Redelivered: No
+                == Properties ==
+                Message ID: -
+                Correlation ID: -
+                Timestamp: -
+                Content Type: -
+                Content Encoding: -
+                Delivery Mode: -
+                Priority: -
+                Expiration: -
+                Reply To: -
+                Type: -
+                App ID: -
+                User ID: -
+                Cluster ID: -
+                == Body (6 bytes) ==
+                Second
+                """);
         }
 
         [Fact]
