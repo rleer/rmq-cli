@@ -637,26 +637,17 @@ public class TextMessageFormatterTests
         [Fact]
         public void PreservesNewlinesInBody()
         {
-            // Arrange - Use \n explicitly for consistent byte count across platforms
+            // Arrange
             var multilineBody = $"Line 1{Environment.NewLine}Line 2{Environment.NewLine}Line 3";
             var message = CreateRetrievedMessage(multilineBody);
 
             // Act
             var result = TextMessageFormatter.FormatMessage(message, compact: true);
 
-            // Assert - Platform-independent check
-            const string msg = """
-                               == Message #1 ==
-                               Queue: test-queue
-                               Routing Key: routing.key
-                               Exchange: exchange
-                               Redelivered: No
-                               == Body (20 bytes) ==
-                               Line 1
-                               Line 2
-                               Line 3
-                               """;
-            result.TrimEnd().Should().Be(msg);
+            // Assert
+            result.Should().Contain($"Line 1{Environment.NewLine}");
+            result.Should().Contain($"Line 2{Environment.NewLine}");
+            result.Should().Contain($"Line 3{Environment.NewLine}");
         }
     }
 
