@@ -21,7 +21,7 @@ public static class TableMessageFormatter
     /// <param name="ansiSupport">Determines ANSI escape sequence support</param>
     public static string FormatMessage(RetrievedMessage message, bool compact = false, AnsiSupport ansiSupport = AnsiSupport.Detect)
     {
-        var panel = CreateMessagePanel(message, compact);
+        var panel = CreateMessagePanel(message, compact, ansiSupport);
 
         // Render to string using AnsiConsole
         var stringWriter = new StringWriter();
@@ -56,9 +56,9 @@ public static class TableMessageFormatter
         return sb.ToString();
     }
 
-    private static Panel CreateMessagePanel(RetrievedMessage message, bool compact)
+    private static Panel CreateMessagePanel(RetrievedMessage message, bool compact, AnsiSupport ansiSupport)
     {
-        var content = CreateMessageContent(message, compact);
+        var content = CreateMessageContent(message, compact, ansiSupport);
 
         var panel = new Panel(content)
         {
@@ -70,39 +70,50 @@ public static class TableMessageFormatter
         return panel;
     }
 
-    private static IRenderable CreateMessageContent(RetrievedMessage message, bool compact)
+    private static IRenderable CreateMessageContent(RetrievedMessage message, bool compact, AnsiSupport ansiSupport)
     {
         var renderables = new List<IRenderable>();
 
         // Routing Information Section
         var routingTable = CreateSectionTable();
-        AddRoutingRows(routingTable, message);
+        AddRoutingRows(routingTable, message, ansiSupport);
         renderables.Add(routingTable);
 
         // Properties Section
         if (message.Properties != null && (message.Properties.HasAnyProperty() || !compact))
         {
-            renderables.Add(new Rule("[dim]Properties[/]").LeftJustified().RuleStyle("dim"));
+            renderables.Add(CreateSectionRule("Properties", ansiSupport));
             var propertiesTable = CreateSectionTable();
-            AddPropertiesRows(propertiesTable, message.Properties, compact);
+            AddPropertiesRows(propertiesTable, message.Properties, compact, ansiSupport);
             renderables.Add(propertiesTable);
         }
 
         // Custom Headers Section
         if (message.Headers != null && message.Headers.Count > 0)
         {
-            renderables.Add(new Rule("[dim]Custom Headers[/]").LeftJustified().RuleStyle("dim"));
+            renderables.Add(CreateSectionRule("Custom Headers", ansiSupport));
             var headersTable = CreateSectionTable();
             AddHeadersRows(headersTable, message.Headers);
             renderables.Add(headersTable);
         }
 
         // Body Section
-        renderables.Add(new Rule($"[dim]Body ({message.BodySize})[/]").LeftJustified().RuleStyle("dim"));
+        renderables.Add(CreateSectionRule($"Body ({message.BodySize})", ansiSupport));
         renderables.Add(new Markup(Markup.Escape(message.Body)));
 
         // Combine all renderables into a Rows layout
         return new Rows(renderables);
+    }
+
+    private static Rule CreateSectionRule(string title, AnsiSupport ansiSupport)
+    {
+        // Only apply dim styling if ANSI is supported
+        if (ansiSupport == AnsiSupport.No)
+        {
+            return new Rule(title).LeftJustified();
+        }
+
+        return new Rule($"[dim]{title}[/]").LeftJustified().RuleStyle("dim");
     }
 
     private static Table CreateSectionTable()
@@ -117,18 +128,20 @@ public static class TableMessageFormatter
         return table;
     }
 
-    private static void AddRoutingRows(Table table, RetrievedMessage message)
+    private static void AddRoutingRows(Table table, RetrievedMessage message, AnsiSupport ansiSupport)
     {
         table.AddRow(new Markup("Queue"), new Markup(Markup.Escape(message.Queue)));
         table.AddRow(new Markup("Routing Key"), new Markup(Markup.Escape(message.RoutingKey)));
         table.AddRow(new Markup("Exchange"), new Markup(Markup.Escape(string.IsNullOrEmpty(message.Exchange) ? "-" : message.Exchange)));
 
         // Color-code redelivered status
-        var redelivered = message.Redelivered ? "[yellow]Yes[/]" : "No";
+        var redelivered = message.Redelivered
+            ? (ansiSupport == AnsiSupport.No ? "Yes" : "[yellow]Yes[/]")
+            : "No";
         table.AddRow(new Markup("Redelivered"), new Markup(redelivered));
     }
 
-    private static void AddPropertiesRows(Table table, MessageProperties props, bool compact)
+    private static void AddPropertiesRows(Table table, MessageProperties props, bool compact, AnsiSupport ansiSupport)
     {
         if (compact)
         {
@@ -166,11 +179,14 @@ public static class TableMessageFormatter
         else
         {
             // Full mode: show all properties with "-" for empty
-            AddRow(table, "Message ID", props.MessageId ?? "[dim]-[/]", allowMarkup: props.MessageId == null);
-            AddRow(table, "Correlation ID", props.CorrelationId ?? "[dim]-[/]", allowMarkup: props.CorrelationId == null);
-            AddRow(table, "Timestamp", props.Timestamp != null ? FormatTimestamp(props.Timestamp.Value) + " UTC" : "[dim]-[/]", allowMarkup: props.Timestamp == null);
-            AddRow(table, "Content Type", props.ContentType ?? "[dim]-[/]", allowMarkup: props.ContentType == null);
-            AddRow(table, "Content Encoding", props.ContentEncoding ?? "[dim]-[/]", allowMarkup: props.ContentEncoding == null);
+            var emptyValue = ansiSupport == AnsiSupport.No ? "-" : "[dim]-[/]";
+            var allowMarkup = ansiSupport != AnsiSupport.No;
+            
+            AddRow(table, "Message ID", props.MessageId ?? emptyValue, allowMarkup: props.MessageId == null && allowMarkup);
+            AddRow(table, "Correlation ID", props.CorrelationId ?? emptyValue, allowMarkup: props.CorrelationId == null && allowMarkup);
+            AddRow(table, "Timestamp", props.Timestamp != null ? FormatTimestamp(props.Timestamp.Value) + " UTC" : emptyValue, allowMarkup: props.Timestamp == null && allowMarkup);
+            AddRow(table, "Content Type", props.ContentType ?? emptyValue, allowMarkup: props.ContentType == null && allowMarkup);
+            AddRow(table, "Content Encoding", props.ContentEncoding ?? emptyValue, allowMarkup: props.ContentEncoding == null && allowMarkup);
 
             if (props.DeliveryMode != null)
             {
@@ -179,16 +195,16 @@ public static class TableMessageFormatter
             }
             else
             {
-                AddRow(table, "Delivery Mode", "[dim]-[/]", allowMarkup: true);
+                AddRow(table, "Delivery Mode", emptyValue, allowMarkup: allowMarkup);
             }
 
-            AddRow(table, "Priority", props.Priority?.ToString() ?? "[dim]-[/]", allowMarkup: props.Priority == null);
-            AddRow(table, "Expiration", props.Expiration ?? "[dim]-[/]", allowMarkup: props.Expiration == null);
-            AddRow(table, "Reply To", props.ReplyTo ?? "[dim]-[/]", allowMarkup: props.ReplyTo == null);
-            AddRow(table, "Type", props.Type ?? "[dim]-[/]", allowMarkup: props.Type == null);
-            AddRow(table, "App ID", props.AppId ?? "[dim]-[/]", allowMarkup: props.AppId == null);
-            AddRow(table, "User ID", props.UserId ?? "[dim]-[/]", allowMarkup: props.UserId == null);
-            AddRow(table, "Cluster ID", props.ClusterId ?? "[dim]-[/]", allowMarkup: props.ClusterId == null);
+            AddRow(table, "Priority", props.Priority?.ToString() ?? emptyValue, allowMarkup: props.Priority == null && allowMarkup);
+            AddRow(table, "Expiration", props.Expiration ?? emptyValue, allowMarkup: props.Expiration == null && allowMarkup);
+            AddRow(table, "Reply To", props.ReplyTo ?? emptyValue, allowMarkup: props.ReplyTo == null && allowMarkup);
+            AddRow(table, "Type", props.Type ?? emptyValue, allowMarkup: props.Type == null && allowMarkup);
+            AddRow(table, "App ID", props.AppId ?? emptyValue, allowMarkup: props.AppId == null && allowMarkup);
+            AddRow(table, "User ID", props.UserId ?? emptyValue, allowMarkup: props.UserId == null && allowMarkup);
+            AddRow(table, "Cluster ID", props.ClusterId ?? emptyValue, allowMarkup: props.ClusterId == null && allowMarkup);
         }
     }
 
