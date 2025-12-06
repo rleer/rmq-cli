@@ -405,7 +405,7 @@ public class TextMessageFormatterTests
                                       5
                                       6
                                     ]
-                                    """);
+                                    """.TrimEnd());
         }
 
         [Fact]
@@ -435,7 +435,7 @@ public class TextMessageFormatterTests
                                       {name: Alice, age: 30}
                                       {name: Bob, age: 25}
                                     ]
-                                    """);
+                                    """.TrimEnd());
         }
 
         [Fact]
@@ -513,6 +513,7 @@ public class TextMessageFormatterTests
             // Act
             var result = TextMessageFormatter.FormatMessage(message);
 
+
             // Assert - Verify nested dictionary formatting (platform-independent)
             result.Should().Contain("""
                                     == Custom Headers ==
@@ -520,7 +521,7 @@ public class TextMessageFormatterTests
                                       user: {name: Alice, role: admin}
                                       timestamp: 1234567890
                                     }
-                                    """);
+                                    """.TrimEnd());
         }
 
         [Fact]
@@ -565,7 +566,7 @@ public class TextMessageFormatterTests
                                       }
                                       simpleKey: simpleValue
                                     }
-                                    """);
+                                    """.TrimEnd());
         }
 
         [Fact]
@@ -616,7 +617,7 @@ public class TextMessageFormatterTests
                                     Line 1
                                     Line 2
                                     Line 3
-                                    """);
+                                    """.TrimEnd());
         }
     }
 
