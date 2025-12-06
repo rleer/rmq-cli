@@ -28,9 +28,8 @@ public record MessageProperties
     /// </summary>
     public bool HasAnyProperty()
     {
-        return Type != null || MessageId != null || AppId != null || ClusterId != null ||
-               ContentType != null || ContentEncoding != null || CorrelationId != null ||
-               DeliveryMode != null || Expiration != null || Priority != null ||
-               ReplyTo != null || Timestamp != null || UserId != null;
+        return AppId != null || ClusterId != null || ContentType != null || ContentEncoding != null || CorrelationId != null || 
+               DeliveryMode != null || Expiration != null || MessageId != null || Priority != null || ReplyTo != null || 
+               Timestamp != null || Type != null || UserId != null;
     }
 }
