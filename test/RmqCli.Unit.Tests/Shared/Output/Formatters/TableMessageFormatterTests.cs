@@ -69,10 +69,20 @@ public class TableMessageFormatterTests
             var message = CreateRetrievedMessage("Test message body", exchange: "");
 
             // Act
-            var result = TableMessageFormatter.FormatMessage(message);
+            var result = TableMessageFormatter.FormatMessage(message, compact: true);
 
             // Assert
-            result.Should().Contain("-");
+            const string msg = """
+                               ╭─Message #1───────────────────────────────────────────────────────────────────╮
+                               │ Queue             test-queue                                                 │
+                               │ Routing Key       routing.key                                                │
+                               │ Exchange          -                                                          │
+                               │ Redelivered       No                                                         │
+                               │ ── Body (17 bytes) ───────────────────────────────────────────────────────── │
+                               │ Test message body                                                            │
+                               ╰──────────────────────────────────────────────────────────────────────────────╯
+                               """;
+            result.Should().Be(msg.TrimEnd());
         }
 
         [Fact]
@@ -124,7 +134,7 @@ public class TableMessageFormatterTests
             var result = TableMessageFormatter.FormatMessage(message);
 
             // Assert
-            result.Should().Contain("4 bytes");
+            result.Should().Contain("Body (4 bytes)");
         }
 
         [Fact]
@@ -134,11 +144,19 @@ public class TableMessageFormatterTests
             var message = CreateRetrievedMessage("");
 
             // Act
-            var result = TableMessageFormatter.FormatMessage(message);
+            var result = TableMessageFormatter.FormatMessage(message, compact: true);
 
             // Assert
-            result.Should().NotBeNullOrWhiteSpace();
-            result.Should().Contain("0 bytes");
+            const string msg = """
+                               ╭─Message #1───────────────────────────────────────────────────────────────────╮
+                               │ Queue             test-queue                                                 │
+                               │ Routing Key       routing.key                                                │
+                               │ Exchange          exchange                                                   │
+                               │ Redelivered       No                                                         │
+                               │ ── Body (0 bytes) ────────────────────────────────────────────────────────── │
+                               ╰──────────────────────────────────────────────────────────────────────────────╯
+                               """;
+            result.Should().Be(msg.TrimEnd());
         }
 
         [Fact]
@@ -164,12 +182,22 @@ public class TableMessageFormatterTests
             var message = CreateRetrievedMessage(multilineBody);
 
             // Act
-            var result = TableMessageFormatter.FormatMessage(message);
+            var result = TableMessageFormatter.FormatMessage(message, compact: true);
 
             // Assert
-            result.Should().Contain("Line 1");
-            result.Should().Contain("Line 2");
-            result.Should().Contain("Line 3");
+            const string msg = """
+                               ╭─Message #1───────────────────────────────────────────────────────────────────╮
+                               │ Queue             test-queue                                                 │
+                               │ Routing Key       routing.key                                                │
+                               │ Exchange          exchange                                                   │
+                               │ Redelivered       No                                                         │
+                               │ ── Body (20 bytes) ───────────────────────────────────────────────────────── │
+                               │ Line 1                                                                       │
+                               │ Line 2                                                                       │
+                               │ Line 3                                                                       │
+                               ╰──────────────────────────────────────────────────────────────────────────────╯
+                               """;
+            result.Should().Be(msg.TrimEnd());
         }
     }
 
@@ -449,12 +477,22 @@ public class TableMessageFormatterTests
             var message = CreateRetrievedMessage("test", props: props);
 
             // Act
-            var result = TableMessageFormatter.FormatMessage(message);
+            var result = TableMessageFormatter.FormatMessage(message, compact: true);
 
             // Assert
-            result.Should().Contain("Custom Headers");
-            result.Should().Contain("x-custom");
-            result.Should().Contain("custom-value");
+            const string msg = """
+                               ╭─Message #1───────────────────────────────────────────────────────────────────╮
+                               │ Queue             test-queue                                                 │
+                               │ Routing Key       routing.key                                                │
+                               │ Exchange          exchange                                                   │
+                               │ Redelivered       No                                                         │
+                               │ ── Custom Headers ────────────────────────────────────────────────────────── │
+                               │ x-custom          custom-value                                               │
+                               │ ── Body (4 bytes) ────────────────────────────────────────────────────────── │
+                               │ test                                                                         │
+                               ╰──────────────────────────────────────────────────────────────────────────────╯
+                               """;
+            result.Should().Be(msg.TrimEnd());
         }
 
         [Fact]
@@ -473,15 +511,24 @@ public class TableMessageFormatterTests
             var message = CreateRetrievedMessage("test", props: props);
 
             // Act
-            var result = TableMessageFormatter.FormatMessage(message);
+            var result = TableMessageFormatter.FormatMessage(message, compact: true);
 
             // Assert
-            result.Should().Contain("x-header-1");
-            result.Should().Contain("value1");
-            result.Should().Contain("x-header-2");
-            result.Should().Contain("value2");
-            result.Should().Contain("x-header-3");
-            result.Should().Contain("value3");
+            const string msg = """
+                               ╭─Message #1───────────────────────────────────────────────────────────────────╮
+                               │ Queue             test-queue                                                 │
+                               │ Routing Key       routing.key                                                │
+                               │ Exchange          exchange                                                   │
+                               │ Redelivered       No                                                         │
+                               │ ── Custom Headers ────────────────────────────────────────────────────────── │
+                               │ x-header-1        value1                                                     │
+                               │ x-header-2        value2                                                     │
+                               │ x-header-3        value3                                                     │
+                               │ ── Body (4 bytes) ────────────────────────────────────────────────────────── │
+                               │ test                                                                         │
+                               ╰──────────────────────────────────────────────────────────────────────────────╯
+                               """;
+            result.Should().Be(msg.TrimEnd());
         }
 
         [Fact]
@@ -491,10 +538,20 @@ public class TableMessageFormatterTests
             var message = CreateRetrievedMessage("test", props: null);
 
             // Act
-            var result = TableMessageFormatter.FormatMessage(message);
+            var result = TableMessageFormatter.FormatMessage(message, compact: true);
 
             // Assert
-            result.Should().NotContain("Custom Headers");
+            const string msg = """
+                               ╭─Message #1───────────────────────────────────────────────────────────────────╮
+                               │ Queue             test-queue                                                 │
+                               │ Routing Key       routing.key                                                │
+                               │ Exchange          exchange                                                   │
+                               │ Redelivered       No                                                         │
+                               │ ── Body (4 bytes) ────────────────────────────────────────────────────────── │
+                               │ test                                                                         │
+                               ╰──────────────────────────────────────────────────────────────────────────────╯
+                               """;
+            result.Should().Be(msg.TrimEnd());
         }
 
         [Fact]
@@ -508,9 +565,20 @@ public class TableMessageFormatterTests
             var message = CreateRetrievedMessage("test", props: props);
 
             // Act
-            var result = TableMessageFormatter.FormatMessage(message);
+            var result = TableMessageFormatter.FormatMessage(message, compact: true);
 
             // Assert
+            const string msg = """
+                               ╭─Message #1───────────────────────────────────────────────────────────────────╮
+                               │ Queue             test-queue                                                 │
+                               │ Routing Key       routing.key                                                │
+                               │ Exchange          exchange                                                   │
+                               │ Redelivered       No                                                         │
+                               │ ── Body (4 bytes) ────────────────────────────────────────────────────────── │
+                               │ test                                                                         │
+                               ╰──────────────────────────────────────────────────────────────────────────────╯
+                               """;
+            result.Should().Be(msg.TrimEnd());
             result.Should().NotContain("Custom Headers");
         }
     }
@@ -532,8 +600,19 @@ public class TableMessageFormatterTests
             var result = TableMessageFormatter.FormatMessage(message, compact: true);
 
             // Assert
-            result.Should().Contain("msg-123");
-            result.Should().Contain("Properties");
+            const string msg = """
+                               ╭─Message #1───────────────────────────────────────────────────────────────────╮
+                               │ Queue             test-queue                                                 │
+                               │ Routing Key       routing.key                                                │
+                               │ Exchange          exchange                                                   │
+                               │ Redelivered       No                                                         │
+                               │ ── Properties ────────────────────────────────────────────────────────────── │
+                               │ Message ID        msg-123                                                    │
+                               │ ── Body (4 bytes) ────────────────────────────────────────────────────────── │
+                               │ test                                                                         │
+                               ╰──────────────────────────────────────────────────────────────────────────────╯
+                               """;
+            result.Should().Be(msg.TrimEnd());
         }
 
         [Fact]
@@ -548,7 +627,17 @@ public class TableMessageFormatterTests
             var result = TableMessageFormatter.FormatMessage(message, compact: true);
 
             // Assert
-            result.Should().NotContain("Properties");
+            const string msg = """
+                               ╭─Message #1───────────────────────────────────────────────────────────────────╮
+                               │ Queue             test-queue                                                 │
+                               │ Routing Key       routing.key                                                │
+                               │ Exchange          exchange                                                   │
+                               │ Redelivered       No                                                         │
+                               │ ── Body (4 bytes) ────────────────────────────────────────────────────────── │
+                               │ test                                                                         │
+                               ╰──────────────────────────────────────────────────────────────────────────────╯
+                               """;
+            result.Should().Be(msg.TrimEnd());
         }
 
         [Fact]
@@ -566,9 +655,31 @@ public class TableMessageFormatterTests
             var result = TableMessageFormatter.FormatMessage(message, compact: false);
 
             // Assert
-            result.Should().Contain("msg-123");
-            // Should show Properties section even if some are missing
-            result.Should().Contain("Properties");
+            const string msg = """
+                               ╭─Message #1───────────────────────────────────────────────────────────────────╮
+                               │ Queue             test-queue                                                 │
+                               │ Routing Key       routing.key                                                │
+                               │ Exchange          exchange                                                   │
+                               │ Redelivered       No                                                         │
+                               │ ── Properties ────────────────────────────────────────────────────────────── │
+                               │ Message ID        msg-123                                                    │
+                               │ Correlation ID    -                                                          │
+                               │ Timestamp         -                                                          │
+                               │ Content Type      -                                                          │
+                               │ Content Encoding  -                                                          │
+                               │ Delivery Mode     -                                                          │
+                               │ Priority          -                                                          │
+                               │ Expiration        -                                                          │
+                               │ Reply To          -                                                          │
+                               │ Type              -                                                          │
+                               │ App ID            -                                                          │
+                               │ User ID           -                                                          │
+                               │ Cluster ID        -                                                          │
+                               │ ── Body (4 bytes) ────────────────────────────────────────────────────────── │
+                               │ test                                                                         │
+                               ╰──────────────────────────────────────────────────────────────────────────────╯
+                               """;
+            result.Should().Be(msg.TrimEnd());
         }
 
         [Fact]
@@ -582,35 +693,36 @@ public class TableMessageFormatterTests
             var result = TableMessageFormatter.FormatMessage(message, compact: false);
 
             // Assert
-            result.Should().Contain("Properties");
+            const string msg = """
+                               ╭─Message #1───────────────────────────────────────────────────────────────────╮
+                               │ Queue             test-queue                                                 │
+                               │ Routing Key       routing.key                                                │
+                               │ Exchange          exchange                                                   │
+                               │ Redelivered       No                                                         │
+                               │ ── Properties ────────────────────────────────────────────────────────────── │
+                               │ Message ID        -                                                          │
+                               │ Correlation ID    -                                                          │
+                               │ Timestamp         -                                                          │
+                               │ Content Type      -                                                          │
+                               │ Content Encoding  -                                                          │
+                               │ Delivery Mode     -                                                          │
+                               │ Priority          -                                                          │
+                               │ Expiration        -                                                          │
+                               │ Reply To          -                                                          │
+                               │ Type              -                                                          │
+                               │ App ID            -                                                          │
+                               │ User ID           -                                                          │
+                               │ Cluster ID        -                                                          │
+                               │ ── Body (4 bytes) ────────────────────────────────────────────────────────── │
+                               │ test                                                                         │
+                               ╰──────────────────────────────────────────────────────────────────────────────╯
+                               """;
+            result.Should().Be(msg.TrimEnd());
         }
     }
 
     public class FormatMessages
     {
-        [Fact]
-        public void FormatsMultipleMessages_SeparatedByBlankLine()
-        {
-            // Arrange
-            var messages = new[]
-            {
-                CreateRetrievedMessage("Message 1", deliveryTag: 1),
-                CreateRetrievedMessage("Message 2", deliveryTag: 2),
-                CreateRetrievedMessage("Message 3", deliveryTag: 3)
-            };
-
-            // Act
-            var result = TableMessageFormatter.FormatMessages(messages);
-
-            // Assert
-            result.Should().Contain("Message #1");
-            result.Should().Contain("Message #2");
-            result.Should().Contain("Message #3");
-            result.Should().Contain("Message 1");
-            result.Should().Contain("Message 2");
-            result.Should().Contain("Message 3");
-        }
-
         [Fact]
         public void ReturnsEmptyString_WhenNoMessages()
         {
@@ -634,8 +746,31 @@ public class TableMessageFormatterTests
             var result = TableMessageFormatter.FormatMessages(messages);
 
             // Assert
-            result.Should().Contain("Message #99");
-            result.Should().Contain("Only one");
+            const string msg = """
+                               ╭─Message #99──────────────────────────────────────────────────────────────────╮
+                               │ Queue             test-queue                                                 │
+                               │ Routing Key       routing.key                                                │
+                               │ Exchange          exchange                                                   │
+                               │ Redelivered       No                                                         │
+                               │ ── Properties ────────────────────────────────────────────────────────────── │
+                               │ Message ID        -                                                          │
+                               │ Correlation ID    -                                                          │
+                               │ Timestamp         -                                                          │
+                               │ Content Type      -                                                          │
+                               │ Content Encoding  -                                                          │
+                               │ Delivery Mode     -                                                          │
+                               │ Priority          -                                                          │
+                               │ Expiration        -                                                          │
+                               │ Reply To          -                                                          │
+                               │ Type              -                                                          │
+                               │ App ID            -                                                          │
+                               │ User ID           -                                                          │
+                               │ Cluster ID        -                                                          │
+                               │ ── Body (8 bytes) ────────────────────────────────────────────────────────── │
+                               │ Only one                                                                     │
+                               ╰──────────────────────────────────────────────────────────────────────────────╯
+                               """;
+            result.Should().Be(msg.TrimEnd());
         }
 
         [Fact]
@@ -656,9 +791,32 @@ public class TableMessageFormatterTests
             var result = TableMessageFormatter.FormatMessages(messages, compact: true);
 
             // Assert
-            result.Should().Contain("msg-1");
-            result.Should().Contain("Message #1");
-            result.Should().Contain("Message #2");
+            const string msg1 = """
+                                ╭─Message #1───────────────────────────────────────────────────────────────────╮
+                                │ Queue             test-queue                                                 │
+                                │ Routing Key       routing.key                                                │
+                                │ Exchange          exchange                                                   │
+                                │ Redelivered       No                                                         │
+                                │ ── Properties ────────────────────────────────────────────────────────────── │
+                                │ Message ID        msg-1                                                      │
+                                │ ── Body (5 bytes) ────────────────────────────────────────────────────────── │
+                                │ First                                                                        │
+                                ╰──────────────────────────────────────────────────────────────────────────────╯
+                                """;
+            const string msg2 = """
+                                ╭─Message #2───────────────────────────────────────────────────────────────────╮
+                                │ Queue             test-queue                                                 │
+                                │ Routing Key       routing.key                                                │
+                                │ Exchange          exchange                                                   │
+                                │ Redelivered       No                                                         │
+                                │ ── Properties ────────────────────────────────────────────────────────────── │
+                                │ Message ID        msg-1                                                      │
+                                │ ── Body (6 bytes) ────────────────────────────────────────────────────────── │
+                                │ Second                                                                       │
+                                ╰──────────────────────────────────────────────────────────────────────────────╯
+                                """;
+            result.Should().Contain(msg1.TrimEnd());
+            result.Should().Contain(msg2.TrimEnd());
         }
     }
 
