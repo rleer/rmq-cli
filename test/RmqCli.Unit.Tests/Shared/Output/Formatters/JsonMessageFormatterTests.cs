@@ -6,7 +6,7 @@ using RmqCli.Shared.Output;
 using RmqCli.Shared.Output.Formatters;
 using RmqCli.Unit.Tests.Helpers;
 
-namespace RmqCli.Unit.Tests.Infrastructure.Output.Formatters;
+namespace RmqCli.Unit.Tests.Shared.Output.Formatters;
 
 public class JsonMessageFormatterTests
 {
