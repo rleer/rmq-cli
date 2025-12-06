@@ -3,6 +3,7 @@ using RabbitMQ.Client;
 using RmqCli.Core.Models;
 using RmqCli.Shared.Output;
 using RmqCli.Shared.Output.Formatters;
+using RmqCli.Unit.Tests.Helpers;
 
 namespace RmqCli.Unit.Tests.Shared.Output.Formatters;
 
@@ -532,6 +533,45 @@ public class TableMessageFormatterTests
         }
 
         [Fact]
+        public void FormatsArrayWithComplexObjectsMultiLine()
+        {
+            // Arrange - Arrays containing complex objects are formatted multi-line
+            var props = Substitute.For<IReadOnlyBasicProperties>();
+            props.IsHeadersPresent().Returns(true);
+            props.Headers.Returns(new Dictionary<string, object?>
+            {
+                ["x-array-objects"] = new object[]
+                {
+                    new Dictionary<string, object> { ["name"] = "Alice", ["age"] = 30 },
+                    new Dictionary<string, object> { ["name"] = "Bob", ["age"] = 25 }
+                }
+            });
+
+            var message = CreateRetrievedMessage("test", props: props);
+
+            // Act
+            var result = TableMessageFormatter.FormatMessage(message, compact: true);
+
+            // Assert - Verify proper multi-line formatting with correct indentation (platform-independent)
+            const string msg = """
+                               ╭─Message #1───────────────────────────────────────────────────────────────────╮
+                               │ Queue             test-queue                                                 │
+                               │ Routing Key       routing.key                                                │
+                               │ Exchange          exchange                                                   │
+                               │ Redelivered       No                                                         │
+                               │ ── Custom Headers ────────────────────────────────────────────────────────── │
+                               │ x-array-objects   [                                                          │
+                               │                     {name: Alice, age: 30}                                   │
+                               │                     {name: Bob, age: 25}                                     │
+                               │                   ]                                                          │
+                               │ ── Body (4 bytes) ────────────────────────────────────────────────────────── │
+                               │ test                                                                         │
+                               ╰──────────────────────────────────────────────────────────────────────────────╯ 
+                               """;
+            result.Should().Be(msg.TrimEnd());
+        }
+
+        [Fact]
         public void DoesNotShowHeadersSection_WhenNoHeaders()
         {
             // Arrange
@@ -718,6 +758,37 @@ public class TableMessageFormatterTests
                                ╰──────────────────────────────────────────────────────────────────────────────╯
                                """;
             result.Should().Be(msg.TrimEnd());
+        }
+
+        [Fact]
+        public void CompactMode_ShowsAllProperties_WhenAllPropertiesSet()
+        {
+            // Arrange
+            var props = RabbitMessageTestHelper.CreateFullyPopulatedProperties();
+            var message = CreateRetrievedMessage("test", props: props);
+
+            // Act
+            var result = TableMessageFormatter.FormatMessage(message, compact: true);
+
+            // Assert
+            result.Should().Contain("""
+                                    │ ── Properties ────────────────────────────────────────────────────────────── │
+                                    │ Message ID        msg-001                                                    │
+                                    │ Correlation ID    corr-123                                                   │
+                                    │ Timestamp         2025-12-06 00:00:00 UTC                                    │
+                                    │ Content Type      application/json                                           │
+                                    │ Content Encoding  utf-8                                                      │
+                                    │ Delivery Mode     Persistent (2)                                             │
+                                    │ Priority          5                                                          │
+                                    │ Expiration        60000                                                      │
+                                    │ Reply To          reply-queue                                                │
+                                    │ Type              test.type                                                  │
+                                    │ App ID            test-app                                                   │
+                                    │ User ID           user-123                                                   │
+                                    │ Cluster ID        cluster-1                                                  │
+                                    │ ── Custom Headers ────────────────────────────────────────────────────────── │
+                                    │ x-custom          custom-value                                               │
+                                    """);
         }
     }
 

@@ -1,6 +1,7 @@
 using System.Text;
 using RabbitMQ.Client;
 using RmqCli.Shared.Output.Formatters;
+using RmqCli.Unit.Tests.Helpers;
 
 namespace RmqCli.Unit.Tests.Shared.Output.Formatters;
 
@@ -236,7 +237,7 @@ public class MessagePropertyExtractorTests
         public void ExtractsAllProperties_WhenAllPresent()
         {
             // Arrange
-            var props = CreateFullyPopulatedProperties();
+            var props = RabbitMessageTestHelper.CreateFullyPopulatedProperties();
 
             // Act
             var (result, _) = MessagePropertyExtractor.ExtractPropertiesAndHeaders(props);
@@ -602,54 +603,4 @@ public class MessagePropertyExtractorTests
             result.Timestamp.Should().Be(2000000000L);
         }
     }
-
-    #region Test Helpers
-
-    private static IReadOnlyBasicProperties CreateFullyPopulatedProperties()
-    {
-        var props = Substitute.For<IReadOnlyBasicProperties>();
-
-        props.IsAppIdPresent().Returns(true);
-        props.AppId.Returns("test-app");
-
-        props.IsClusterIdPresent().Returns(true);
-        props.ClusterId.Returns("cluster-1");
-
-        props.IsContentTypePresent().Returns(true);
-        props.ContentType.Returns("application/json");
-
-        props.IsContentEncodingPresent().Returns(true);
-        props.ContentEncoding.Returns("utf-8");
-
-        props.IsCorrelationIdPresent().Returns(true);
-        props.CorrelationId.Returns("corr-123");
-
-        props.IsDeliveryModePresent().Returns(true);
-        props.DeliveryMode.Returns(DeliveryModes.Persistent);
-
-        props.IsExpirationPresent().Returns(true);
-        props.Expiration.Returns("60000");
-
-        props.IsMessageIdPresent().Returns(true);
-        props.MessageId.Returns("msg-001");
-        
-        props.IsPriorityPresent().Returns(true);
-        props.Priority.Returns((byte)5);
-
-        props.IsReplyToPresent().Returns(true);
-        props.ReplyTo.Returns("reply-queue");
-
-        props.IsTimestampPresent().Returns(true);
-        props.Timestamp.Returns(new AmqpTimestamp(DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
-
-        props.IsTypePresent().Returns(true);
-        props.Type.Returns("test.type");
-        
-        props.IsUserIdPresent().Returns(true);
-        props.UserId.Returns("user-123");
-
-        return props;
-    }
-
-    #endregion
 }
