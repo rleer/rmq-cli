@@ -638,7 +638,7 @@ public class TextMessageFormatterTests
         public void PreservesNewlinesInBody()
         {
             // Arrange - Use \n explicitly for consistent byte count across platforms
-            var multilineBody = "Line 1\nLine 2\nLine 3";
+            var multilineBody = $"Line 1{Environment.NewLine}Line 2{Environment.NewLine}Line 3";
             var message = CreateRetrievedMessage(multilineBody);
 
             // Act
