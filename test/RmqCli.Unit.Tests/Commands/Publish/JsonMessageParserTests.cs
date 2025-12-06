@@ -44,9 +44,9 @@ public class JsonMessageParserTests
             // Assert
             message.Body.Should().Be("Test message");
             message.Properties.Should().NotBeNull();
-            message.Properties!.ContentType.Should().Be("application/json");
-            message.Properties!.CorrelationId.Should().Be("123-456");
-            message.Properties!.DeliveryMode.Should().Be(DeliveryModes.Persistent);
+            message.Properties.ContentType.Should().Be("application/json");
+            message.Properties.CorrelationId.Should().Be("123-456");
+            message.Properties.DeliveryMode.Should().Be(DeliveryModes.Persistent);
         }
 
         [Fact]
@@ -70,7 +70,8 @@ public class JsonMessageParserTests
             message.Body.Should().Be("Test message");
             message.Headers.Should().NotBeNull();
             message.Headers.Should().HaveCount(2);
-            message.Headers!["x-custom-header"].Should().Be("value");
+            message.Headers["x-custom-header"].Should().Be("value");
+            message.Headers["x-priority"].Should().Be(5);
         }
 
         [Fact]
@@ -91,6 +92,7 @@ public class JsonMessageParserTests
                         "replyTo": "reply-queue",
                         "type": "test-type",
                         "userId": "test-user",
+                        "timestamp": 1625077765,
                         "clusterId": "cluster-1"
                     }
                 }
@@ -101,7 +103,8 @@ public class JsonMessageParserTests
 
             // Assert
             message.Body.Should().Be("Complete message");
-            var props = message.Properties!;
+            var props = message.Properties;
+            props.Should().NotBeNull();
             props.AppId.Should().Be("test-app");
             props.ContentType.Should().Be("text/plain");
             props.ContentEncoding.Should().Be("utf-8");
@@ -112,6 +115,7 @@ public class JsonMessageParserTests
             props.ReplyTo.Should().Be("reply-queue");
             props.Type.Should().Be("test-type");
             props.UserId.Should().Be("test-user");
+            props.Timestamp.Should().Be(1625077765);
             props.ClusterId.Should().Be("cluster-1");
         }
 
@@ -132,8 +136,9 @@ public class JsonMessageParserTests
             var message = JsonMessageParser.ParseSingle(json);
 
             // Assert
-            message.Headers!["stringHeader"].Should().BeOfType<string>();
-            message.Headers!["stringHeader"].Should().Be("text value");
+            message.Headers.Should().NotBeNull();
+            message.Headers["stringHeader"].Should().BeOfType<string>();
+            message.Headers["stringHeader"].Should().Be("text value");
         }
 
         [Fact]
@@ -153,9 +158,10 @@ public class JsonMessageParserTests
             var message = JsonMessageParser.ParseSingle(json);
 
             // Assert
+            message.Headers.Should().NotBeNull();
             // System.Text.Json deserializes numbers as double when using Dictionary<string, object>
-            message.Headers!["intHeader"].Should().BeOfType<double>();
-            message.Headers!["intHeader"].Should().Be(42.0);
+            message.Headers["intHeader"].Should().BeOfType<double>();
+            message.Headers["intHeader"].Should().Be(42.0);
         }
 
         [Fact]
@@ -175,8 +181,9 @@ public class JsonMessageParserTests
             var message = JsonMessageParser.ParseSingle(json);
 
             // Assert
-            message.Headers!["doubleHeader"].Should().BeOfType<double>();
-            message.Headers!["doubleHeader"].Should().Be(3.14);
+            message.Headers.Should().NotBeNull();
+            message.Headers["doubleHeader"].Should().BeOfType<double>();
+            message.Headers["doubleHeader"].Should().Be(3.14);
         }
 
         [Fact]
@@ -196,8 +203,9 @@ public class JsonMessageParserTests
             var message = JsonMessageParser.ParseSingle(json);
 
             // Assert
-            message.Headers!["boolHeader"].Should().BeOfType<bool>();
-            message.Headers!["boolHeader"].Should().Be(true);
+            message.Headers.Should().NotBeNull();
+            message.Headers["boolHeader"].Should().BeOfType<bool>();
+            message.Headers["boolHeader"].Should().Be(true);
         }
 
         [Fact]
@@ -220,7 +228,7 @@ public class JsonMessageParserTests
             // Null values in JSON are deserialized as null (not JsonElement)
             message.Headers.Should().NotBeNull();
             message.Headers.Should().ContainKey("nullHeader");
-            message.Headers!["nullHeader"].Should().BeNull();
+            message.Headers["nullHeader"].Should().BeNull();
         }
 
         [Fact]
@@ -244,13 +252,14 @@ public class JsonMessageParserTests
             var message = JsonMessageParser.ParseSingle(json);
 
             // Assert
+            message.Headers.Should().NotBeNull();
             message.Headers.Should().HaveCount(5);
-            message.Headers!["string"].Should().Be("text");
+            message.Headers["string"].Should().Be("text");
             // System.Text.Json deserializes all numbers as double
-            message.Headers!["int"].Should().Be(100.0);
-            message.Headers!["double"].Should().Be(2.5);
-            message.Headers!["bool"].Should().Be(false);
-            message.Headers!["null"].Should().BeNull();
+            message.Headers["int"].Should().Be(100.0);
+            message.Headers["double"].Should().Be(2.5);
+            message.Headers["bool"].Should().Be(false);
+            message.Headers["null"].Should().BeNull();
         }
 
         [Fact]
