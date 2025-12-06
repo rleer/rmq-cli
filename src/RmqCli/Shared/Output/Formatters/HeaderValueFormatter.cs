@@ -96,6 +96,6 @@ public static class HeaderValueFormatter
             lines.Add($"{indentStr}{formattedItem}");
         }
         lines.Add(new string(' ', indent * 2) + "]");
-        return string.Join("\n", lines);
+        return string.Join(Environment.NewLine, lines);
     }
 }
