@@ -138,7 +138,8 @@ public static class TextMessageFormatter
         return mode switch
         {
             DeliveryModes.Transient => "Non-persistent (1)",
-            DeliveryModes.Persistent => "Persistent (2)"
+            DeliveryModes.Persistent => "Persistent (2)",
+            _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, null)
         };
     }
 
