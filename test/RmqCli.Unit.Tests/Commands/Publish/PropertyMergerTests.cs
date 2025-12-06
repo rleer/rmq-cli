@@ -29,9 +29,9 @@ public class PropertyMergerTests
 
             // Assert
             merged.Properties.Should().NotBeNull();
-            merged.Properties!.ContentType.Should().Be("application/json");
-            merged.Properties!.CorrelationId.Should().Be("json-123");
-            merged.Properties!.DeliveryMode.Should().Be(DeliveryModes.Persistent);
+            merged.Properties.ContentType.Should().Be("application/json");
+            merged.Properties.CorrelationId.Should().Be("json-123");
+            merged.Properties.DeliveryMode.Should().Be(DeliveryModes.Persistent);
         }
 
         [Fact]
@@ -51,9 +51,9 @@ public class PropertyMergerTests
 
             // Assert
             merged.Properties.Should().NotBeNull();
-            merged.Properties!.ContentType.Should().Be("text/plain");
-            merged.Properties!.CorrelationId.Should().Be("cli-456");
-            merged.Properties!.DeliveryMode.Should().Be(DeliveryModes.Transient);
+            merged.Properties.ContentType.Should().Be("text/plain");
+            merged.Properties.CorrelationId.Should().Be("cli-456");
+            merged.Properties.DeliveryMode.Should().Be(DeliveryModes.Transient);
         }
 
         [Fact]
@@ -80,9 +80,10 @@ public class PropertyMergerTests
             var merged = PropertyMerger.Merge(jsonMessage, cliOptions);
 
             // Assert
-            merged.Properties!.ContentType.Should().Be("text/plain", "CLI should override JSON");
-            merged.Properties!.CorrelationId.Should().Be("cli-456", "CLI should override JSON");
-            merged.Properties!.DeliveryMode.Should().Be(DeliveryModes.Persistent, "JSON value should remain when CLI is null");
+            merged.Properties.Should().NotBeNull();
+            merged.Properties.ContentType.Should().Be("text/plain", "CLI should override JSON");
+            merged.Properties.CorrelationId.Should().Be("cli-456", "CLI should override JSON");
+            merged.Properties.DeliveryMode.Should().Be(DeliveryModes.Persistent, "JSON value should remain when CLI is null");
         }
 
         [Fact]
@@ -170,8 +171,8 @@ public class PropertyMergerTests
             // Assert
             merged.Headers.Should().NotBeNull();
             merged.Headers.Should().HaveCount(2);
-            merged.Headers!["x-json-header"].Should().Be("json-value");
-            merged.Headers!["x-priority"].Should().Be(5);
+            merged.Headers["x-json-header"].Should().Be("json-value");
+            merged.Headers["x-priority"].Should().Be(5);
         }
 
         [Fact]
@@ -194,8 +195,8 @@ public class PropertyMergerTests
             // Assert
             merged.Headers.Should().NotBeNull();
             merged.Headers.Should().HaveCount(2);
-            merged.Headers!["x-cli-header"].Should().Be("cli-value");
-            merged.Headers!["x-count"].Should().Be(10);
+            merged.Headers["x-cli-header"].Should().Be("cli-value");
+            merged.Headers["x-count"].Should().Be(10);
         }
 
         [Fact]
@@ -225,9 +226,9 @@ public class PropertyMergerTests
 
             // Assert
             merged.Headers.Should().HaveCount(3);
-            merged.Headers!["x-header"].Should().Be("cli-value", "CLI should override JSON for same key");
-            merged.Headers!["x-json-only"].Should().Be("json", "JSON-only header should remain");
-            merged.Headers!["x-cli-only"].Should().Be("cli", "CLI-only header should be added");
+            merged.Headers["x-header"].Should().Be("cli-value", "CLI should override JSON for same key");
+            merged.Headers["x-json-only"].Should().Be("json", "JSON-only header should remain");
+            merged.Headers["x-cli-only"].Should().Be("cli", "CLI-only header should be added");
         }
 
         [Fact]
@@ -257,10 +258,10 @@ public class PropertyMergerTests
 
             // Assert
             merged.Headers.Should().HaveCount(4);
-            merged.Headers!["x-json-1"].Should().Be("value1");
-            merged.Headers!["x-json-2"].Should().Be("value2");
-            merged.Headers!["x-cli-1"].Should().Be("value3");
-            merged.Headers!["x-cli-2"].Should().Be("value4");
+            merged.Headers["x-json-1"].Should().Be("value1");
+            merged.Headers["x-json-2"].Should().Be("value2");
+            merged.Headers["x-cli-1"].Should().Be("value3");
+            merged.Headers["x-cli-2"].Should().Be("value4");
         }
 
         [Fact]
@@ -332,12 +333,13 @@ public class PropertyMergerTests
             var merged = PropertyMerger.Merge(jsonMessage, cliOptions);
 
             // Assert
-            merged.Properties!.ContentType.Should().Be("application/json");
-            merged.Properties!.CorrelationId.Should().Be("json-123");
-            merged.Properties!.Priority.Should().Be(5);
+            merged.Properties.Should().NotBeNull();
+            merged.Properties.ContentType.Should().Be("application/json");
+            merged.Properties.CorrelationId.Should().Be("json-123");
+            merged.Properties.Priority.Should().Be(5);
             merged.Headers.Should().HaveCount(2);
-            merged.Headers!["x-json-header"].Should().Be("json");
-            merged.Headers!["x-cli-header"].Should().Be("cli");
+            merged.Headers["x-json-header"].Should().Be("json");
+            merged.Headers["x-cli-header"].Should().Be("cli");
         }
 
         [Fact]
@@ -394,13 +396,14 @@ public class PropertyMergerTests
             var merged = PropertyMerger.Merge(jsonMessage, cliOptions);
 
             // Assert
-            merged.Properties!.ContentType.Should().Be("text/plain");
-            merged.Properties!.CorrelationId.Should().Be("cli-corr");
-            merged.Properties!.DeliveryMode.Should().Be(DeliveryModes.Persistent);
-            merged.Properties!.Priority.Should().Be(9);
+            merged.Properties.Should().NotBeNull();
+            merged.Properties.ContentType.Should().Be("text/plain");
+            merged.Properties.CorrelationId.Should().Be("cli-corr");
+            merged.Properties.DeliveryMode.Should().Be(DeliveryModes.Persistent);
+            merged.Properties.Priority.Should().Be(9);
             merged.Headers.Should().HaveCount(2);
-            merged.Headers!["x-shared"].Should().Be("cli-value");
-            merged.Headers!["x-new"].Should().Be("new-value");
+            merged.Headers["x-shared"].Should().Be("cli-value");
+            merged.Headers["x-new"].Should().Be("new-value");
         }
 
         [Fact]
@@ -427,10 +430,12 @@ public class PropertyMergerTests
             var merged = PropertyMerger.Merge(jsonMessage, cliOptions);
 
             // Assert
-            merged.Properties!.ContentType.Should().Be("application/json");
-            merged.Properties!.CorrelationId.Should().Be("json-123");
-            merged.Properties!.DeliveryMode.Should().Be(DeliveryModes.Persistent);
-            merged.Headers!["x-header"].Should().Be("value");
+            merged.Properties.Should().NotBeNull();
+            merged.Properties.ContentType.Should().Be("application/json");
+            merged.Properties.CorrelationId.Should().Be("json-123");
+            merged.Properties.DeliveryMode.Should().Be(DeliveryModes.Persistent);
+            merged.Headers.Should().HaveCount(1);
+            merged.Headers["x-header"].Should().Be("value");
         }
     }
 
@@ -472,12 +477,14 @@ public class PropertyMergerTests
             var merged = PropertyMerger.Merge(jsonMessage, cliOptions);
 
             // Assert - original should be unchanged
-            jsonMessage.Properties!.ContentType.Should().Be("application/json");
-            jsonMessage.Headers!["x-header"].Should().Be("value");
+            jsonMessage.Properties.ContentType.Should().Be("application/json");
+            jsonMessage.Headers["x-header"].Should().Be("value");
 
             // Merged should have CLI values
-            merged.Properties!.ContentType.Should().Be("text/plain");
-            merged.Headers!["x-header"].Should().Be("new-value");
+            merged.Properties.Should().NotBeNull();
+            merged.Properties.ContentType.Should().Be("text/plain");
+            merged.Headers.Should().HaveCount(1);
+            merged.Headers["x-header"].Should().Be("new-value");
         }
 
         [Fact]
@@ -503,8 +510,9 @@ public class PropertyMergerTests
             var merged = PropertyMerger.Merge(jsonMessage, cliOptions);
 
             // Assert
-            merged.Properties!.DeliveryMode.Should().Be(DeliveryModes.Persistent, "CLI should override");
-            merged.Properties!.Priority.Should().Be(3, "JSON value should remain when CLI is null");
+            merged.Properties.Should().NotBeNull();
+            merged.Properties.DeliveryMode.Should().Be(DeliveryModes.Persistent, "CLI should override");
+            merged.Properties.Priority.Should().Be(3, "JSON value should remain when CLI is null");
         }
     }
 }
