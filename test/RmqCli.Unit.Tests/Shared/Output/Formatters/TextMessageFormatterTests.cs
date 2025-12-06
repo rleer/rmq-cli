@@ -392,20 +392,29 @@ public class TextMessageFormatterTests
             var message = CreateRetrievedMessage("test", props: props);
 
             // Act
-            var result = TextMessageFormatter.FormatMessage(message);
+            var result = TextMessageFormatter.FormatMessage(message, compact: true);
+
 
             // Assert - Verify multi-line array with proper indentation (platform-independent)
-            result.Should().Contain("""
-                                    == Custom Headers ==
-                                    x-large-array: [
-                                      1
-                                      2
-                                      3
-                                      4
-                                      5
-                                      6
-                                    ]
-                                    """.TrimEnd());
+            const string msg = """
+                               == Message #1 ==
+                               Queue: test-queue
+                               Routing Key: routing.key
+                               Exchange: exchange
+                               Redelivered: No
+                               == Custom Headers ==
+                               x-large-array: [
+                                 1
+                                 2
+                                 3
+                                 4
+                                 5
+                                 6
+                               ]
+                               == Body (4 bytes) ==
+                               test
+                               """;
+            result.TrimEnd().Should().Be(msg);
         }
 
         [Fact]
@@ -426,16 +435,24 @@ public class TextMessageFormatterTests
             var message = CreateRetrievedMessage("test", props: props);
 
             // Act
-            var result = TextMessageFormatter.FormatMessage(message);
+            var result = TextMessageFormatter.FormatMessage(message, compact: true);
 
             // Assert - Verify proper multi-line formatting with correct indentation (platform-independent)
-            result.Should().Contain("""
-                                    == Custom Headers ==
-                                    x-array-of-objects: [
-                                      {name: Alice, age: 30}
-                                      {name: Bob, age: 25}
-                                    ]
-                                    """.TrimEnd());
+            const string msg = """
+                               == Message #1 ==
+                               Queue: test-queue
+                               Routing Key: routing.key
+                               Exchange: exchange
+                               Redelivered: No
+                               == Custom Headers ==
+                               x-array-of-objects: [
+                                 {name: Alice, age: 30}
+                                 {name: Bob, age: 25}
+                               ]
+                               == Body (4 bytes) ==
+                               test
+                               """;
+            result.TrimEnd().Should().Be(msg);
         }
 
         [Fact]
@@ -511,17 +528,25 @@ public class TextMessageFormatterTests
             var message = CreateRetrievedMessage("test", props: props);
 
             // Act
-            var result = TextMessageFormatter.FormatMessage(message);
+            var result = TextMessageFormatter.FormatMessage(message, compact: true);
 
 
             // Assert - Verify nested dictionary formatting (platform-independent)
-            result.Should().Contain("""
-                                    == Custom Headers ==
-                                    x-nested: {
-                                      user: {name: Alice, role: admin}
-                                      timestamp: 1234567890
-                                    }
-                                    """.TrimEnd());
+            const string msg = """
+                               == Message #1 ==
+                               Queue: test-queue
+                               Routing Key: routing.key
+                               Exchange: exchange
+                               Redelivered: No
+                               == Custom Headers ==
+                               x-nested: {
+                                 user: {name: Alice, role: admin}
+                                 timestamp: 1234567890
+                               }
+                               == Body (4 bytes) ==
+                               test
+                               """;
+            result.TrimEnd().Should().Be(msg);
         }
 
         [Fact]
@@ -555,18 +580,26 @@ public class TextMessageFormatterTests
             var result = TextMessageFormatter.FormatMessage(message, compact: true);
 
             // Assert - Verify proper indentation at each nesting level (platform-independent)
-            result.Should().Contain("""
-                                    == Custom Headers ==
-                                    x-deep: {
-                                      level1: {
-                                        level2: {
-                                          level3: {value: deep-value}
-                                        }
-                                        anotherKey: anotherValue
-                                      }
-                                      simpleKey: simpleValue
-                                    }
-                                    """.TrimEnd());
+            const string msg = """
+                               == Message #1 ==
+                               Queue: test-queue
+                               Routing Key: routing.key
+                               Exchange: exchange
+                               Redelivered: No
+                               == Custom Headers ==
+                               x-deep: {
+                                 level1: {
+                                   level2: {
+                                     level3: {value: deep-value}
+                                   }
+                                   anotherKey: anotherValue
+                                 }
+                                 simpleKey: simpleValue
+                               }
+                               == Body (4 bytes) ==
+                               test
+                               """;
+            result.TrimEnd().Should().Be(msg);
         }
 
         [Fact]
@@ -609,15 +642,21 @@ public class TextMessageFormatterTests
             var message = CreateRetrievedMessage(multilineBody);
 
             // Act
-            var result = TextMessageFormatter.FormatMessage(message);
+            var result = TextMessageFormatter.FormatMessage(message, compact: true);
 
             // Assert - Platform-independent check
-            result.Should().Contain("""
-                                    == Body (20 bytes) ==
-                                    Line 1
-                                    Line 2
-                                    Line 3
-                                    """.TrimEnd());
+            const string msg = """
+                               == Message #1 ==
+                               Queue: test-queue
+                               Routing Key: routing.key
+                               Exchange: exchange
+                               Redelivered: No
+                               == Body (20 bytes) ==
+                               Line 1
+                               Line 2
+                               Line 3
+                               """;
+            result.TrimEnd().Should().Be(msg);
         }
     }
 
