@@ -24,8 +24,6 @@ public static class MessagePropertyExtractor
 
         var properties = new MessageProperties
         {
-            Type = props.IsTypePresent() ? props.Type : null,
-            MessageId = props.IsMessageIdPresent() ? props.MessageId : null,
             AppId = props.IsAppIdPresent() ? props.AppId : null,
             ClusterId = props.IsClusterIdPresent() ? props.ClusterId : null,
             ContentType = props.IsContentTypePresent() ? props.ContentType : null,
@@ -33,8 +31,10 @@ public static class MessagePropertyExtractor
             CorrelationId = props.IsCorrelationIdPresent() ? props.CorrelationId : null,
             DeliveryMode = props.IsDeliveryModePresent() ? props.DeliveryMode : null,
             Expiration = props.IsExpirationPresent() ? props.Expiration : null,
+            MessageId = props.IsMessageIdPresent() ? props.MessageId : null,
             Priority = props.IsPriorityPresent() ? props.Priority : null,
             ReplyTo = props.IsReplyToPresent() ? props.ReplyTo : null,
+            Type = props.IsTypePresent() ? props.Type : null,
             UserId = props.IsUserIdPresent() ? props.UserId : null,
             Timestamp = props.IsTimestampPresent()
                 ? props.Timestamp.UnixTime
@@ -106,7 +106,7 @@ public static class MessagePropertyExtractor
     }
 
     /// <summary>
-    /// Formats binary data description. Can be customized per output format.
+    /// Formats binary data description
     /// </summary>
     private static string FormatBinaryData(int length)
     {
