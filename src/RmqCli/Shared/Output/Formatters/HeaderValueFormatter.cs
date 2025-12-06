@@ -30,7 +30,7 @@ public static class HeaderValueFormatter
 
             // Handle arrays and enumerables
             IEnumerable<object> enumerable when enumerable.Any() => FormatArray(enumerable.ToArray(), indent),
-            IEnumerable<object> _ => "[]",
+            IEnumerable<object> => "[]",
 
             // Handle primitives
             _ => value.ToString() ?? "-"

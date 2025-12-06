@@ -217,8 +217,7 @@ public static class TableMessageFormatter
         return mode switch
         {
             DeliveryModes.Transient => "Non-persistent (1)",
-            DeliveryModes.Persistent => "Persistent (2)",
-            _ => mode.ToString()
+            DeliveryModes.Persistent => "Persistent (2)"
         };
     }
 
