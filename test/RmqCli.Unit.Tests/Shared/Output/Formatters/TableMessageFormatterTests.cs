@@ -5,7 +5,6 @@ using RmqCli.Shared.Output;
 using RmqCli.Shared.Output.Formatters;
 using RmqCli.Unit.Tests.Helpers;
 using Spectre.Console;
-using Xunit.Abstractions;
 
 namespace RmqCli.Unit.Tests.Shared.Output.Formatters;
 
@@ -466,12 +465,6 @@ public class TableMessageFormatterTests
 
     public class FormatMessageWithHeaders
     {
-        private readonly ITestOutputHelper _output;
-
-        public FormatMessageWithHeaders(ITestOutputHelper output)
-        {
-            _output = output;
-        }
         [Fact]
         public void ShowsCustomHeadersSection_WhenHeadersExist()
         {
@@ -587,7 +580,7 @@ public class TableMessageFormatterTests
 
             // Act
             var result = TableMessageFormatter.FormatMessage(message, compact: true, AnsiSupport.No);
-            _output.WriteLine(result);
+
             // Assert
             const string msg = """
                                ╭─Message #1───────────────────────────────────────────────────────────────────╮
@@ -614,8 +607,7 @@ public class TableMessageFormatterTests
 
             // Act
             var result = TableMessageFormatter.FormatMessage(message, compact: true, AnsiSupport.No);
-            _output.WriteLine(result);
-            
+
             // Assert
             const string msg = """
                                ╭─Message #1───────────────────────────────────────────────────────────────────╮
@@ -634,11 +626,6 @@ public class TableMessageFormatterTests
 
     public class FormatMessageCompactMode
     {
-        private readonly ITestOutputHelper _output;
-        public FormatMessageCompactMode(ITestOutputHelper output)
-        {
-            _output = output;
-        }
         [Fact]
         public void CompactMode_ShowsOnlyPropertiesWithValues()
         {
@@ -652,8 +639,7 @@ public class TableMessageFormatterTests
 
             // Act
             var result = TableMessageFormatter.FormatMessage(message, compact: true, AnsiSupport.No);
-            _output.WriteLine(result);
-            
+
             // Assert
             const string msg = """
                                ╭─Message #1───────────────────────────────────────────────────────────────────╮
@@ -680,7 +666,6 @@ public class TableMessageFormatterTests
 
             // Act
             var result = TableMessageFormatter.FormatMessage(message, compact: true, AnsiSupport.No);
-            _output.WriteLine(result);
 
             // Assert
             const string msg = """
