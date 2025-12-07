@@ -439,7 +439,7 @@ public class FileOutputTests
             result.ProcessedCount.Should().BeLessThan(totalMessages, "cancellation should stop processing before all messages are consumed");
             _output.WriteLine($"Processed {result.ProcessedCount} messages before cancellation.");
         }
-        
+
         [Theory]
         [InlineData(2)] // Single file
         [InlineData(1)] // Rotating files
@@ -447,12 +447,12 @@ public class FileOutputTests
         {
             // Arrange
             var logger = new NullLogger<FileOutput>();
-            // Use a valid path, but trigger error during processing
             var outputFile = new FileInfo(Path.Combine(_tempDir, "output.txt"));
-        
             var fileConfig = new FileConfig { MessagesPerFile = messagesPerFile };
             // Use an unsupported format to trigger error
-            var output = new FileOutput(logger, new OutputOptions { Format = (OutputFormat)3, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 2);
+            var output = new FileOutput(logger,
+                new OutputOptions { Format = (OutputFormat)3, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false },
+                fileConfig, messageCount: 2);
 
             var messageChannel = Channel.CreateUnbounded<RetrievedMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
