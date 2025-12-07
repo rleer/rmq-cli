@@ -5,8 +5,22 @@ namespace RmqCli.Integration.Tests.Infrastructure.Configuration;
 
 public class TomlConfigurationHelperTests
 {
-    public class GetUserConfigFilePath
+    [Collection("Configuration Helpers Tests")]
+    public class GetUserConfigFilePath : IDisposable
     {
+        public GetUserConfigFilePath()
+        {
+            // Ensure no env var override is active from previous tests
+            Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", null);
+            Environment.SetEnvironmentVariable("RMQCLI_SYSTEM_CONFIG_PATH", null);
+        }
+
+        public void Dispose()
+        {
+            Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", null);
+            Environment.SetEnvironmentVariable("RMQCLI_SYSTEM_CONFIG_PATH", null);
+        }
+
         [Fact]
         public void ReturnsPath_WithConfigTomlFileName()
         {
@@ -49,8 +63,22 @@ public class TomlConfigurationHelperTests
         }
     }
 
-    public class GetSystemConfigFilePath
+    [Collection("Configuration Helpers Tests")]
+    public class GetSystemConfigFilePath : IDisposable
     {
+        public GetSystemConfigFilePath()
+        {
+            // Ensure no env var override is active from previous tests
+            Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", null);
+            Environment.SetEnvironmentVariable("RMQCLI_SYSTEM_CONFIG_PATH", null);
+        }
+
+        public void Dispose()
+        {
+            Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", null);
+            Environment.SetEnvironmentVariable("RMQCLI_SYSTEM_CONFIG_PATH", null);
+        }
+
         [Fact]
         public void ReturnsPath_WithConfigTomlFileName()
         {
@@ -104,8 +132,16 @@ public class TomlConfigurationHelperTests
         }
     }
 
+    [Collection("Configuration Helpers Tests")]
     public class EnvironmentVariableOverrides : IDisposable
     {
+        public EnvironmentVariableOverrides()
+        {
+            // Ensure no env var override is active from previous tests
+            Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", null);
+            Environment.SetEnvironmentVariable("RMQCLI_SYSTEM_CONFIG_PATH", null);
+        }
+
         public void Dispose()
         {
             Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", null);
@@ -142,6 +178,7 @@ public class TomlConfigurationHelperTests
         }
     }
 
+    [Collection("Configuration Helpers Tests")]
     public class DefaultConfigGeneration : IDisposable
     {
         private readonly string _tempDir;
@@ -213,8 +250,22 @@ public class TomlConfigurationHelperTests
         }
     }
 
-    public class PlatformSpecificBehavior
+    [Collection("Configuration Helpers Tests")]
+    public class PlatformSpecificBehavior : IDisposable
     {
+        public PlatformSpecificBehavior()
+        {
+            // Ensure no env var override is active from previous tests
+            Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", null);
+            Environment.SetEnvironmentVariable("RMQCLI_SYSTEM_CONFIG_PATH", null);
+        }
+
+        public void Dispose()
+        {
+            Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", null);
+            Environment.SetEnvironmentVariable("RMQCLI_SYSTEM_CONFIG_PATH", null);
+        }
+
         [Fact]
         public void OnUnix_ReturnsPathInDotConfigDirectory()
         {
