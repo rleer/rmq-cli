@@ -280,6 +280,7 @@ public class TomlConfigurationProviderTests
                 Password = "guest"
                 Exchange = "amq.direct"
                 ClientName = "rmq-cli-tool"
+                UseTls = false
 
                 [FileConfig]
                 MessagesPerFile = 10000
@@ -308,6 +309,8 @@ public class TomlConfigurationProviderTests
             exchange.Should().Be("amq.direct");
             provider.TryGet("RabbitMq:ClientName", out var clientName).Should().BeTrue();
             clientName.Should().Be("rmq-cli-tool");
+            provider.TryGet("RabbitMq:UseTls", out var useTls).Should().BeTrue();
+            useTls.Should().Be("False");
             provider.TryGet("FileConfig:MessagesPerFile", out var messagesPerFile).Should().BeTrue();
             messagesPerFile.Should().Be("10000");
         }

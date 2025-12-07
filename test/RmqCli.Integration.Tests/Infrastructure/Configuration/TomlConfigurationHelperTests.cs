@@ -104,20 +104,92 @@ public class TomlConfigurationHelperTests
         }
     }
 
-    public class DefaultConfigGeneration
+    public class EnvironmentVariableOverrides : IDisposable
     {
+        public void Dispose()
+        {
+            Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", null);
+            Environment.SetEnvironmentVariable("RMQCLI_SYSTEM_CONFIG_PATH", null);
+        }
+
+        [Fact]
+        public void GetUserConfigFilePath_RespectsEnvVar()
+        {
+            // Arrange
+            var expectedPath = "/tmp/custom/user/config.toml";
+            var envPath = "/tmp/custom/user";
+            Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", envPath);
+
+            // Act
+            var path = TomlConfigurationHelper.GetUserConfigFilePath();
+
+            // Assert
+            path.Should().Be(expectedPath);
+        }
+
+        [Fact]
+        public void GetSystemConfigFilePath_RespectsEnvVar()
+        {
+            // Arrange
+            var expectedPath = "/tmp/custom/system/config.toml";
+            Environment.SetEnvironmentVariable("RMQCLI_SYSTEM_CONFIG_PATH", expectedPath);
+
+            // Act
+            var path = TomlConfigurationHelper.GetSystemConfigFilePath();
+
+            // Assert
+            path.Should().Be(expectedPath);
+        }
+    }
+
+    public class DefaultConfigGeneration : IDisposable
+    {
+        private readonly string _tempDir;
+
+        public DefaultConfigGeneration()
+        {
+            _tempDir = Path.Combine(Path.GetTempPath(), $"rmq-helper-tests-{Guid.NewGuid()}");
+            Directory.CreateDirectory(_tempDir);
+            Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", _tempDir);
+        }
+
+        public void Dispose()
+        {
+            Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", null);
+            if (Directory.Exists(_tempDir))
+            {
+                Directory.Delete(_tempDir, recursive: true);
+            }
+        }
+
         [Fact]
         public void CreatesConfigFile_WhenNotExists()
         {
             // Arrange
             var userConfigPath = TomlConfigurationHelper.GetUserConfigFilePath();
+            if (File.Exists(userConfigPath)) File.Delete(userConfigPath);
 
             // Act
             TomlConfigurationHelper.CreateDefaultUserConfigIfNotExists();
 
             // Assert
-            // After calling, the file should exist
             File.Exists(userConfigPath).Should().BeTrue();
+            var content = File.ReadAllText(userConfigPath);
+            content.Should().Contain("[RabbitMq]");
+        }
+
+        [Fact]
+        public void DoesNotOverwrite_WhenExists()
+        {
+            // Arrange
+            var userConfigPath = TomlConfigurationHelper.GetUserConfigFilePath();
+            File.WriteAllText(userConfigPath, "existing content");
+
+            // Act
+            TomlConfigurationHelper.CreateDefaultUserConfigIfNotExists();
+
+            // Assert
+            File.ReadAllText(userConfigPath).Should().Be("existing content");
         }
     }
 
@@ -130,6 +202,9 @@ public class TomlConfigurationHelperTests
             {
                 return; // Skip on Windows
             }
+
+            // Ensure no env var override is active
+            Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", null);
 
             // Act
             var path = TomlConfigurationHelper.GetUserConfigFilePath();
@@ -145,6 +220,9 @@ public class TomlConfigurationHelperTests
             {
                 return; // Skip on Windows
             }
+
+            // Ensure no env var override is active
+            Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", null);
 
             // Arrange
             var homeDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
@@ -164,6 +242,9 @@ public class TomlConfigurationHelperTests
                 return; // Skip on Windows
             }
 
+            // Ensure no env var override is active
+            Environment.SetEnvironmentVariable("RMQCLI_SYSTEM_CONFIG_PATH", null);
+
             // Act
             var path = TomlConfigurationHelper.GetSystemConfigFilePath();
 
@@ -178,6 +259,9 @@ public class TomlConfigurationHelperTests
             {
                 return; // Skip on Windows
             }
+
+            // Ensure no env var override is active
+            Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", null);
 
             // Arrange
             var homeDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
@@ -198,6 +282,9 @@ public class TomlConfigurationHelperTests
                 return; // Skip on Windows
             }
 
+            // Ensure no env var override is active
+            Environment.SetEnvironmentVariable("RMQCLI_SYSTEM_CONFIG_PATH", null);
+
             // Arrange
             var expectedBasePath = $"/etc/{Constants.AppName}";
 
@@ -215,6 +302,9 @@ public class TomlConfigurationHelperTests
             {
                 return; // Skip on non-Windows
             }
+
+            // Ensure no env var override is active
+            Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", null);
 
             // Arrange
             var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
@@ -234,6 +324,9 @@ public class TomlConfigurationHelperTests
             {
                 return; // Skip on non-Windows
             }
+
+            // Ensure no env var override is active
+            Environment.SetEnvironmentVariable("RMQCLI_SYSTEM_CONFIG_PATH", null);
 
             // Arrange
             var programData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
