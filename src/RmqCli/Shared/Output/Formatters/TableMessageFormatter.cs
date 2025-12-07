@@ -18,17 +18,17 @@ public static class TableMessageFormatter
     /// </summary>
     /// <param name="message">The message to format</param>
     /// <param name="compact">If true, only show properties with values. If false, show all properties with "-" for empty values.</param>
-    /// <param name="ansiSupport">Determines ANSI escape sequence support</param>
-    public static string FormatMessage(RetrievedMessage message, bool compact = false, AnsiSupport ansiSupport = AnsiSupport.Detect)
+    /// <param name="noColor">Determines ANSI/Color support</param>
+    public static string FormatMessage(RetrievedMessage message, bool compact = false, bool noColor = false)
     {
-        var panel = CreateMessagePanel(message, compact, ansiSupport);
+        var panel = CreateMessagePanel(message, compact, noColor);
 
         // Render to string using AnsiConsole
         var stringWriter = new StringWriter();
         var console = AnsiConsole.Create(new AnsiConsoleSettings
         {
-            Ansi = ansiSupport,
-            ColorSystem = ansiSupport == AnsiSupport.No ? ColorSystemSupport.NoColors : ColorSystemSupport.Detect,
+            Ansi = noColor ? AnsiSupport.No : AnsiSupport.Detect,
+            ColorSystem = noColor ? ColorSystemSupport.NoColors : ColorSystemSupport.Detect,
             Out = new AnsiConsoleOutput(stringWriter)
         });
 
@@ -39,7 +39,7 @@ public static class TableMessageFormatter
     /// <summary>
     /// Formats multiple messages separated by newlines.
     /// </summary>
-    public static string FormatMessages(IEnumerable<RetrievedMessage> messages, bool compact = false, AnsiSupport ansiSupport = AnsiSupport.Detect)
+    public static string FormatMessages(IEnumerable<RetrievedMessage> messages, bool compact = false, bool noColor = false)
     {
         var messageList = messages.ToList();
         var sb = new StringBuilder();
@@ -50,15 +50,16 @@ public static class TableMessageFormatter
             {
                 sb.AppendLine(); // Blank line between messages
             }
-            sb.Append(FormatMessage(messageList[i], compact, ansiSupport));
+
+            sb.Append(FormatMessage(messageList[i], compact, noColor));
         }
 
         return sb.ToString();
     }
 
-    private static Panel CreateMessagePanel(RetrievedMessage message, bool compact, AnsiSupport ansiSupport)
+    private static Panel CreateMessagePanel(RetrievedMessage message, bool compact, bool noColor)
     {
-        var content = CreateMessageContent(message, compact, ansiSupport);
+        var content = CreateMessageContent(message, compact, noColor);
 
         var panel = new Panel(content)
         {
@@ -70,13 +71,15 @@ public static class TableMessageFormatter
         return panel;
     }
 
-    private static IRenderable CreateMessageContent(RetrievedMessage message, bool compact, AnsiSupport ansiSupport)
+    private static IRenderable CreateMessageContent(RetrievedMessage message, bool compact, bool noColor)
     {
         var renderables = new List<IRenderable>();
+        
+        var ansiSupport = noColor ? AnsiSupport.No : AnsiSupport.Detect;
 
         // Routing Information Section
         var routingTable = CreateSectionTable();
-        AddRoutingRows(routingTable, message, ansiSupport);
+        AddRoutingRows(routingTable, message, noColor);
         renderables.Add(routingTable);
 
         // Properties Section
@@ -128,7 +131,7 @@ public static class TableMessageFormatter
         return table;
     }
 
-    private static void AddRoutingRows(Table table, RetrievedMessage message, AnsiSupport ansiSupport)
+    private static void AddRoutingRows(Table table, RetrievedMessage message, bool noColor)
     {
         table.AddRow(new Markup("Queue"), new Markup(Markup.Escape(message.Queue)));
         table.AddRow(new Markup("Routing Key"), new Markup(Markup.Escape(message.RoutingKey)));
@@ -136,7 +139,7 @@ public static class TableMessageFormatter
 
         // Color-code redelivered status
         var redelivered = message.Redelivered
-            ? (ansiSupport == AnsiSupport.No ? "Yes" : "[yellow]Yes[/]")
+            ? (noColor ? "Yes" : "[yellow]Yes[/]")
             : "No";
         table.AddRow(new Markup("Redelivered"), new Markup(redelivered));
     }
@@ -161,6 +164,7 @@ public static class TableMessageFormatter
                 var deliveryModeText = FormatDeliveryMode(props.DeliveryMode.Value);
                 AddRow(table, "Delivery Mode", deliveryModeText);
             }
+
             if (props.Priority != null)
                 AddRow(table, "Priority", props.Priority.ToString()!);
             if (props.Expiration != null)
@@ -181,10 +185,11 @@ public static class TableMessageFormatter
             // Full mode: show all properties with "-" for empty
             var emptyValue = ansiSupport == AnsiSupport.No ? "-" : "[dim]-[/]";
             var allowMarkup = ansiSupport != AnsiSupport.No;
-            
+
             AddRow(table, "Message ID", props.MessageId ?? emptyValue, allowMarkup: props.MessageId == null && allowMarkup);
             AddRow(table, "Correlation ID", props.CorrelationId ?? emptyValue, allowMarkup: props.CorrelationId == null && allowMarkup);
-            AddRow(table, "Timestamp", props.Timestamp != null ? FormatTimestamp(props.Timestamp.Value) + " UTC" : emptyValue, allowMarkup: props.Timestamp == null && allowMarkup);
+            AddRow(table, "Timestamp", props.Timestamp != null ? FormatTimestamp(props.Timestamp.Value) + " UTC" : emptyValue,
+                allowMarkup: props.Timestamp == null && allowMarkup);
             AddRow(table, "Content Type", props.ContentType ?? emptyValue, allowMarkup: props.ContentType == null && allowMarkup);
             AddRow(table, "Content Encoding", props.ContentEncoding ?? emptyValue, allowMarkup: props.ContentEncoding == null && allowMarkup);
 
