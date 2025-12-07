@@ -264,7 +264,7 @@ public class TomlConfigurationProviderTests
         }
 
         [Fact]
-        public void HandlesDefaultConfigFormat()
+        public void HandlesAllConfigurationOptions()
         {
             // Arrange
             var configPath = Path.Combine(_tempDir, "config.toml");
@@ -281,11 +281,12 @@ public class TomlConfigurationProviderTests
                 Exchange = "amq.direct"
                 ClientName = "rmq-cli-tool"
                 UseTls = false
+                TlsServerName = "amqp.example.com"
+                TlsAcceptAllCertificates = false   
 
                 [FileConfig]
                 MessagesPerFile = 10000
-                ## Default value is the OS specific newline character
-                # MessageDelimiter="\n"
+                MessageDelimiter="\n"
                 """;
             File.WriteAllText(configPath, tomlContent);
 
@@ -311,8 +312,14 @@ public class TomlConfigurationProviderTests
             clientName.Should().Be("rmq-cli-tool");
             provider.TryGet("RabbitMq:UseTls", out var useTls).Should().BeTrue();
             useTls.Should().Be("False");
+            provider.TryGet("RabbitMq:TlsServerName", out var tlsServerName).Should().BeTrue();
+            tlsServerName.Should().Be("amqp.example.com");
+            provider.TryGet("RabbitMq:TlsAcceptAllCertificates", out var tlsAcceptAll).Should().BeTrue();
+            tlsAcceptAll.Should().Be("False");
             provider.TryGet("FileConfig:MessagesPerFile", out var messagesPerFile).Should().BeTrue();
             messagesPerFile.Should().Be("10000");
+            provider.TryGet("FileConfig:MessageDelimiter", out var delimiter).Should().BeTrue();
+            delimiter.Should().Be("\n");
         }
     }
 }

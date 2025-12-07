@@ -193,4 +193,54 @@ public class ConfigurationExtensionsTests : IDisposable
         rabbitMqConfig.Should().NotBeNull();
         rabbitMqConfig.Host.Should().Be("localhost");
     }
+    
+    [Fact]
+    public void AllConfigValuesCanBeParsedCorrectly()
+    {
+        // Arrange
+        var customConfigPath = Path.Combine(_tempDir, "full.toml");
+        File.WriteAllText(customConfigPath, """
+                                            [RabbitMq]
+                                            Host = "full-host"
+                                            Port = 5671
+                                            ManagementPort = 15673
+                                            VirtualHost = "full-vhost"
+                                            User = "full-user"
+                                            Password = "full-password"
+                                            Exchange = "full-exchange"
+                                            ClientName = "full-client"
+                                            UseTls = true
+                                            TlsServerName = "tls-server"
+                                            TlsAcceptAllCertificates = true
+                                            
+                                            [FileConfig]
+                                            MessagesPerFile = 2000
+                                            MessageDelimiter = "\n\n"
+                                            """);
+
+        // Act
+        var builder = new ConfigurationBuilder();
+        builder.AddRmqConfig(customConfigPath);
+        var config = builder.Build();
+        var rabbitMqConfig = config.GetSection(RabbitMqConfig.RabbitMqConfigName).Get<RabbitMqConfig>();
+        var fileConfig = config.GetSection("FileConfig").Get<FileConfig>();
+
+        // Assert
+        rabbitMqConfig.Should().NotBeNull();
+        rabbitMqConfig.Host.Should().Be("full-host");
+        rabbitMqConfig.Port.Should().Be(5671);
+        rabbitMqConfig.ManagementPort.Should().Be(15673);
+        rabbitMqConfig.VirtualHost.Should().Be("full-vhost");
+        rabbitMqConfig.User.Should().Be("full-user");
+        rabbitMqConfig.Password.Should().Be("full-password");
+        rabbitMqConfig.Exchange.Should().Be("full-exchange");
+        rabbitMqConfig.ClientName.Should().Be("full-client");
+        rabbitMqConfig.UseTls.Should().BeTrue();
+        rabbitMqConfig.TlsServerName.Should().Be("tls-server");
+        rabbitMqConfig.TlsAcceptAllCertificates.Should().BeTrue();
+
+        fileConfig.Should().NotBeNull();
+        fileConfig.MessagesPerFile.Should().Be(2000);
+        fileConfig.MessageDelimiter.Should().Be("\n\n");
+    }
 }

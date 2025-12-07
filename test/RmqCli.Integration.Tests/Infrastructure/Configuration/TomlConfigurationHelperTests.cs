@@ -191,6 +191,26 @@ public class TomlConfigurationHelperTests
             // Assert
             File.ReadAllText(userConfigPath).Should().Be("existing content");
         }
+
+        [Fact]
+        public void CreatesConfigDirectory_WhenNotExists()
+        {
+            // Arrange
+            var nonExistingDir = Path.Combine(Path.GetTempPath(), $"rmq-helper-tests-{Guid.NewGuid()}");
+            Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", nonExistingDir);
+
+            // Act
+            TomlConfigurationHelper.CreateDefaultUserConfigIfNotExists();
+
+            // Assert
+            Directory.Exists(nonExistingDir).Should().BeTrue();
+
+            // Cleanup
+            if (Directory.Exists(nonExistingDir))
+            {
+                Directory.Delete(nonExistingDir, recursive: true);
+            }
+        }
     }
 
     public class PlatformSpecificBehavior
