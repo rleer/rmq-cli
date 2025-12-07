@@ -451,17 +451,13 @@ public class FileOutputTests
             var outputFile = new FileInfo(Path.Combine(_tempDir, "output.txt"));
         
             var fileConfig = new FileConfig { MessagesPerFile = messagesPerFile };
-            var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 2);
+            // Use an unsupported format to trigger error
+            var output = new FileOutput(logger, new OutputOptions { Format = (OutputFormat)3, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 2);
 
             var messageChannel = Channel.CreateUnbounded<RetrievedMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
 
-            var message = CreateRetrievedMessage("Message 1", deliveryTag: 1);
-            // Create a new properties object with invalid DeliveryMode to force FormatMessage to throw
-            var invalidProps = message.Properties! with { DeliveryMode = (DeliveryModes)99 };
-            var invalidMessage = message with { Properties = invalidProps };
-
-            await messageChannel.Writer.WriteAsync(invalidMessage);
+            await messageChannel.Writer.WriteAsync(CreateRetrievedMessage("Message 1", deliveryTag: 1));
             messageChannel.Writer.Complete();
 
             // Act
