@@ -11,13 +11,6 @@ namespace RmqCli.Integration.Tests.Infrastructure.Output;
 
 public class FileOutputTests
 {
-    private readonly string _tempDir;
-
-    public FileOutputTests()
-    {
-        _tempDir = Path.Combine(Path.GetTempPath(), $"rmq-tests-{Guid.NewGuid()}");
-        Directory.CreateDirectory(_tempDir);
-    }
 
     public class SingleFileMode : IDisposable
     {
@@ -52,7 +45,7 @@ public class FileOutputTests
             // Add messages
             for (int i = 1; i <= 5; i++)
             {
-                await messageChannel.Writer.WriteAsync(CreateRetrievedMessage($"Message {i}", "exchange", "routing-key", "test-queue", (ulong)i));
+                await messageChannel.Writer.WriteAsync(CreateRetrievedMessage($"Message {i}", deliveryTag: (ulong)i));
             }
             messageChannel.Writer.Complete();
 
@@ -68,6 +61,9 @@ public class FileOutputTests
 
             var content = await File.ReadAllTextAsync(outputFile.FullName);
             content.Should().Contain("Message 1");
+            content.Should().Contain("Message 2");
+            content.Should().Contain("Message 3");
+            content.Should().Contain("Message 4");
             content.Should().Contain("Message 5");
         }
 
@@ -87,9 +83,9 @@ public class FileOutputTests
             var messageChannel = Channel.CreateUnbounded<RetrievedMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
 
-            await messageChannel.Writer.WriteAsync(CreateRetrievedMessage("Message 1", "exchange", "routing-key", "test-queue", 1));
-            await messageChannel.Writer.WriteAsync(CreateRetrievedMessage("Message 2", "exchange", "routing-key", "test-queue", 2));
-            await messageChannel.Writer.WriteAsync(CreateRetrievedMessage("Message 3", "exchange", "routing-key", "test-queue", 3));
+            await messageChannel.Writer.WriteAsync(CreateRetrievedMessage("Message 1", deliveryTag: 1));
+            await messageChannel.Writer.WriteAsync(CreateRetrievedMessage("Message 2", deliveryTag: 2));
+            await messageChannel.Writer.WriteAsync(CreateRetrievedMessage("Message 3", deliveryTag: 3));
             messageChannel.Writer.Complete();
 
             // Act
@@ -101,7 +97,7 @@ public class FileOutputTests
             // Assert
             var content = await File.ReadAllTextAsync(outputFile.FullName);
             // Count only standalone "---" delimiters (on their own line), not section separators like "==="
-            var delimiterCount = content.Split(new[] { "\n---\n", "\r\n---\r\n" }, StringSplitOptions.None).Length - 1;
+            var delimiterCount = content.Split(new[] { $"{Environment.NewLine}---{Environment.NewLine}" }, StringSplitOptions.None).Length - 1;
             delimiterCount.Should().Be(2); // 2 delimiters between 3 messages
         }
 
@@ -117,8 +113,8 @@ public class FileOutputTests
             var messageChannel = Channel.CreateUnbounded<RetrievedMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
 
-            await messageChannel.Writer.WriteAsync(CreateRetrievedMessage("Message 1", "exchange", "routing-key", "test-queue", 1));
-            await messageChannel.Writer.WriteAsync(CreateRetrievedMessage("Message 2", "exchange", "routing-key", "test-queue", 2));
+            await messageChannel.Writer.WriteAsync(CreateRetrievedMessage("Message 1", deliveryTag: 1));
+            await messageChannel.Writer.WriteAsync(CreateRetrievedMessage("Message 2", deliveryTag: 2));
             messageChannel.Writer.Complete();
 
             // Act
@@ -171,11 +167,10 @@ public class FileOutputTests
 
             var body1 = "Test message 1";
             var body2 = "Test message 2 - longer";
-            var expectedBytes = System.Text.Encoding.UTF8.GetByteCount(body1)
-                              + System.Text.Encoding.UTF8.GetByteCount(body2);
+            var expectedBytes = Encoding.UTF8.GetByteCount(body1) + Encoding.UTF8.GetByteCount(body2);
 
-            await messageChannel.Writer.WriteAsync(CreateRetrievedMessage(body1, "exchange", "routing-key", "test-queue", 1));
-            await messageChannel.Writer.WriteAsync(CreateRetrievedMessage(body2, "exchange", "routing-key", "test-queue", 2));
+            await messageChannel.Writer.WriteAsync(CreateRetrievedMessage(body1, deliveryTag: 1));
+            await messageChannel.Writer.WriteAsync(CreateRetrievedMessage(body2, deliveryTag: 2));
             messageChannel.Writer.Complete();
 
             // Act
@@ -222,7 +217,7 @@ public class FileOutputTests
             // Add 5 messages (should create 3 files: 2+2+1)
             for (int i = 1; i <= 5; i++)
             {
-                await messageChannel.Writer.WriteAsync(CreateRetrievedMessage($"Message {i}", "exchange", "routing-key", "test-queue", (ulong)i));
+                await messageChannel.Writer.WriteAsync(CreateRetrievedMessage($"Message {i}", deliveryTag: (ulong)i));
             }
             messageChannel.Writer.Complete();
 
@@ -255,7 +250,7 @@ public class FileOutputTests
             // Add 5 messages
             for (int i = 1; i <= 5; i++)
             {
-                await messageChannel.Writer.WriteAsync(CreateRetrievedMessage($"Message {i}", "exchange", "routing-key", "test-queue", (ulong)i));
+                await messageChannel.Writer.WriteAsync(CreateRetrievedMessage($"Message {i}", deliveryTag: (ulong)i));
             }
             messageChannel.Writer.Complete();
 
@@ -287,7 +282,7 @@ public class FileOutputTests
 
             for (int i = 1; i <= 6; i++)
             {
-                await messageChannel.Writer.WriteAsync(CreateRetrievedMessage($"Message {i}", "exchange", "routing-key", "test-queue", (ulong)i));
+                await messageChannel.Writer.WriteAsync(CreateRetrievedMessage($"Message {i}", deliveryTag: (ulong)i));
             }
             messageChannel.Writer.Complete();
 
@@ -319,7 +314,7 @@ public class FileOutputTests
 
             for (int i = 1; i <= 3; i++)
             {
-                await messageChannel.Writer.WriteAsync(CreateRetrievedMessage($"Message {i}", "exchange", "routing-key", "test-queue", (ulong)i));
+                await messageChannel.Writer.WriteAsync(CreateRetrievedMessage($"Message {i}", deliveryTag: (ulong)i));
             }
             messageChannel.Writer.Complete();
 
@@ -353,7 +348,7 @@ public class FileOutputTests
 
             for (int i = 1; i <= 6; i++)
             {
-                await messageChannel.Writer.WriteAsync(CreateRetrievedMessage($"Message {i}", "exchange", "routing-key", "test-queue", (ulong)i));
+                await messageChannel.Writer.WriteAsync(CreateRetrievedMessage($"Message {i}", deliveryTag: (ulong)i));
             }
             messageChannel.Writer.Complete();
 
@@ -366,12 +361,12 @@ public class FileOutputTests
             // Assert
             var file1Content = await File.ReadAllTextAsync(Path.Combine(_tempDir, "delimited.0.txt"));
             // Count only standalone "---" delimiters (on their own line), not section separators like "==="
-            var file1DelimiterCount = file1Content.Split(new[] { "\n---\n", "\r\n---\r\n" }, StringSplitOptions.None).Length - 1;
+            var file1DelimiterCount = file1Content.Split(new[] { $"{Environment.NewLine}---{Environment.NewLine}" }, StringSplitOptions.None).Length - 1;
             file1DelimiterCount.Should().Be(2); // 2 delimiters between 3 messages in first file
 
             var file2Content = await File.ReadAllTextAsync(Path.Combine(_tempDir, "delimited.1.txt"));
             // Count only standalone "---" delimiters (on their own line), not section separators like "==="
-            var file2DelimiterCount = file2Content.Split(new[] { "\n---\n", "\r\n---\r\n" }, StringSplitOptions.None).Length - 1;
+            var file2DelimiterCount = file2Content.Split(new[] { $"{Environment.NewLine}---{Environment.NewLine}" }, StringSplitOptions.None).Length - 1;
             file2DelimiterCount.Should().Be(2); // 2 delimiters between 3 messages in second file
         }
 
@@ -389,7 +384,7 @@ public class FileOutputTests
 
             for (int i = 1; i <= 4; i++)
             {
-                await messageChannel.Writer.WriteAsync(CreateRetrievedMessage($"Message {i}", "exchange", "routing-key", "test-queue", (ulong)i));
+                await messageChannel.Writer.WriteAsync(CreateRetrievedMessage($"Message {i}", deliveryTag: (ulong)i));
             }
             messageChannel.Writer.Complete();
 
@@ -441,7 +436,7 @@ public class FileOutputTests
             var messageChannel = Channel.CreateUnbounded<RetrievedMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
 
-            await messageChannel.Writer.WriteAsync(CreateRetrievedMessage("Test", "exchange", "routing-key", "test-queue", 42));
+            await messageChannel.Writer.WriteAsync(CreateRetrievedMessage("Test", deliveryTag: 42));
             messageChannel.Writer.Complete();
 
             // Act
@@ -472,7 +467,7 @@ public class FileOutputTests
             props.IsMessageIdPresent().Returns(true);
             props.MessageId.Returns("msg-123");
 
-            await messageChannel.Writer.WriteAsync(CreateRetrievedMessage("Test", "exchange", "routing-key", "test-queue", 1, props));
+            await messageChannel.Writer.WriteAsync(CreateRetrievedMessage("Test", deliveryTag: 1, props: props));
             messageChannel.Writer.Complete();
 
             // Act
@@ -518,7 +513,7 @@ public class FileOutputTests
                     if (cts.Token.IsCancellationRequested)
                         break;
 
-                    await messageChannel.Writer.WriteAsync(CreateRetrievedMessage($"Message {i}", "exchange", "routing-key", "test-queue", (ulong)i));
+                    await messageChannel.Writer.WriteAsync(CreateRetrievedMessage($"Message {i}", deliveryTag: (ulong)i));
 
                     // Cancel after some messages have been written
                     if (i == 1000)
