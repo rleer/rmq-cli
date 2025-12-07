@@ -42,10 +42,10 @@ jobs:
         run: dotnet build --no-restore --configuration Release
 
       - name: Run Unit Tests
-        run: dotnet test test/RmqCli.Unit.Tests/RmqCli.Unit.Tests.csproj --no-build --configuration Release -v normal --logger "trx;LogFileName=unit-tests.trx"
+        run: dotnet test test/RmqCli.Unit.Tests/RmqCli.Unit.Tests.csproj --no-build --configuration Release -v normal --logger "trx;LogFileName=unit-tests.trx" --collect:"XPlat Code Coverage" --results-directory ./coverage/unit
 
       - name: Run Integration Tests
-        run: dotnet test test/RmqCli.Integration.Tests/RmqCli.Integration.Tests.csproj --no-build --configuration Release -v normal --logger "trx;LogFileName=integration-tests.trx"
+        run: dotnet test test/RmqCli.Integration.Tests/RmqCli.Integration.Tests.csproj --no-build --configuration Release -v normal --logger "trx;LogFileName=integration-tests.trx" --collect:"XPlat Code Coverage" --results-directory ./coverage/integration
 
       - name: Upload Test Results
         uses: actions/upload-artifact@v4
@@ -53,6 +53,13 @@ jobs:
         with:
           name: test-results-${{ matrix.os }}
           path: "**/*.trx"
+
+      - name: Upload Coverage Artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-${{ matrix.os }}
+          path: coverage
 
   e2e-tests:
     runs-on: ubuntu-latest
@@ -93,34 +100,18 @@ jobs:
           name: e2e-test-results
           path: "**/*e2e-tests.trx"
 
-  code-coverage:
+  upload-coverage:
+    needs: build-and-test
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+      - name: Download Coverage Artifacts
+        uses: actions/download-artifact@v4
         with:
-          dotnet-version: 8.0.x
-
-      - name: Cache NuGet packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
-          restore-keys: |
-            ${{ runner.os }}-nuget-
-
-      - name: Restore dependencies
-        run: dotnet restore
-
-      - name: Build
-        run: dotnet build --no-restore -c Release
-
-      - name: Run Tests with Coverage
-        run: dotnet test --no-build -c Release -v normal --collect:"XPlat Code Coverage" --results-directory ./coverage --filter "FullyQualifiedName!~RmqCli.E2E.Tests"
+          pattern: coverage-*
+          path: coverage
 
       - name: Upload Coverage to Codecov
         uses: codecov/codecov-action@v4
