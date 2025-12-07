@@ -36,7 +36,7 @@ public class ConsoleOutput : MessageOutput
             try
             {
                 var formattedMessage = FormatMessage(message);
-                await System.Console.Out.WriteLineAsync(formattedMessage);
+                await Console.Out.WriteLineAsync(formattedMessage);
 
                 await ackChannel.Writer.WriteAsync((message.DeliveryTag, true), CancellationToken.None);
                 _logger.LogTrace("Message #{DeliveryTag} written to console", message.DeliveryTag);
