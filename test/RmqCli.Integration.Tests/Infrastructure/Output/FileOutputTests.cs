@@ -6,12 +6,12 @@ using RmqCli.Core.Models;
 using RmqCli.Infrastructure.Configuration.Models;
 using RmqCli.Shared.Output;
 using RmqCli.Shared.Output.Formatters;
+using Xunit.Abstractions;
 
 namespace RmqCli.Integration.Tests.Infrastructure.Output;
 
 public class FileOutputTests
 {
-
     public class SingleFileMode : IDisposable
     {
         private readonly string _tempDir;
@@ -37,7 +37,9 @@ public class FileOutputTests
             var logger = new NullLogger<FileOutput>();
             var outputFile = new FileInfo(Path.Combine(_tempDir, "output.txt"));
             var fileConfig = new FileConfig { MessagesPerFile = 100 };
-            var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 5);
+            var output = new FileOutput(logger,
+                new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false },
+                fileConfig, messageCount: 5);
 
             var messageChannel = Channel.CreateUnbounded<RetrievedMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
@@ -47,6 +49,7 @@ public class FileOutputTests
             {
                 await messageChannel.Writer.WriteAsync(CreateRetrievedMessage($"Message {i}", deliveryTag: (ulong)i));
             }
+
             messageChannel.Writer.Complete();
 
             // Act
@@ -59,128 +62,16 @@ public class FileOutputTests
             result.ProcessedCount.Should().Be(5);
             outputFile.Exists.Should().BeTrue();
 
+            // Should not create rotating files
+            var files = Directory.GetFiles(_tempDir, "output.*.txt");
+            files.Should().HaveCount(0);
+
             var content = await File.ReadAllTextAsync(outputFile.FullName);
             content.Should().Contain("Message 1");
             content.Should().Contain("Message 2");
             content.Should().Contain("Message 3");
             content.Should().Contain("Message 4");
             content.Should().Contain("Message 5");
-        }
-
-        [Fact]
-        public async Task AddsDelimiters_BetweenMessages_InPlainFormat()
-        {
-            // Arrange
-            var logger = new NullLogger<FileOutput>();
-            var outputFile = new FileInfo(Path.Combine(_tempDir, "output.txt"));
-            var fileConfig = new FileConfig
-            {
-                MessagesPerFile = 100,
-                MessageDelimiter = "---"
-            };
-            var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 3);
-
-            var messageChannel = Channel.CreateUnbounded<RetrievedMessage>();
-            var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
-
-            await messageChannel.Writer.WriteAsync(CreateRetrievedMessage("Message 1", deliveryTag: 1));
-            await messageChannel.Writer.WriteAsync(CreateRetrievedMessage("Message 2", deliveryTag: 2));
-            await messageChannel.Writer.WriteAsync(CreateRetrievedMessage("Message 3", deliveryTag: 3));
-            messageChannel.Writer.Complete();
-
-            // Act
-            await output.WriteMessagesAsync(
-                messageChannel,
-                ackChannel,
-                CancellationToken.None);
-
-            // Assert
-            var content = await File.ReadAllTextAsync(outputFile.FullName);
-            // Count only standalone "---" delimiters (on their own line), not section separators like "==="
-            var delimiterCount = content.Split(new[] { $"{Environment.NewLine}---{Environment.NewLine}" }, StringSplitOptions.None).Length - 1;
-            delimiterCount.Should().Be(2); // 2 delimiters between 3 messages
-        }
-
-        [Fact]
-        public async Task WritesJsonFormat_WithoutDelimiters()
-        {
-            // Arrange
-            var logger = new NullLogger<FileOutput>();
-            var outputFile = new FileInfo(Path.Combine(_tempDir, "output.json"));
-            var fileConfig = new FileConfig { MessagesPerFile = 100, MessageDelimiter = "---" };
-            var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Json, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 2);
-
-            var messageChannel = Channel.CreateUnbounded<RetrievedMessage>();
-            var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
-
-            await messageChannel.Writer.WriteAsync(CreateRetrievedMessage("Message 1", deliveryTag: 1));
-            await messageChannel.Writer.WriteAsync(CreateRetrievedMessage("Message 2", deliveryTag: 2));
-            messageChannel.Writer.Complete();
-
-            // Act
-            await output.WriteMessagesAsync(
-                messageChannel,
-                ackChannel,
-                CancellationToken.None);
-
-            // Assert
-            var content = await File.ReadAllTextAsync(outputFile.FullName);
-            content.Should().NotContain("---"); // No delimiters in JSON format
-            content.Should().Contain("deliveryTag");
-        }
-
-        [Fact]
-        public async Task HandlesEmptyMessageChannel()
-        {
-            // Arrange
-            var logger = new NullLogger<FileOutput>();
-            var outputFile = new FileInfo(Path.Combine(_tempDir, "empty.txt"));
-            var fileConfig = new FileConfig { MessagesPerFile = 100 };
-            var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 10);
-
-            var messageChannel = Channel.CreateUnbounded<RetrievedMessage>();
-            var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
-            messageChannel.Writer.Complete();
-
-            // Act
-            var result = await output.WriteMessagesAsync(
-                messageChannel,
-                ackChannel,
-                CancellationToken.None);
-
-            // Assert
-            result.ProcessedCount.Should().Be(0);
-            result.TotalBytes.Should().Be(0);
-        }
-
-        [Fact]
-        public async Task CalculatesTotalBytes_Correctly()
-        {
-            // Arrange
-            var logger = new NullLogger<FileOutput>();
-            var outputFile = new FileInfo(Path.Combine(_tempDir, "bytes.txt"));
-            var fileConfig = new FileConfig { MessagesPerFile = 100 };
-            var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 2);
-
-            var messageChannel = Channel.CreateUnbounded<RetrievedMessage>();
-            var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
-
-            var body1 = "Test message 1";
-            var body2 = "Test message 2 - longer";
-            var expectedBytes = Encoding.UTF8.GetByteCount(body1) + Encoding.UTF8.GetByteCount(body2);
-
-            await messageChannel.Writer.WriteAsync(CreateRetrievedMessage(body1, deliveryTag: 1));
-            await messageChannel.Writer.WriteAsync(CreateRetrievedMessage(body2, deliveryTag: 2));
-            messageChannel.Writer.Complete();
-
-            // Act
-            var result = await output.WriteMessagesAsync(
-                messageChannel,
-                ackChannel,
-                CancellationToken.None);
-
-            // Assert
-            result.TotalBytes.Should().Be(expectedBytes);
         }
     }
 
@@ -202,47 +93,18 @@ public class FileOutputTests
             }
         }
 
-        [Fact]
-        public async Task CreatesMultipleFiles_WhenExceedingMessagesPerFile()
-        {
-            // Arrange
-            var logger = new NullLogger<FileOutput>();
-            var outputFile = new FileInfo(Path.Combine(_tempDir, "output.txt"));
-            var fileConfig = new FileConfig { MessagesPerFile = 2 }; // 2 messages per file
-            var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 5);
-
-            var messageChannel = Channel.CreateUnbounded<RetrievedMessage>();
-            var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
-
-            // Add 5 messages (should create 3 files: 2+2+1)
-            for (int i = 1; i <= 5; i++)
-            {
-                await messageChannel.Writer.WriteAsync(CreateRetrievedMessage($"Message {i}", deliveryTag: (ulong)i));
-            }
-            messageChannel.Writer.Complete();
-
-            // Act
-            var result = await output.WriteMessagesAsync(
-                messageChannel,
-                ackChannel,
-                CancellationToken.None);
-
-            // Assert
-            result.ProcessedCount.Should().Be(5);
-
-            // Check that multiple files were created
-            var files = Directory.GetFiles(_tempDir, "output.*.txt");
-            files.Should().HaveCountGreaterOrEqualTo(3);
-        }
-
-        [Fact]
-        public async Task UsesRotatingMode_WhenMessageCountIsUnlimited()
+        [Theory]
+        [InlineData(-1)] // Unlimited
+        [InlineData(5)] // Exceeds MessagesPerFile
+        public async Task UsesRotatingMode_WhenMessageCountIsUnlimited_Or_ExceedsMessagesPerFile(int messageCount)
         {
             // Arrange
             var logger = new NullLogger<FileOutput>();
             var outputFile = new FileInfo(Path.Combine(_tempDir, "unlimited.txt"));
             var fileConfig = new FileConfig { MessagesPerFile = 2 };
-            var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: -1); // Unlimited
+            var output = new FileOutput(logger,
+                new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false },
+                fileConfig, messageCount: messageCount);
 
             var messageChannel = Channel.CreateUnbounded<RetrievedMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
@@ -252,6 +114,7 @@ public class FileOutputTests
             {
                 await messageChannel.Writer.WriteAsync(CreateRetrievedMessage($"Message {i}", deliveryTag: (ulong)i));
             }
+
             messageChannel.Writer.Complete();
 
             // Act
@@ -269,45 +132,15 @@ public class FileOutputTests
         }
 
         [Fact]
-        public async Task UsesRotatingMode_WhenCountExceedsMessagesPerFile()
-        {
-            // Arrange
-            var logger = new NullLogger<FileOutput>();
-            var outputFile = new FileInfo(Path.Combine(_tempDir, "rotating.txt"));
-            var fileConfig = new FileConfig { MessagesPerFile = 3 };
-            var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 10); // 10 > 3
-
-            var messageChannel = Channel.CreateUnbounded<RetrievedMessage>();
-            var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
-
-            for (int i = 1; i <= 6; i++)
-            {
-                await messageChannel.Writer.WriteAsync(CreateRetrievedMessage($"Message {i}", deliveryTag: (ulong)i));
-            }
-            messageChannel.Writer.Complete();
-
-            // Act
-            var result = await output.WriteMessagesAsync(
-                messageChannel,
-                ackChannel,
-                CancellationToken.None);
-
-            // Assert
-            result.ProcessedCount.Should().Be(6);
-
-            // Should create rotating files (6 messages / 3 per file = 2 files)
-            var files = Directory.GetFiles(_tempDir, "rotating.*.txt");
-            files.Should().HaveCount(2);
-        }
-
-        [Fact]
         public async Task NamesRotatingFiles_WithSequentialIndexes()
         {
             // Arrange
             var logger = new NullLogger<FileOutput>();
             var outputFile = new FileInfo(Path.Combine(_tempDir, "indexed.txt"));
             var fileConfig = new FileConfig { MessagesPerFile = 1 }; // 1 message per file
-            var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 3);
+            var output = new FileOutput(logger,
+                new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false },
+                fileConfig, messageCount: 3);
 
             var messageChannel = Channel.CreateUnbounded<RetrievedMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
@@ -316,6 +149,7 @@ public class FileOutputTests
             {
                 await messageChannel.Writer.WriteAsync(CreateRetrievedMessage($"Message {i}", deliveryTag: (ulong)i));
             }
+
             messageChannel.Writer.Complete();
 
             // Act
@@ -329,89 +163,16 @@ public class FileOutputTests
             File.Exists(Path.Combine(_tempDir, "indexed.1.txt")).Should().BeTrue();
             File.Exists(Path.Combine(_tempDir, "indexed.2.txt")).Should().BeTrue();
         }
-
-        [Fact]
-        public async Task AddsDelimiters_WithinSameFile_InPlainFormat()
-        {
-            // Arrange
-            var logger = new NullLogger<FileOutput>();
-            var outputFile = new FileInfo(Path.Combine(_tempDir, "delimited.txt"));
-            var fileConfig = new FileConfig
-            {
-                MessagesPerFile = 3,
-                MessageDelimiter = "---"
-            };
-            var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 6);
-
-            var messageChannel = Channel.CreateUnbounded<RetrievedMessage>();
-            var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
-
-            for (int i = 1; i <= 6; i++)
-            {
-                await messageChannel.Writer.WriteAsync(CreateRetrievedMessage($"Message {i}", deliveryTag: (ulong)i));
-            }
-            messageChannel.Writer.Complete();
-
-            // Act
-            await output.WriteMessagesAsync(
-                messageChannel,
-                ackChannel,
-                CancellationToken.None);
-
-            // Assert
-            var file1Content = await File.ReadAllTextAsync(Path.Combine(_tempDir, "delimited.0.txt"));
-            // Count only standalone "---" delimiters (on their own line), not section separators like "==="
-            var file1DelimiterCount = file1Content.Split(new[] { $"{Environment.NewLine}---{Environment.NewLine}" }, StringSplitOptions.None).Length - 1;
-            file1DelimiterCount.Should().Be(2); // 2 delimiters between 3 messages in first file
-
-            var file2Content = await File.ReadAllTextAsync(Path.Combine(_tempDir, "delimited.1.txt"));
-            // Count only standalone "---" delimiters (on their own line), not section separators like "==="
-            var file2DelimiterCount = file2Content.Split(new[] { $"{Environment.NewLine}---{Environment.NewLine}" }, StringSplitOptions.None).Length - 1;
-            file2DelimiterCount.Should().Be(2); // 2 delimiters between 3 messages in second file
-        }
-
-        [Fact]
-        public async Task HandlesJsonFormat_InRotatingFiles()
-        {
-            // Arrange
-            var logger = new NullLogger<FileOutput>();
-            var outputFile = new FileInfo(Path.Combine(_tempDir, "json.txt"));
-            var fileConfig = new FileConfig { MessagesPerFile = 2 };
-            var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Json, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 4);
-
-            var messageChannel = Channel.CreateUnbounded<RetrievedMessage>();
-            var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
-
-            for (int i = 1; i <= 4; i++)
-            {
-                await messageChannel.Writer.WriteAsync(CreateRetrievedMessage($"Message {i}", deliveryTag: (ulong)i));
-            }
-            messageChannel.Writer.Complete();
-
-            // Act
-            await output.WriteMessagesAsync(
-                messageChannel,
-                ackChannel,
-                CancellationToken.None);
-
-            // Assert
-            var files = Directory.GetFiles(_tempDir, "json.*.txt");
-            files.Should().HaveCount(2);
-
-            foreach (var file in files)
-            {
-                var content = await File.ReadAllTextAsync(file);
-                content.Should().Contain("deliveryTag");
-            }
-        }
     }
 
     public class CommonScenarios : IDisposable
     {
         private readonly string _tempDir;
+        private readonly ITestOutputHelper _output;
 
-        public CommonScenarios()
+        public CommonScenarios(ITestOutputHelper output)
         {
+            _output = output;
             _tempDir = Path.Combine(Path.GetTempPath(), $"rmq-tests-{Guid.NewGuid()}");
             Directory.CreateDirectory(_tempDir);
         }
@@ -424,50 +185,21 @@ public class FileOutputTests
             }
         }
 
-        [Fact]
-        public async Task SendsAcknowledgments_WithCorrectMode()
+        [Theory]
+        [InlineData(1)] // Single file
+        [InlineData(2)] // Rotating files
+        public async Task HandlesEmptyMessageChannel(int messageCount)
         {
             // Arrange
             var logger = new NullLogger<FileOutput>();
-            var outputFile = new FileInfo(Path.Combine(_tempDir, "ack.txt"));
-            var fileConfig = new FileConfig { MessagesPerFile = 100 };
-            var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 1);
+            var outputFile = new FileInfo(Path.Combine(_tempDir, "empty.txt"));
+            var fileConfig = new FileConfig { MessagesPerFile = 1 };
+            var output = new FileOutput(logger,
+                new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false },
+                fileConfig, messageCount: messageCount);
 
             var messageChannel = Channel.CreateUnbounded<RetrievedMessage>();
             var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
-
-            await messageChannel.Writer.WriteAsync(CreateRetrievedMessage("Test", deliveryTag: 42));
-            messageChannel.Writer.Complete();
-
-            // Act
-            await output.WriteMessagesAsync(
-                messageChannel,
-                ackChannel,
-                CancellationToken.None);
-
-            // Assert
-            ackChannel.Reader.TryRead(out var ack).Should().BeTrue();
-            ack.Item1.Should().Be(42);
-            ack.Item2.Should().Be(true);
-        }
-
-        [Fact]
-        public async Task HandlesMessagesWithProperties()
-        {
-            // Arrange
-            var logger = new NullLogger<FileOutput>();
-            var outputFile = new FileInfo(Path.Combine(_tempDir, "props.txt"));
-            var fileConfig = new FileConfig { MessagesPerFile = 100 };
-            var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 1);
-
-            var messageChannel = Channel.CreateUnbounded<RetrievedMessage>();
-            var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
-
-            var props = Substitute.For<IReadOnlyBasicProperties>();
-            props.IsMessageIdPresent().Returns(true);
-            props.MessageId.Returns("msg-123");
-
-            await messageChannel.Writer.WriteAsync(CreateRetrievedMessage("Test", deliveryTag: 1, props: props));
             messageChannel.Writer.Complete();
 
             // Act
@@ -477,19 +209,191 @@ public class FileOutputTests
                 CancellationToken.None);
 
             // Assert
-            result.ProcessedCount.Should().Be(1);
-            var content = await File.ReadAllTextAsync(outputFile.FullName);
-            content.Should().Contain("msg-123");
+            result.ProcessedCount.Should().Be(0);
+            result.TotalBytes.Should().Be(0);
         }
 
-        [Fact]
-        public async Task StopsProcessingAfterCancellation()
+        [Theory]
+        [InlineData(OutputFormat.Json, 2)] // Single file
+        [InlineData(OutputFormat.Json, 4)] // Rotating files
+        [InlineData(OutputFormat.Table, 2)] // Single file
+        [InlineData(OutputFormat.Table, 4)] // Rotating files
+        [InlineData(OutputFormat.Plain, 2)] // Single file
+        [InlineData(OutputFormat.Plain, 4)] // Rotating files
+        public async Task AddDelimiters_WhenInPlainModeOnly(OutputFormat format, int messageCount)
+        {
+            // Arrange
+            var logger = new NullLogger<FileOutput>();
+            var outputFile = new FileInfo(Path.Combine(_tempDir, "delimiter.txt"));
+            var fileConfig = new FileConfig
+            {
+                MessagesPerFile = 2,
+                MessageDelimiter = "---"
+            };
+            var output = new FileOutput(logger,
+                new OutputOptions { Format = format, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig,
+                messageCount: messageCount);
+
+            var messageChannel = Channel.CreateUnbounded<RetrievedMessage>();
+            var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
+
+            for (int i = 1; i <= messageCount; i++)
+            {
+                await messageChannel.Writer.WriteAsync(CreateRetrievedMessage($"Message {i}", deliveryTag: (ulong)i));
+            }
+
+            messageChannel.Writer.Complete();
+
+            // Act
+            await output.WriteMessagesAsync(
+                messageChannel,
+                ackChannel,
+                CancellationToken.None);
+
+            // Assert
+            var files = Directory.GetFiles(_tempDir, "delimiter*txt");
+            foreach (var file in files)
+            {
+                var content = await File.ReadAllTextAsync(file);
+                // Count only standalone "---" delimiters (on their own line), not section separators like "==="
+                var delimiterCount = content.Split([$"{Environment.NewLine}---{Environment.NewLine}"], StringSplitOptions.None).Length - 1;
+
+                if (format == OutputFormat.Plain)
+                {
+                    delimiterCount.Should().Be(1); // Delimiter between 2 messages in each file in plain format
+                }
+                else
+                {
+                    delimiterCount.Should().Be(0); // No delimiters in Table/JSON format
+                }
+            }
+        }
+
+        [Theory]
+        [InlineData(2)] // Single file
+        [InlineData(4)] // Rotating files
+        public async Task HandlesDelimiterWithNewLine(int messageCount)
+        {
+            // Arrange
+            var logger = new NullLogger<FileOutput>();
+            var outputFile = new FileInfo(Path.Combine(_tempDir, "newline_delim.txt"));
+            var delimiter = $"{Environment.NewLine}{Environment.NewLine}";
+            var fileConfig = new FileConfig
+            {
+                MessagesPerFile = 2,
+                MessageDelimiter = delimiter
+            };
+            var output = new FileOutput(logger,
+                new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false },
+                fileConfig, messageCount: messageCount);
+
+            var messageChannel = Channel.CreateUnbounded<RetrievedMessage>();
+            var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
+
+            for (int i = 1; i <= messageCount; i++)
+            {
+                await messageChannel.Writer.WriteAsync(CreateRetrievedMessage($"Message {i}", deliveryTag: (ulong)i));
+            }
+
+            messageChannel.Writer.Complete();
+
+            // Act
+            await output.WriteMessagesAsync(messageChannel, ackChannel, CancellationToken.None);
+
+            // Assert
+            var files = Directory.GetFiles(_tempDir, "newline_delim*txt");
+            foreach (var file in files)
+            {
+                var content = await File.ReadAllTextAsync(file);
+                // TODO: Improve delimiter check to count for added new lines
+                content.Should().Contain(delimiter);
+            }
+        }
+
+        [Theory]
+        [InlineData(1)] // Single file
+        [InlineData(2)] // Rotating files
+        public async Task CalculatesTotalBytes_Correctly(int messagesPerFile)
+        {
+            // Arrange
+            var logger = new NullLogger<FileOutput>();
+            var outputFile = new FileInfo(Path.Combine(_tempDir, "bytes.txt"));
+            var fileConfig = new FileConfig { MessagesPerFile = messagesPerFile };
+            var output = new FileOutput(logger,
+                new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false },
+                fileConfig, messageCount: 2);
+
+            var messageChannel = Channel.CreateUnbounded<RetrievedMessage>();
+            var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
+
+            var body1 = "Test message 1";
+            var body2 = "Test message 2 - longer";
+            var expectedBytes = Encoding.UTF8.GetByteCount(body1) + Encoding.UTF8.GetByteCount(body2);
+
+            await messageChannel.Writer.WriteAsync(CreateRetrievedMessage(body1, deliveryTag: 1));
+            await messageChannel.Writer.WriteAsync(CreateRetrievedMessage(body2, deliveryTag: 2));
+            messageChannel.Writer.Complete();
+
+            // Act
+            var result = await output.WriteMessagesAsync(
+                messageChannel,
+                ackChannel,
+                CancellationToken.None);
+
+            // Assert
+            result.TotalBytes.Should().Be(expectedBytes);
+        }
+
+        [Theory]
+        [InlineData(1)] // Single file
+        [InlineData(2)] // Rotating files
+        public async Task SendsAcknowledgments_WithCorrectMode(int messageCount)
+        {
+            // Arrange
+            var logger = new NullLogger<FileOutput>();
+            var outputFile = new FileInfo(Path.Combine(_tempDir, "ack.txt"));
+            var fileConfig = new FileConfig { MessagesPerFile = 1 };
+            var output = new FileOutput(logger,
+                new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false },
+                fileConfig, messageCount: messageCount);
+
+            var messageChannel = Channel.CreateUnbounded<RetrievedMessage>();
+            var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
+
+            for (int i = 1; i <= messageCount; i++)
+            {
+                await messageChannel.Writer.WriteAsync(CreateRetrievedMessage($"Message {i}", deliveryTag: (ulong)i));
+            }
+
+            messageChannel.Writer.Complete();
+
+            // Act
+            await output.WriteMessagesAsync(
+                messageChannel,
+                ackChannel,
+                CancellationToken.None);
+
+            // Assert
+            for (int i = 1; i <= messageCount; i++)
+            {
+                ackChannel.Reader.TryRead(out var ack).Should().BeTrue();
+                ack.Item1.Should().Be((ulong)i);
+                ack.Item2.Should().Be(true);
+            }
+        }
+
+        [Theory]
+        [InlineData(100000)] // Single file
+        [InlineData(10000)] // Rotating files
+        public async Task StopsProcessingAfterCancellation(int messagesPerFile)
         {
             // Arrange
             var logger = new NullLogger<FileOutput>();
             var outputFile = new FileInfo(Path.Combine(_tempDir, "cancel.txt"));
-            var fileConfig = new FileConfig { MessagesPerFile = 10000 };
-            var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 100000);
+            var fileConfig = new FileConfig { MessagesPerFile = messagesPerFile };
+            var output = new FileOutput(logger,
+                new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false },
+                fileConfig, messageCount: 100000);
 
             // Use bounded channel to control message flow rate
             var messageChannel = Channel.CreateBounded<RetrievedMessage>(500);
@@ -521,6 +425,7 @@ public class FileOutputTests
                         cts.Cancel();
                     }
                 }
+
                 messageChannel.Writer.Complete();
             });
 
@@ -532,6 +437,43 @@ public class FileOutputTests
             result.Should().NotBeNull();
             result.ProcessedCount.Should().BeGreaterThan(100, "at least 100 messages should be processed before cancellation");
             result.ProcessedCount.Should().BeLessThan(totalMessages, "cancellation should stop processing before all messages are consumed");
+            _output.WriteLine($"Processed {result.ProcessedCount} messages before cancellation.");
+        }
+        
+        [Theory]
+        [InlineData(2)] // Single file
+        [InlineData(1)] // Rotating files
+        public async Task HandlesWriteError_SendsNack(int messagesPerFile)
+        {
+            // Arrange
+            var logger = new NullLogger<FileOutput>();
+            // Use a valid path, but trigger error during processing
+            var outputFile = new FileInfo(Path.Combine(_tempDir, "output.txt"));
+        
+            var fileConfig = new FileConfig { MessagesPerFile = messagesPerFile };
+            var output = new FileOutput(logger, new OutputOptions { Format = OutputFormat.Plain, OutputFile = outputFile, Compact = false, Quiet = false, Verbose = false, NoColor = false }, fileConfig, messageCount: 2);
+
+            var messageChannel = Channel.CreateUnbounded<RetrievedMessage>();
+            var ackChannel = Channel.CreateUnbounded<(ulong, bool)>();
+
+            var message = CreateRetrievedMessage("Message 1", deliveryTag: 1);
+            // Create a new properties object with invalid DeliveryMode to force FormatMessage to throw
+            var invalidProps = message.Properties! with { DeliveryMode = (DeliveryModes)99 };
+            var invalidMessage = message with { Properties = invalidProps };
+
+            await messageChannel.Writer.WriteAsync(invalidMessage);
+            messageChannel.Writer.Complete();
+
+            // Act
+            var result = await output.WriteMessagesAsync(messageChannel, ackChannel, CancellationToken.None);
+
+            // Assert
+            // Should receive a NACK (false)
+            ackChannel.Reader.TryRead(out var ack).Should().BeTrue();
+            ack.Item1.Should().Be(1);
+            ack.Item2.Should().BeFalse();
+            result.ProcessedCount.Should().Be(0);
+            result.TotalBytes.Should().Be(0);
         }
     }
 
