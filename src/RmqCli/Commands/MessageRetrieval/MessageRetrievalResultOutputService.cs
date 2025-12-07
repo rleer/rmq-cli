@@ -14,7 +14,7 @@ public class MessageRetrievalResultOutputService
     public MessageRetrievalResultOutputService(OutputOptions outputOptions)
     {
         _outputOptions = outputOptions;
-        _console = AnsiConsoleFactory.CreateStderrConsole();
+        _console = AnsiConsoleFactory.CreateStderrConsole(_outputOptions.NoColor);
     }
 
     public void WriteMessageRetrievalResult(MessageRetrievalResponse response)

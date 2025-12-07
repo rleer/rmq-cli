@@ -20,7 +20,7 @@ public class PurgeOutputService : IPurgeOutputService
     public PurgeOutputService(OutputOptions outputOptions)
     {
         _outputOptions = outputOptions;
-        _console = AnsiConsoleFactory.CreateStderrConsole();
+        _console = AnsiConsoleFactory.CreateStderrConsole(outputOptions.NoColor);
     }
 
     public void Write(PurgeResponse response)

@@ -19,7 +19,7 @@ public class PublishOutputService : IPublishOutputService
     public PublishOutputService(OutputOptions outputOptions)
     {
         _outputOptions = outputOptions;
-        _console = AnsiConsoleFactory.CreateStderrConsole();
+        _console = AnsiConsoleFactory.CreateStderrConsole(outputOptions.NoColor);
     }
 
     public void WritePublishResult(PublishResponse response)

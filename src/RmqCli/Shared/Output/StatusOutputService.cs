@@ -27,7 +27,7 @@ public class StatusOutputService : IStatusOutputService
     public StatusOutputService(OutputOptions outputOptions)
     {
         _outputOptions = outputOptions;
-        _console = AnsiConsoleFactory.CreateStderrConsole();
+        _console = AnsiConsoleFactory.CreateStderrConsole(outputOptions.NoColor);
     }
 
     public bool NoColor => _outputOptions.NoColor;
