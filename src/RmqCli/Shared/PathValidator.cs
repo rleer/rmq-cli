@@ -2,7 +2,7 @@ namespace RmqCli.Shared;
 
 public static class PathValidator
 {
-    public static bool IsValidFilePath(string path)
+    public static bool IsValidFilePath(string? path)
     {
         if (string.IsNullOrWhiteSpace(path))
             return false;
