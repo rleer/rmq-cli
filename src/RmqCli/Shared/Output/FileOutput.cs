@@ -80,8 +80,16 @@ public class FileOutput : MessageOutput
                 // Add delimiter between messages for plain text format
                 if (!isFirstMessage && _outputOptions.Format == OutputFormat.Plain)
                 {
-                    await writer.WriteLineAsync(_fileConfig.MessageDelimiter);
+                    if (_fileConfig.MessageDelimiter.Contains(Environment.NewLine))
+                    {
+                        await writer.WriteAsync(_fileConfig.MessageDelimiter);
+                    }
+                    else
+                    {
+                        await writer.WriteLineAsync(_fileConfig.MessageDelimiter);
+                    }
                 }
+
                 isFirstMessage = false;
 
                 var formattedMessage = FormatMessage(message);
@@ -157,7 +165,14 @@ public class FileOutput : MessageOutput
                     // Add delimiter between messages in same file for plain text format
                     if (messagesInCurrentFile > 0 && _outputOptions.Format == OutputFormat.Plain)
                     {
-                        await writer.WriteLineAsync(_fileConfig.MessageDelimiter);
+                        if (_fileConfig.MessageDelimiter.Contains(Environment.NewLine))
+                        {
+                            await writer.WriteAsync(_fileConfig.MessageDelimiter);
+                        }
+                        else
+                        {
+                            await writer.WriteLineAsync(_fileConfig.MessageDelimiter);
+                        }
                     }
 
                     var formattedMessage = FormatMessage(message);
