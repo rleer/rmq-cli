@@ -152,8 +152,8 @@ public class TomlConfigurationHelperTests
         public void GetUserConfigFilePath_RespectsEnvVar()
         {
             // Arrange
-            var expectedPath = "/tmp/custom/user/config.toml";
-            var envPath = "/tmp/custom/user";
+            var envPath = Path.Combine(Path.GetTempPath(), "custom", "user");
+            var expectedPath = Path.Combine(envPath, "config.toml");
             Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", envPath);
 
             // Act
@@ -167,7 +167,7 @@ public class TomlConfigurationHelperTests
         public void GetSystemConfigFilePath_RespectsEnvVar()
         {
             // Arrange
-            var expectedPath = "/tmp/custom/system/config.toml";
+            var expectedPath = Path.Combine(Path.GetTempPath(), "custom", "system", "config.toml");
             Environment.SetEnvironmentVariable("RMQCLI_SYSTEM_CONFIG_PATH", expectedPath);
 
             // Act
