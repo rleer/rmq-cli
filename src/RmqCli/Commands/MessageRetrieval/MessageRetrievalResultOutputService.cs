@@ -34,27 +34,29 @@ public class MessageRetrievalResultOutputService
 
     private void WriteMessageRetrievalResultInPlainFormat(MessageRetrievalResponse response)
     {
-        _console.MarkupLineInterpolated($"  [dim]Queue:      {response.Queue}[/]");
+        var rows = new List<Text> { new($"  Queue:      {response.Queue}", AddStyle()) };
 
         if (response.Result is { } result)
         {
-            _console.MarkupLineInterpolated($"  [dim]Mode:       {result.RetrievalMode}[/]");
-            _console.MarkupLineInterpolated($"  [dim]Ack Mode:   {result.AckMode}[/]");
-            _console.MarkupLineInterpolated($"  [dim]Received:   {FormatMessageCount(result.MessagesReceived)}[/]");
+            rows.Add(new Text($"  Mode:       {result.RetrievalMode}", AddStyle()));
+            rows.Add(new Text($"  Ack Mode:   {result.AckMode}", AddStyle()));
+            rows.Add(new Text($"  Received:   {FormatMessageCount(result.MessagesReceived)}", AddStyle()));
 
             // Show processed count with skipped messages if applicable
             if (result.MessagesSkipped > 0)
             {
-                _console.MarkupLineInterpolated(
-                    $"  [dim]Processed:  {FormatMessageCount(result.MessagesProcessed)} ({result.MessagesSkipped} skipped & requeued by RabbitMQ)[/]");
+                rows.Add(new Text($"  Processed:  {FormatMessageCount(result.MessagesProcessed)} ({result.MessagesSkipped} skipped & requeued by RabbitMQ)",
+                    AddStyle()));
             }
             else
             {
-                _console.MarkupLineInterpolated($"  [dim]Processed:  {FormatMessageCount(result.MessagesProcessed)}[/]");
+                rows.Add(new Text($"  Processed:  {FormatMessageCount(result.MessagesProcessed)}", AddStyle()));
             }
 
-            _console.MarkupLineInterpolated($"  [dim]Total size: {result.TotalSize}[/]");
+            rows.Add(new Text($"  Total size: {result.TotalSize}", AddStyle()));
         }
+
+        _console.Write(new Rows(rows));
     }
 
     private void WriteMessageRetrievalResultInJsonFormat(MessageRetrievalResponse response)
@@ -67,5 +69,10 @@ public class MessageRetrievalResultOutputService
     {
         var pluralSuffix = count == 1 ? string.Empty : "s";
         return $"{count} message{pluralSuffix}";
+    }
+
+    private Style AddStyle()
+    {
+        return _outputOptions.NoColor ? Style.Plain : Style.Parse("dim");
     }
 }
