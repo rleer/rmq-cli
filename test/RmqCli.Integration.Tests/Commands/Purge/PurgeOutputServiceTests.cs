@@ -62,6 +62,9 @@ public class PurgeOutputServiceTests : IDisposable
             Operation = "purge"
         };
 
+        // Clear any buffered content before Act to prevent test pollution
+        _stringWriter.GetStringBuilder().Clear();
+
         // Act
         service.Write(response);
 
@@ -117,6 +120,9 @@ public class PurgeOutputServiceTests : IDisposable
             Vhost = "/",
             Operation = "purge"
         };
+
+        // Clear any buffered content before Act to prevent test pollution
+        _stringWriter.GetStringBuilder().Clear();
 
         // Act
         service.Write(response);

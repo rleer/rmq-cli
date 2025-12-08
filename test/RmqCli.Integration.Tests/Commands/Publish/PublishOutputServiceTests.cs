@@ -195,6 +195,9 @@ public class PublishOutputServiceTests : IDisposable
             }
         };
 
+        // Clear any buffered content before Act to prevent test pollution
+        _stringWriter.GetStringBuilder().Clear();
+
         // Act
         service.WritePublishResult(response);
 
