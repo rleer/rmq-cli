@@ -9,6 +9,7 @@ using Xunit.Abstractions;
 
 namespace RmqCli.Integration.Tests.Infrastructure.Output;
 
+[Collection("ConsoleOutputTests")]
 public class ConsoleOutputTests
 {
     public class WriteMessagesAsync : IDisposable
