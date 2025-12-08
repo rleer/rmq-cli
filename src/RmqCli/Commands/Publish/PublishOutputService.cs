@@ -45,16 +45,19 @@ public class PublishOutputService : IPublishOutputService
 
     private void WritePublishResultInPlainFormat(PublishResponse response)
     {
+        var rows = new List<Text>();
+        var style = _outputOptions.NoColor ? Style.Plain : Style.Parse("dim");
+
         if (response.Destination is { } dest)
         {
             if (dest.Queue is not null)
             {
-                _console.MarkupLineInterpolated($"  [dim]Queue:       {dest.Queue}[/]");
+                rows.Add(new Text($"  Queue:       {dest.Queue}", style));
             }
             else if (dest is { Exchange: not null, RoutingKey: not null })
             {
-                _console.MarkupLineInterpolated($"  [dim]Exchange:    {dest.Exchange}[/]");
-                _console.MarkupLineInterpolated($"  [dim]Routing Key: {dest.RoutingKey}[/]");
+                rows.Add(new Text($"  Exchange:    {dest.Exchange}", style));
+                rows.Add(new Text($"  Routing Key: {dest.RoutingKey}", style));
             }
         }
 
@@ -62,16 +65,18 @@ public class PublishOutputService : IPublishOutputService
         {
             if (response.Result.MessagesPublished > 1)
             {
-                _console.MarkupLineInterpolated($"  [dim]Message IDs: {result.FirstMessageId} → {result.LastMessageId}[/]");
-                _console.MarkupLineInterpolated($"  [dim]Size:        {result.AverageMessageSize} avg. ({result.TotalSize} total)[/]");
-                _console.MarkupLineInterpolated($"  [dim]Time:        {result.FirstTimestamp} UTC → {result.LastTimestamp} UTC[/]");
+                rows.Add(new Text($"  Message IDs: {result.FirstMessageId} → {result.LastMessageId}", style));
+                rows.Add(new Text($"  Size:        {result.AverageMessageSize} avg. ({result.TotalSize} total)", style));
+                rows.Add(new Text($"  Time:        {result.FirstTimestamp} UTC → {result.LastTimestamp} UTC", style));
             }
             else
             {
-                _console.MarkupLineInterpolated($"  [dim]Message ID:  {result.FirstMessageId}[/]");
-                _console.MarkupLineInterpolated($"  [dim]Size:        {result.TotalSize}[/]");
-                _console.MarkupLineInterpolated($"  [dim]Timestamp:   {result.FirstTimestamp} UTC[/]");
+                rows.Add(new Text($"  Message ID:  {result.FirstMessageId}", style));
+                rows.Add(new Text($"  Size:        {result.TotalSize}", style));
+                rows.Add(new Text($"  Timestamp:   {result.FirstTimestamp} UTC", style));
             }
         }
+
+        _console.Write(new Rows(rows));
     }
 }
