@@ -231,14 +231,5 @@ public class CancellationHelperTests
             // Assert - Token captured before disposal remains accessible
             act.Should().NotThrow();
         }
-
-        // Note: Actually triggering Console.CancelKeyPress (Ctrl+C) requires OS-level
-        // signal handling and is not feasible in automated tests. The tests above verify:
-        // 1. The CancellationTokenSource linkage works correctly
-        // 2. The handler registration doesn't throw
-        // 3. Cancellation propagates through the linked token
-        //
-        // The Ctrl+C handling can be manually tested by running the application and
-        // pressing Ctrl+C, or in E2E tests that can send signals to the process.
     }
 }

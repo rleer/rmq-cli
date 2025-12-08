@@ -1,6 +1,6 @@
 using RmqCli.Shared.Output;
 
-namespace RmqCli.Unit.Tests.Shared;
+namespace RmqCli.Unit.Tests.Shared.Output;
 
 public class OutputUtilitiesTests
 {
