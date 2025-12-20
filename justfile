@@ -12,6 +12,7 @@ build:
 test:
     dotnet test
 
+# Publish native binary for E2E tests and place in designated directory
 prepare-e2e-test:
     rm -rf test/RmqCli.E2E.Tests/bin/rmq-published
     dotnet publish src/RmqCli/RmqCli.csproj -c Release -r osx-arm64 -o test/RmqCli.E2E.Tests/bin/rmq-published
