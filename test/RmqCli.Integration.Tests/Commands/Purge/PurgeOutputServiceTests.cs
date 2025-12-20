@@ -35,7 +35,8 @@ public class PurgeOutputServiceTests : IDisposable
         var response = new PurgeResponse
         {
             Queue = "test-queue",
-            Vhost = "/"
+            Vhost = "/",
+            PurgedMessages = 42
         };
 
         // Act
@@ -43,7 +44,7 @@ public class PurgeOutputServiceTests : IDisposable
 
         // Assert
         var output = _stringWriter.ToString();
-        output.Should().Contain("Queue test-queue in vhost / was purged successfully");
+        output.Should().Contain("Purged 42 messages from queue test-queue in vhost / successfully");
     }
 
     [Fact]
@@ -59,7 +60,8 @@ public class PurgeOutputServiceTests : IDisposable
             Timestamp = timestamp,
             Queue = "test-queue",
             Vhost = "/",
-            Operation = "purge"
+            Operation = "purge",
+            PurgedMessages = 42
         };
 
         // Clear any buffered content before Act to prevent test pollution
@@ -76,6 +78,7 @@ public class PurgeOutputServiceTests : IDisposable
         deserialized.Should().NotBeNull();
         deserialized.Status.Should().Be("success");
         deserialized.Timestamp.Should().Be(timestamp);
+        deserialized.PurgedMessages.Should().Be(42);
         deserialized.Queue.Should().Be("test-queue");
         deserialized.Vhost.Should().Be("/");
         deserialized.Operation.Should().Be("purge");
