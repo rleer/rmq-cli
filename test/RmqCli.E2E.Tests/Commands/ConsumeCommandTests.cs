@@ -1,6 +1,7 @@
 using System.Text.Json;
 using RmqCli.E2E.Tests.Infrastructure;
 using RmqCli.Shared.Json;
+using RmqCli.Tests.Shared.Infrastructure;
 using Xunit.Abstractions;
 
 namespace RmqCli.E2E.Tests.Commands;

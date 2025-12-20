@@ -27,6 +27,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\RmqCli\RmqCli.csproj" />
+    <ProjectReference Include="..\RmqCli.Tests.Shared\RmqCli.Tests.Shared.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,7 +1,9 @@
+using RmqCli.Tests.Shared.Infrastructure;
+
 namespace RmqCli.E2E.Tests.Infrastructure;
 
 /// <summary>
-/// Collection definition for sharing RabbitMQ container across tests.
+/// Collection definition for sharing RabbitMQ container across E2E tests.
 /// Tests in this collection will share the same RabbitMQ instance for better performance.
 /// </summary>
 [CollectionDefinition("RabbitMQ")]

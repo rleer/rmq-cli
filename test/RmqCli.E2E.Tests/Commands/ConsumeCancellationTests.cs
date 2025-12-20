@@ -1,4 +1,5 @@
 using RmqCli.E2E.Tests.Infrastructure;
+using RmqCli.Tests.Shared.Infrastructure;
 using Xunit.Abstractions;
 
 namespace RmqCli.E2E.Tests.Commands;

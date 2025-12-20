@@ -1,6 +1,8 @@
+using System.Text;
 using CliWrap;
-using RabbitMQ.Client;
 using RmqCli.Core.Models;
+using RmqCli.Tests.Shared.Infrastructure;
+using CommandResult = RmqCli.Tests.Shared.Infrastructure.CommandResult;
 
 namespace RmqCli.E2E.Tests.Infrastructure;
 
@@ -10,10 +12,12 @@ namespace RmqCli.E2E.Tests.Infrastructure;
 public class RabbitMqTestHelpers
 {
     private readonly RabbitMqFixture _fixture;
+    private readonly RabbitMqOperations _operations;
 
     public RabbitMqTestHelpers(RabbitMqFixture fixture)
     {
         _fixture = fixture;
+        _operations = new RabbitMqOperations(fixture);
     }
 
     /// <summary>
@@ -43,8 +47,8 @@ public class RabbitMqTestHelpers
         // Fallback if graceful cancellation doesn't complete in time
         using var timeoutCts = new CancellationTokenSource(timeout.Value);
 
-        var stdOutBuffer = new System.Text.StringBuilder();
-        var stdErrBuffer = new System.Text.StringBuilder();
+        var stdOutBuffer = new StringBuilder();
+        var stdErrBuffer = new StringBuilder();
 
         try
         {
@@ -106,148 +110,26 @@ public class RabbitMqTestHelpers
     /// <summary>
     /// Gets queue information directly from RabbitMQ
     /// </summary>
-    public async Task<QueueInfo> GetQueueInfo(string queueName)
-    {
-        var factory = new ConnectionFactory
-        {
-            Uri = new Uri(_fixture.ConnectionString)
-        };
+    public Task<QueueInfo> GetQueueInfo(string queueName) => _operations.GetQueueInfo(queueName);
 
-        await using var connection = await factory.CreateConnectionAsync();
-        await using var channel = await connection.CreateChannelAsync();
-
-        try
-        {
-            var result = await channel.QueueDeclarePassiveAsync(queueName);
-
-            return new QueueInfo
-            {
-                Queue = queueName,
-                Exists = true,
-                MessageCount = (int)result.MessageCount,
-                ConsumerCount = (int)result.ConsumerCount
-            };
-        }
-        catch (Exception)
-        {
-            return new QueueInfo
-            {
-                Queue = queueName,
-                Exists = false,
-                MessageCount = 0,
-                ConsumerCount = 0
-            };
-        }
-    }
-    
     /// <summary>
     /// Declares a queue in RabbitMQ for testing
     /// </summary>
-    public async Task DeclareQueue(string queueName)
-    {
-        var factory = new ConnectionFactory
-        {
-            Uri = new Uri(_fixture.ConnectionString)
-        };
-
-        await using var connection = await factory.CreateConnectionAsync();
-        await using var channel = await connection.CreateChannelAsync();
-
-        // Ensure queue exists
-        await channel.QueueDeclareAsync(
-            queue: queueName,
-            durable: false,
-            exclusive: false,
-            autoDelete: false);
-    }
+    public Task DeclareQueue(string queueName) => _operations.DeclareQueue(queueName);
 
     /// <summary>
     /// Publishes messages directly to RabbitMQ for testing
     /// </summary>
-    public async Task PublishMessages(string queueName, IEnumerable<string> messages, bool declareQueue = true)
-    {
-        var factory = new ConnectionFactory
-        {
-            Uri = new Uri(_fixture.ConnectionString)
-        };
-
-        await using var connection = await factory.CreateConnectionAsync();
-        await using var channel = await connection.CreateChannelAsync();
-
-        if (declareQueue)
-        {
-            await channel.QueueDeclareAsync(
-                queue: queueName,
-                durable: false,
-                exclusive: false,
-                autoDelete: false);
-        }
-
-        foreach (var message in messages)
-        {
-            var body = System.Text.Encoding.UTF8.GetBytes(message);
-            await channel.BasicPublishAsync(
-                exchange: string.Empty,
-                routingKey: queueName,
-                body: body);
-        }
-    }
+    public Task PublishMessages(string queueName, IEnumerable<string> messages, bool declareQueue = true) =>
+        _operations.PublishMessages(queueName, messages, declareQueue);
 
     /// <summary>
     /// Purges all messages from a queue
     /// </summary>
-    public async Task PurgeQueue(string queueName)
-    {
-        var factory = new ConnectionFactory
-        {
-            Uri = new Uri(_fixture.ConnectionString)
-        };
-
-        await using var connection = await factory.CreateConnectionAsync();
-        await using var channel = await connection.CreateChannelAsync();
-
-        try
-        {
-            await channel.QueuePurgeAsync(queueName);
-        }
-        catch
-        {
-            // Queue might not exist, ignore
-        }
-    }
+    public Task PurgeQueue(string queueName) => _operations.PurgeQueue(queueName);
 
     /// <summary>
     /// Deletes a queue
     /// </summary>
-    public async Task DeleteQueue(string queueName)
-    {
-        var factory = new ConnectionFactory
-        {
-            Uri = new Uri(_fixture.ConnectionString)
-        };
-
-        await using var connection = await factory.CreateConnectionAsync();
-        await using var channel = await connection.CreateChannelAsync();
-
-        try
-        {
-            await channel.QueueDeleteAsync(queueName);
-        }
-        catch
-        {
-            // Queue might not exist, ignore
-        }
-    }
-}
-
-/// <summary>
-/// Wrapper for command execution result
-/// </summary>
-public record CommandResult
-{
-    public int ExitCode { get; init; }
-    public string Output { get; init; } = string.Empty;
-    public string ErrorOutput { get; init; } = string.Empty;
-
-    public bool IsSuccess => ExitCode == 0;
+    public Task DeleteQueue(string queueName) => _operations.DeleteQueue(queueName);
 }
