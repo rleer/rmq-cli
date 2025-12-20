@@ -193,6 +193,12 @@ public class PublishService : IPublishService
 
             for (var i = 0; i < burstCount; i++)
             {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    _logger.LogDebug("Cancellation requested during publishing loop");
+                    cancellationToken.ThrowIfCancellationRequested();
+                }
+
                 var burstSuffix = burstCount > 1 ? GetMessageIdSuffix(i, burstCount) : string.Empty;
                 var messageId = $"{messageBaseId}{messageIdSuffix}{burstSuffix}";
                 var props = new BasicProperties
@@ -210,7 +216,7 @@ public class PublishService : IPublishService
                     mandatory: true,
                     basicProperties: props,
                     body: body,
-                    cancellationToken: cancellationToken);
+                    cancellationToken: CancellationToken.None);
 
                 // Collect the result
                 results.Add(new PublishOperationDto(props.MessageId, body.LongLength, props.Timestamp));
