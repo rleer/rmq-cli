@@ -33,6 +33,9 @@ public class PurgeCommandHandler : ICommandHandler
 
                                      # Purge a queue in a specific vhost
                                      rmq purge orders --vhost production
+                                     
+                                     # Purge a queue via API endpoint
+                                     rmq purge orders --use-api
                                    """;
 
         var purgeCommand = new Command("purge", description);
@@ -56,10 +59,17 @@ public class PurgeCommandHandler : ICommandHandler
             DefaultValueFactory = _ => OutputFormat.Plain
         };
         outputFormatOption.AcceptOnlyFromAmong("plain", "json");
+        
+        var useApiOption = new Option<bool>("--use-api")
+        {
+            Description = "Use RabbitMQ Management API for purging the queue.",
+            DefaultValueFactory = _ => false
+        };
 
         purgeCommand.Arguments.Add(queueArgument);
         purgeCommand.Options.Add(forceOption);
         purgeCommand.Options.Add(outputFormatOption);
+        purgeCommand.Options.Add(useApiOption);
 
         purgeCommand.SetAction(Handle);
 

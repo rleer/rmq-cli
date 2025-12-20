@@ -42,17 +42,23 @@ public class PurgeOutputService : IPurgeOutputService
     {
         var style = _outputOptions.NoColor ? Style.Plain : Style.Parse("orange1");
 
-        var message = new Text($"{Constants.SuccessSymbol} Queue ", Style.Plain);
-        var queueText = new Text(response.Queue, style);
-        var inVhostText = new Text(" in vhost ", Style.Plain);
-        var vhostText = new Text(response.Vhost, style);
-        var successText = new Text(" was purged successfully", Style.Plain);
+        var message = new List<Text> { new($"{Constants.SuccessSymbol} Purged ", Style.Plain) };
 
-        _console.Write(message);
-        _console.Write(queueText);
-        _console.Write(inVhostText);
-        _console.Write(vhostText);
-        _console.Write(successText);
+        if (response.PurgedMessages > 0)
+        {
+            message.Add(new Text($"{response.PurgedMessages} ", style));   
+        }
+        message.Add(new Text("messages from queue ", Style.Plain));
+        message.Add(new Text(response.Queue, style));
+        message.Add(new Text(" in vhost ", Style.Plain));
+        message.Add(new Text(response.Vhost, style));
+        message.Add(new Text(" successfully", Style.Plain));
+
+        foreach (var text in message)
+        {
+            _console.Write(text);
+        }
+        
         _console.WriteLine();
     }
 

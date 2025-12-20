@@ -122,15 +122,17 @@ public static class ServiceCollectionExtensions
     /// Includes RabbitMQ channel factory and status output service.
     /// </summary>
     /// <param name="services">The service collection to add services to.</param>
-    /// <param name="useManagementClient">Toggles between library API client and management API</param>
+    /// <param name="useAmqpClient">Add AMQP client factory</param>
+    /// <param name="useManagementClient">Add management API client</param>
     /// <returns>The service collection for chaining.</returns>
-    private static IServiceCollection AddRmqCoreServices(this IServiceCollection services, bool useManagementClient = false)
+    private static IServiceCollection AddRmqCoreServices(this IServiceCollection services, bool useAmqpClient = true, bool useManagementClient = false)
     {
         if (useManagementClient)
         {
             services.AddSingleton<IRabbitManagementClient, RabbitManagementClient>();
         }
-        else
+
+        if (useAmqpClient)
         {
             services.AddSingleton<IRabbitChannelFactory, RabbitChannelFactory>();
         }
@@ -300,7 +302,6 @@ public static class ServiceCollectionExtensions
     /// <param name="parseResult">The parse result containing CLI options.</param>
     /// <param name="purgeOptions">Purge-specific options.</param>
     /// <param name="outputOptions">Output formatting options.</param>
-    /// <returns>The service collection for chaining.</returns>
     /// <returns>The service collection for chaining.</returns>
     public static IServiceCollection AddRmqPurge(
         this IServiceCollection services,

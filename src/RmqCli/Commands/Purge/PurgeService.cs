@@ -14,6 +14,7 @@ public interface IPurgeService
 public class PurgeService : IPurgeService
 {
     private readonly IRabbitManagementClient _client;
+    private readonly IRabbitChannelFactory _channelFactory;
     private readonly PurgeOptions _purgeOptions;
     private readonly RabbitMqConfig _rabbitMqConfig;
     private readonly IPurgeOutputService _resultOutput;
@@ -22,6 +23,7 @@ public class PurgeService : IPurgeService
 
     public PurgeService(
         IRabbitManagementClient client,
+        IRabbitChannelFactory channelFactory,
         PurgeOptions purgeOptions,
         RabbitMqConfig rabbitMqConfig,
         IPurgeOutputService resultOutput,
@@ -29,6 +31,7 @@ public class PurgeService : IPurgeService
         ILogger<PurgeService> logger)
     {
         _client = client;
+        _channelFactory = channelFactory;
         _purgeOptions = purgeOptions;
         _rabbitMqConfig = rabbitMqConfig;
         _resultOutput = resultOutput;
@@ -52,21 +55,41 @@ public class PurgeService : IPurgeService
             }
         }
 
-        var result = await _client.PurgeQueueAsync(_purgeOptions.Queue, cancellationToken);
-
-        if (!result.IsSuccess)
-        {
-            _statusOutput.ShowError($"Failed to purge queue {formattedQueueName} in vhost {formattedVhostName}", result.ErrorInfo);
-            return 1;
-        }
-        
         var response = new PurgeResponse
         {
             Queue = _purgeOptions.Queue,
             Vhost = _rabbitMqConfig.VirtualHost,
-            Status = result.IsSuccess ? "success" : "failure",
             Timestamp = DateTime.Now
         };
+        
+        if (_purgeOptions.UseApi)
+        {
+            var result = await _client.PurgeQueueAsync(_purgeOptions.Queue, cancellationToken);
+
+            if (!result.IsSuccess)
+            {
+                _statusOutput.ShowError($"Failed to purge queue {formattedQueueName} in vhost {formattedVhostName}", result.ErrorInfo);
+                return 1;
+            }
+            response.Status = "success";
+        }
+        else
+        {
+            var channel = await _channelFactory.GetChannelAsync();
+            try
+            {
+                var purgeResult = await channel.QueuePurgeAsync(_purgeOptions.Queue, cancellationToken);
+                response.PurgedMessages = purgeResult;
+                response.Status = "success";
+            }
+            catch (Exception ex)
+            {
+                // TODO: Improve error handling to distinguish different failure reasons
+                _logger.LogError(ex, "Error purging queue {Queue} in vhost {Vhost}", _purgeOptions.Queue, _rabbitMqConfig.VirtualHost);
+                _statusOutput.ShowError($"Failed to purge queue {formattedQueueName} in vhost {formattedVhostName}");
+                return 1;
+            }
+        }
 
         _resultOutput.Write(response);
 
