@@ -25,9 +25,8 @@ public class RabbitManagementClient : IRabbitManagementClient
 
         var baseUrl = new UriBuilder
         {
-            // TODO: Support HTTPS if needed
-            Scheme = "http",
-            Host = _config.Host,
+            Scheme = _config.UseTls ? "https" : "http",
+            Host = string.IsNullOrWhiteSpace(_config.TlsServerName) ? _config.Host : _config.TlsServerName,
             Port = _config.ManagementPort
         };
 
