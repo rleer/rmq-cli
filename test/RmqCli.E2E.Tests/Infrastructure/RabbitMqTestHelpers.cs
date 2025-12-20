@@ -101,7 +101,7 @@ public class RabbitMqTestHelpers
         {
             throw new FileNotFoundException(
                 $"RMQ executable not found at: {rmqPath}. " +
-                "Please run 'dotnet publish src/RmqCli/RmqCli.csproj -c Release -r osx-arm64 -o test/RmqCli.E2E.Tests/bin/rmq-published' first.");
+                "Please run 'dotnet publish src/RmqCli/RmqCli.csproj -c Release -r <RUNTIME_IDENTIFIER> -o test/RmqCli.E2E.Tests/bin/rmq-published' first.");
         }
 
         return rmqPath;

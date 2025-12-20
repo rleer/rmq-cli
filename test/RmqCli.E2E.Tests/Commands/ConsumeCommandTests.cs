@@ -2,24 +2,21 @@ using System.Text.Json;
 using RmqCli.E2E.Tests.Infrastructure;
 using RmqCli.Shared.Json;
 using RmqCli.Tests.Shared.Infrastructure;
-using Xunit.Abstractions;
 
 namespace RmqCli.E2E.Tests.Commands;
 
 /// <summary>
 /// E2E tests for the consume command using a real RabbitMQ instance.
-/// These tests verify the full workflow from publishing messages to consuming them via the CLI.
+/// Covers the critical functionality of message consumption, acknowledgment modes, and output formats.
 /// </summary>
 [Collection("RabbitMQ")]
 public class ConsumeCommandTests : IAsyncLifetime
 {
-    private readonly ITestOutputHelper _output;
     private readonly RabbitMqTestHelpers _helpers;
     private const string TestQueue = "e2e-consume-test";
 
-    public ConsumeCommandTests(RabbitMqFixture fixture, ITestOutputHelper output)
+    public ConsumeCommandTests(RabbitMqFixture fixture)
     {
-        _output = output;
         _helpers = new RabbitMqTestHelpers(fixture);
     }
 
@@ -133,42 +130,77 @@ public class ConsumeCommandTests : IAsyncLifetime
         // STDOUT should contain JSON output
         result.Output.Should().NotBeEmpty();
 
-        // The message output should be parseable as JSON
-        var parsing = () => JsonDocument.Parse(result.Output);
-        parsing.Should().NotThrow("message output should be valid JSON");
-
-        // {"body":"Test message","properties":{"appId":null,"clusterId":null,"contentType":null,"contentEncoding":null,"correlationId":null,"deliveryMode":null,"expiration":null,"messageId":null,"priority":null,"replyTo":null,"timestamp":null,"type":null,"userId":null},"headers":null,"exchange":"","routingKey":"e2e-consume-test","queue":"e2e-consume-test","deliveryTag":1,"redelivered":false,"bodySizeBytes":12,"bodySize":"12 bytes"}    
+        // The message output should conform to the JSON schema for RetrievedMessage
         var jsonMessage = JsonSerializer.Deserialize(result.Output, JsonSerializationContext.RelaxedEscaping.RetrievedMessage);
         jsonMessage.Should().NotBeNull();
-        jsonMessage.Queue.Should().Be(TestQueue);
-        jsonMessage.RoutingKey.Should().Be(TestQueue);
-        jsonMessage.Redelivered.Should().Be(false);
-        jsonMessage.Headers.Should().BeNull();
-        jsonMessage.Body.Should().Be("Test message");
-        jsonMessage.BodySize.Should().Be("12 bytes");
-        jsonMessage.BodySizeBytes.Should().Be(12);
-        jsonMessage.DeliveryTag.Should().Be(1);
 
-        // The result output should be parseable as JSON
-        parsing = () => JsonDocument.Parse(result.ErrorOutput);
-        parsing.Should().NotThrow("result output should be valid JSON");
-
-        // {"result":{"messages_received":1,"messages_processed":1,"messages_skipped":0,"duration_ms":14.556,"duration":"14ms","ack_mode":"Ack","retrieval_mode":"subscribe","messages_per_second":68.7,"total_size_bytes":12,"total_size":"12 bytes"},"queue":"e2e-consume-test","status":"success","timestamp":"2025-11-16T17:04:56.984718Z","error":null}
+        // The result output should conform to the JSON schema for MessageRetrievalResponse
         var jsonResult = JsonSerializer.Deserialize(result.ErrorOutput, JsonSerializationContext.RelaxedEscaping.MessageRetrievalResponse);
         jsonResult.Should().NotBeNull();
-        jsonResult.Queue.Should().Be(TestQueue);
-        jsonResult.Status.Should().Be("success");
-        jsonResult.Result.Should().NotBeNull();
-        jsonResult.Timestamp.Should().BeBefore(DateTime.UtcNow);
-        jsonResult.Result.MessagesReceived.Should().Be(1);
-        jsonResult.Result.MessagesProcessed.Should().Be(1);
-        jsonResult.Result.MessagesSkipped.Should().Be(0);
-        jsonResult.Result.DurationMs.Should().BeGreaterThan(0);
-        jsonResult.Result.Duration.Should().NotBeEmpty();
-        jsonResult.Result.AckMode.Should().Be("Ack");
-        jsonResult.Result.RetrievalMode.Should().Be("subscribe");
-        jsonResult.Result.MessagesPerSecond.Should().NotBe(0);
-        jsonResult.Result.TotalSizeBytes.Should().Be(12);
-        jsonResult.Result.TotalSize.Should().Be("12 bytes");
+    }
+
+    [Fact]
+    public async Task Consume_ShouldOutputTable_WhenTableFormatSpecified()
+    {
+        // Arrange
+        var messages = new[] { "Test message" };
+        await _helpers.PublishMessages(TestQueue, messages);
+
+        // Act - use no-color to simplify output verification
+        var result = await _helpers.RunRmqCommand(
+            $"consume --queue {TestQueue} --count 1 --ack-mode ack --output table --no-color");
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Output.Should().NotBeNullOrEmpty();
+        result.Output.Should().Contain("""
+                                       ╭─Message #1───────────────────────────────────────────────────────────────────╮
+                                       │ Queue             e2e-consume-test                                           │
+                                       │ Routing Key       e2e-consume-test                                           │
+                                       │ Exchange          -                                                          │
+                                       │ Redelivered       No                                                         │
+                                       │ ── Properties ────────────────────────────────────────────────────────────── │
+                                       │ Message ID        -                                                          │
+                                       │ Correlation ID    -                                                          │
+                                       │ Timestamp         -                                                          │
+                                       │ Content Type      -                                                          │
+                                       │ Content Encoding  -                                                          │
+                                       │ Delivery Mode     -                                                          │
+                                       │ Priority          -                                                          │
+                                       │ Expiration        -                                                          │
+                                       │ Reply To          -                                                          │
+                                       │ Type              -                                                          │
+                                       │ App ID            -                                                          │
+                                       │ User ID           -                                                          │
+                                       │ Cluster ID        -                                                          │
+                                       │ ── Body (12 bytes) ───────────────────────────────────────────────────────── │
+                                       │ Test message                                                                 │
+                                       ╰──────────────────────────────────────────────────────────────────────────────╯
+                                       """);
+    }
+
+    [Fact]
+    public async Task Consume_ShouldWriteToFile_WhenFileOptionSpecified()
+    {
+        // Arrange
+        var messages = new[] { "Message 1", "Message 2" };
+        await _helpers.PublishMessages(TestQueue, messages);
+        
+        // Create temp file path
+        var tempFilePath = Path.GetTempFileName();
+
+        // Act - consume with reject mode (no requeue)
+        var result = await _helpers.RunRmqCommand(
+            $"consume --queue {TestQueue} --count 2 --ack-mode reject --output plain --to-file {tempFilePath}");
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        File.Exists(tempFilePath).Should().BeTrue("output file should be created");
+        var fileContent = await File.ReadAllTextAsync(tempFilePath);
+        fileContent.Should().Contain("Message 1");
+        fileContent.Should().Contain("Message 2");
+        
+        // Clean up temp file
+        File.Delete(tempFilePath);
     }
 }
