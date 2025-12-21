@@ -28,7 +28,7 @@ public class RabbitMqTestHelpers
     /// <param name="timeout">Optional timeout (default: 1 minute)</param>
     /// <param name="cancellationToken">Cancellation token</param>
     public async Task<CommandResult> RunRmqCommand(
-        string command,
+        IEnumerable<string> args,
         string? stdinInput = null,
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
@@ -41,8 +41,14 @@ public class RabbitMqTestHelpers
         var username = userInfo.Length > 0 ? userInfo[0] : "guest";
         var password = userInfo.Length > 1 ? userInfo[1] : "guest";
 
-        // Build full arguments with connection details
-        var fullArgs = $"{command} --host {_fixture.Host} --port {_fixture.AmqpPort} --user {username} --password {password}";
+        // Build full arguments list with connection details
+        var fullArgs = new List<string>(args)
+        {
+            "--host", _fixture.Host,
+            "--port", _fixture.AmqpPort.ToString(),
+            "--user", username,
+            "--password", password
+        };
 
         // Get path to published rmq executable
         var rmqPath = GetRmqExecutablePath();

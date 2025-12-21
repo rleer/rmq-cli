@@ -41,7 +41,7 @@ public class ConsumeCommandTests : IAsyncLifetime
 
         // Act
         var result = await _helpers.RunRmqCommand(
-            $"consume --queue {TestQueue} --count 3 --ack-mode ack --output plain");
+            ["consume", "--queue", TestQueue, "--count", "3", "--ack-mode", "ack", "--output", "plain"]);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -63,7 +63,7 @@ public class ConsumeCommandTests : IAsyncLifetime
 
         // Act - consume only 3 messages
         var result = await _helpers.RunRmqCommand(
-            $"consume --queue {TestQueue} --count 3 --ack-mode ack --output plain");
+            ["consume", "--queue", TestQueue, "--count", "3", "--ack-mode", "ack", "--output", "plain"]);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -82,7 +82,7 @@ public class ConsumeCommandTests : IAsyncLifetime
 
         // Act - consume with requeue mode
         var result = await _helpers.RunRmqCommand(
-            $"consume --queue {TestQueue} --count 2 --ack-mode requeue --output plain");
+            ["consume", "--queue", TestQueue, "--count", "2", "--ack-mode", "requeue", "--output", "plain"]);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -103,7 +103,7 @@ public class ConsumeCommandTests : IAsyncLifetime
 
         // Act - consume with reject mode (no requeue)
         var result = await _helpers.RunRmqCommand(
-            $"consume --queue {TestQueue} --count 2 --ack-mode reject --output plain");
+            ["consume", "--queue", TestQueue, "--count", "2", "--ack-mode", "reject", "--output", "plain"]);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -122,7 +122,7 @@ public class ConsumeCommandTests : IAsyncLifetime
 
         // Act
         var result = await _helpers.RunRmqCommand(
-            $"consume --queue {TestQueue} --count 1 --ack-mode ack --output json");
+            ["consume", "--queue", TestQueue, "--count", "1", "--ack-mode", "ack", "--output", "json"]);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -148,7 +148,7 @@ public class ConsumeCommandTests : IAsyncLifetime
 
         // Act - use no-color to simplify output verification
         var result = await _helpers.RunRmqCommand(
-            $"consume --queue {TestQueue} --count 1 --ack-mode ack --output table --no-color");
+            ["consume", "--queue", TestQueue, "--count", "1", "--ack-mode", "ack", "--output", "table", "--no-color"]);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -191,7 +191,7 @@ public class ConsumeCommandTests : IAsyncLifetime
 
         // Act - consume with reject mode (no requeue)
         var result = await _helpers.RunRmqCommand(
-            $"consume --queue {TestQueue} --count 2 --ack-mode reject --output plain --to-file {tempFilePath}");
+            ["consume", "--queue", TestQueue, "--count", "2", "--ack-mode", "reject", "--output", "plain", "--to-file", tempFilePath]);
 
         // Assert
         result.IsSuccess.Should().BeTrue();

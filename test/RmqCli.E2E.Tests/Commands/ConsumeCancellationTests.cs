@@ -37,7 +37,7 @@ public class ConsumeCancellationTests : IAsyncLifetime
 
         // Act - Start consuming without count limit
         var result = await _helpers.RunRmqCommand(
-            $"consume --queue {TestQueue} --ack-mode ack --output table --no-color",
+            ["consume", "--queue", TestQueue, "--ack-mode", "ack", "--output", "table", "--no-color"],
             timeout: TimeSpan.FromSeconds(10), // Fallback timeout
             cancellationToken: cts.Token);
 
@@ -64,7 +64,7 @@ public class ConsumeCancellationTests : IAsyncLifetime
 
         // Act - Consume with requeue mode
         var result = await _helpers.RunRmqCommand(
-            $"consume --queue {TestQueue} --ack-mode requeue --output plain --no-color",
+            ["consume", "--queue", TestQueue, "--ack-mode", "requeue", "--output", "plain", "--no-color"],
             timeout: TimeSpan.FromSeconds(10), // Fallback timeout
             cancellationToken: cts.Token);
 
@@ -90,7 +90,7 @@ public class ConsumeCancellationTests : IAsyncLifetime
 
         // Act - Start consuming from empty queue
         var result = await _helpers.RunRmqCommand(
-            $"consume --queue {TestQueue} --count 10 --ack-mode ack --output plain --no-color",
+            ["consume", "--queue", TestQueue, "--count", "10", "--ack-mode", "ack", "--output", "plain", "--no-color"],
             timeout: TimeSpan.FromSeconds(10), // Fallback timeout
             cancellationToken: cts.Token);
 
