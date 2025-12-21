@@ -33,11 +33,11 @@ public class ConsumeCancellationTests : IAsyncLifetime
         await _helpers.PublishMessages(TestQueue, messages);
 
         // Cancel after a very short delay to simulate CTRL-C
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
 
         // Act - Start consuming without count limit
         var result = await _helpers.RunRmqCommand(
-            ["consume", "--queue", TestQueue, "--ack-mode", "ack", "--output", "table", "--no-color"],
+            ["consume", "--queue", TestQueue, "--ack-mode", "ack", "--output", "table", "--compact", "--no-color"],
             timeout: TimeSpan.FromSeconds(10), // Fallback timeout
             cancellationToken: cts.Token);
 
@@ -60,11 +60,11 @@ public class ConsumeCancellationTests : IAsyncLifetime
         await _helpers.PublishMessages(TestQueue, messages);
 
         // Cancel after a very short delay to simulate CTRL-C
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
 
         // Act - Consume with requeue mode
         var result = await _helpers.RunRmqCommand(
-            ["consume", "--queue", TestQueue, "--ack-mode", "requeue", "--output", "plain", "--no-color"],
+            ["consume", "--queue", TestQueue, "--ack-mode", "requeue", "--output", "plain", "--compact", "--no-color"],
             timeout: TimeSpan.FromSeconds(10), // Fallback timeout
             cancellationToken: cts.Token);
 
