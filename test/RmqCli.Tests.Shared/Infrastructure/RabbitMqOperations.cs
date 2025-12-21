@@ -151,4 +151,94 @@ public class RabbitMqOperations
             // Queue might not exist, ignore
         }
     }
+
+    /// <summary>
+    /// Declares an exchange in RabbitMQ for testing
+    /// </summary>
+    public async Task DeclareExchange(string exchangeName, string type)
+    {
+        var factory = new ConnectionFactory
+        {
+            Uri = new Uri(_fixture.ConnectionString)
+        };
+
+        await using var connection = await factory.CreateConnectionAsync();
+        await using var channel = await connection.CreateChannelAsync();
+
+        // Ensure exchange exists
+        await channel.ExchangeDeclareAsync(
+            exchange: exchangeName,
+            type: type,
+            durable: false,
+            autoDelete: false);
+    }
+
+    /// <summary>
+    /// Deletes an exchange
+    /// </summary>
+    public async Task DeleteExchange(string exchangeName)
+    {
+        var factory = new ConnectionFactory
+        {
+            Uri = new Uri(_fixture.ConnectionString)
+        };
+
+        await using var connection = await factory.CreateConnectionAsync();
+        await using var channel = await connection.CreateChannelAsync();
+
+        try
+        {
+            await channel.ExchangeDeleteAsync(exchangeName);
+        }
+        catch
+        {
+            // Exchange might not exist, ignore
+        }
+    }
+
+    /// <summary>
+    /// Declares a binding between an exchange and a queue
+    /// </summary>
+    public async Task DeclareBinding(string exchangeName, string queueName, string routingKey)
+    {
+        var factory = new ConnectionFactory
+        {
+            Uri = new Uri(_fixture.ConnectionString)
+        };
+
+        await using var connection = await factory.CreateConnectionAsync();
+        await using var channel = await connection.CreateChannelAsync();
+
+        // Ensure binding exists
+        await channel.QueueBindAsync(
+            queue: queueName,
+            exchange: exchangeName,
+            routingKey: routingKey);
+    }
+
+    /// <summary>
+    /// Deletes a binding between an exchange and a queue
+    /// </summary>
+    public async Task DeleteBinding(string exchangeName, string queueName, string routingKey)
+    {
+        var factory = new ConnectionFactory
+        {
+            Uri = new Uri(_fixture.ConnectionString)
+        };
+
+        await using var connection = await factory.CreateConnectionAsync();
+        await using var channel = await connection.CreateChannelAsync();
+
+        try
+        {
+            await channel.QueueUnbindAsync(
+                queue: queueName,
+                exchange: exchangeName,
+                routingKey: routingKey);
+        }
+        catch
+        {
+            // Binding might not exist, ignore
+        }
+    }
 }

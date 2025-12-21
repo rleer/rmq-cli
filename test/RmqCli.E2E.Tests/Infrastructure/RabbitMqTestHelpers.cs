@@ -160,4 +160,27 @@ public class RabbitMqTestHelpers
     /// Deletes a queue
     /// </summary>
     public Task DeleteQueue(string queueName) => _operations.DeleteQueue(queueName);
+
+    /// <summary>
+    /// Declares an exchange in RabbitMQ for testing
+    /// </summary>
+    public Task DeclareExchange(string exchangeName, string type) =>
+        _operations.DeclareExchange(exchangeName, type);
+
+    /// <summary>
+    /// Deletes an exchange
+    /// </summary>
+    public Task DeleteExchange(string exchangeName) => _operations.DeleteExchange(exchangeName);
+
+    /// <summary>
+    /// Declares a binding between an exchange and a queue
+    /// </summary>
+    public Task DeclareBinding(string exchangeName, string queueName, string routingKey) =>
+        _operations.DeclareBinding(exchangeName, queueName, routingKey);
+
+    /// <summary>
+    /// Deletes a binding between an exchange and a queue
+    /// </summary>
+    public Task DeleteBinding(string exchangeName, string queueName, string routingKey) =>
+        _operations.DeleteBinding(exchangeName, queueName, routingKey);
 }
