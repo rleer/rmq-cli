@@ -168,6 +168,13 @@ public class PublishService : IPublishService
         _logger.LogDebug("Read {MessageCount} messages from STDIN with delimiter '{MessageDelimiter}'", messages.Count,
             delimiterDisplay);
 
+        if (messages.Count == 0)
+        {
+            _logger.LogWarning("No messages found in STDIN after splitting by delimiter");
+            _statusOutput.ShowWarning("No messages to publish from STDIN");
+            return 0;
+        }
+
         // Convert plain text messages to Message and publish
         var plainMessagesWithProps = ConvertToMessages(messages);
         return await PublishMessageInternal(dest, plainMessagesWithProps, burstCount, cancellationToken);
