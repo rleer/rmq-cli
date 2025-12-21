@@ -127,6 +127,7 @@ jobs:
 
   test-report:
     if: always()
+    needs: [build-and-test, e2e-and-subcutaneous-tests]
     runs-on: ubuntu-latest
     permissions:
       checks: write
@@ -144,7 +145,7 @@ jobs:
       - name: Download E2E & Subcutaneous Test Results
         uses: actions/download-artifact@v4
         with:
-          name: e2e-test-results
+          name: e2e-and-sub-test-results
           path: test-results/e2e-and-subcutaneous
 
       - name: Test Report
