@@ -45,9 +45,9 @@ public class ConsumeCommandTests : IAsyncLifetime
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        result.Output.Should().Contain("Message 1");
-        result.Output.Should().Contain("Message 2");
-        result.Output.Should().Contain("Message 3");
+        result.StdoutOutput.Should().Contain("Message 1");
+        result.StdoutOutput.Should().Contain("Message 2");
+        result.StdoutOutput.Should().Contain("Message 3");
 
         // Verify messages were consumed (queue should be empty)
         var finalQueueInfo = await _helpers.GetQueueInfo(TestQueue);
@@ -86,8 +86,8 @@ public class ConsumeCommandTests : IAsyncLifetime
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        result.Output.Should().Contain("Message 1");
-        result.Output.Should().Contain("Message 2");
+        result.StdoutOutput.Should().Contain("Message 1");
+        result.StdoutOutput.Should().Contain("Message 2");
 
         // Verify messages were requeued (still in queue)
         var queueInfo = await _helpers.GetQueueInfo(TestQueue);
@@ -128,14 +128,14 @@ public class ConsumeCommandTests : IAsyncLifetime
         result.IsSuccess.Should().BeTrue();
 
         // STDOUT should contain JSON output
-        result.Output.Should().NotBeEmpty();
+        result.StdoutOutput.Should().NotBeEmpty();
 
         // The message output should conform to the JSON schema for RetrievedMessage
-        var jsonMessage = JsonSerializer.Deserialize(result.Output, JsonSerializationContext.RelaxedEscaping.RetrievedMessage);
+        var jsonMessage = JsonSerializer.Deserialize(result.StdoutOutput, JsonSerializationContext.RelaxedEscaping.RetrievedMessage);
         jsonMessage.Should().NotBeNull();
 
         // The result output should conform to the JSON schema for MessageRetrievalResponse
-        var jsonResult = JsonSerializer.Deserialize(result.ErrorOutput, JsonSerializationContext.RelaxedEscaping.MessageRetrievalResponse);
+        var jsonResult = JsonSerializer.Deserialize(result.StderrOutput, JsonSerializationContext.RelaxedEscaping.MessageRetrievalResponse);
         jsonResult.Should().NotBeNull();
     }
 
@@ -152,8 +152,8 @@ public class ConsumeCommandTests : IAsyncLifetime
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        result.Output.Should().NotBeNullOrEmpty();
-        result.Output.Should().Contain("""
+        result.StdoutOutput.Should().NotBeNullOrEmpty();
+        result.StdoutOutput.Should().Contain("""
                                        ╭─Message #1───────────────────────────────────────────────────────────────────╮
                                        │ Queue             e2e-consume-test                                           │
                                        │ Routing Key       e2e-consume-test                                           │

@@ -6,8 +6,10 @@ namespace RmqCli.Tests.Shared.Infrastructure;
 public record CommandResult
 {
     public int ExitCode { get; init; }
-    public string Output { get; init; } = string.Empty;
-    public string ErrorOutput { get; init; } = string.Empty;
+    // STDOUT output
+    public string StdoutOutput { get; init; } = string.Empty;
+    // STDERR output
+    public string StderrOutput { get; init; } = string.Empty;
 
     public bool IsSuccess => ExitCode == 0;
 }

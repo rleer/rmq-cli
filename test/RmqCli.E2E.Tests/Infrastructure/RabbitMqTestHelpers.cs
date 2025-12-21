@@ -62,8 +62,8 @@ public class RabbitMqTestHelpers
             return new CommandResult
             {
                 ExitCode = result.ExitCode,
-                Output = stdOutBuffer.ToString().Trim(),
-                ErrorOutput = stdErrBuffer.ToString().Trim()
+                StdoutOutput = stdOutBuffer.ToString().Trim(),
+                StderrOutput = stdErrBuffer.ToString().Trim()
             };
         }
         catch (OperationCanceledException ex)
@@ -79,8 +79,8 @@ public class RabbitMqTestHelpers
             return new CommandResult
             {
                 ExitCode = exitCode,
-                Output = stdOutBuffer.ToString().Trim(),
-                ErrorOutput = stdErrBuffer.ToString().Trim()
+                StdoutOutput = stdOutBuffer.ToString().Trim(),
+                StderrOutput = stdErrBuffer.ToString().Trim()
             };
         }
     }

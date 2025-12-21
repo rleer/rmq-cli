@@ -44,8 +44,8 @@ public class ConsumeCancellationTests : IAsyncLifetime
         // Assert - The cancellation should work properly with ack mode
         // The process should have stopped gracefully after receiving SIGINT
         result.ExitCode.Should().Be(0, "process should exit gracefully after receiving SIGINT");
-        result.ErrorOutput.Should().Contain("⚠ Message retrieval cancelled by user");
-        result.ErrorOutput.Should().NotContain("Retrieved 0 messages");
+        result.StderrOutput.Should().Contain("⚠ Message retrieval cancelled by user");
+        result.StderrOutput.Should().NotContain("Retrieved 0 messages");
         
         // Verify that some messages were consumed before cancellation
         var q = await _helpers.GetQueueInfo(TestQueue);
@@ -71,8 +71,8 @@ public class ConsumeCancellationTests : IAsyncLifetime
         // Assert - The cancellation should work properly with requeue mode
         // The process should have stopped gracefully after receiving SIGINT
         result.ExitCode.Should().Be(0, "process should exit gracefully after receiving SIGINT");
-        result.ErrorOutput.Should().Contain("⚠ Message retrieval cancelled by user");
-        result.ErrorOutput.Should().Contain("Retrieved 10 messages");
+        result.StderrOutput.Should().Contain("⚠ Message retrieval cancelled by user");
+        result.StderrOutput.Should().Contain("Retrieved 10 messages");
         
         // Verify all messages were requeued.
         await Task.Delay(TimeSpan.FromMilliseconds(500), CancellationToken.None);
@@ -97,8 +97,8 @@ public class ConsumeCancellationTests : IAsyncLifetime
         // Assert - Process should exit gracefully even when canceled before receiving messages
         // The process should have stopped gracefully after receiving SIGINT
         result.ExitCode.Should().Be(0, "process should exit gracefully after receiving SIGINT");
-        result.ErrorOutput.Should().Contain("⚠ Message retrieval cancelled by user");
+        result.StderrOutput.Should().Contain("⚠ Message retrieval cancelled by user");
         
-        result.ErrorOutput.Should().Contain("Retrieved 0 messages");
+        result.StderrOutput.Should().Contain("Retrieved 0 messages");
     }
 }
