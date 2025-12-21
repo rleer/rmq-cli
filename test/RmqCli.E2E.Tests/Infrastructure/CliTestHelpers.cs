@@ -98,13 +98,16 @@ public class CliTestHelpers
                 cliCommand = cliCommand.WithStandardInputPipe(PipeSource.FromString(stdinInput));
             }
 
+            // Run the command with both timeout and graceful cancellation tokens
             var result = await cliCommand.ExecuteAsync(timeoutCts.Token, gracefulCts.Token); // Graceful cancellation token will send Ctrl-C to rmq process
 
             var commandResult = new CommandResult
             {
+                CliArguments = fullArgs,
                 ExitCode = result.ExitCode,
                 StdoutOutput = stdOutBuffer.ToString().Trim(),
-                StderrOutput = stdErrBuffer.ToString().Trim()
+                StderrOutput = stdErrBuffer.ToString().Trim(),
+                StdinInput = stdinInput ?? string.Empty
             };
 
             _output.WriteLine(commandResult.ToDebugString());
@@ -122,9 +125,27 @@ public class CliTestHelpers
 
             var commandResult = new CommandResult
             {
+                CliArguments = fullArgs,
                 ExitCode = exitCode,
                 StdoutOutput = stdOutBuffer.ToString().Trim(),
-                StderrOutput = stdErrBuffer.ToString().Trim()
+                StderrOutput = stdErrBuffer.ToString().Trim(),
+                StdinInput = stdinInput ?? string.Empty,
+                ExceptionMessage = exitCode == 2 ? ex.Message : null
+            };
+
+            _output.WriteLine(commandResult.ToDebugString());
+            return commandResult;
+        }
+        catch (Exception ex)
+        {
+            var commandResult = new CommandResult
+            {
+                CliArguments = fullArgs,
+                ExitCode = 42,
+                StdoutOutput = stdOutBuffer.ToString().Trim(),
+                StderrOutput = stdErrBuffer.ToString().Trim(),
+                StdinInput = stdinInput ?? string.Empty,
+                ExceptionMessage = ex.Message
             };
 
             _output.WriteLine(commandResult.ToDebugString());
