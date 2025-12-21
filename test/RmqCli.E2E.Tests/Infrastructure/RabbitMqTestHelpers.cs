@@ -2,6 +2,7 @@ using System.Text;
 using CliWrap;
 using RmqCli.Core.Models;
 using RmqCli.Tests.Shared.Infrastructure;
+using Xunit.Abstractions;
 using CommandResult = RmqCli.Tests.Shared.Infrastructure.CommandResult;
 
 namespace RmqCli.E2E.Tests.Infrastructure;
@@ -13,10 +14,12 @@ public class RabbitMqTestHelpers
 {
     private readonly RabbitMqFixture _fixture;
     private readonly RabbitMqOperations _operations;
+    private readonly ITestOutputHelper _output;
 
-    public RabbitMqTestHelpers(RabbitMqFixture fixture)
+    public RabbitMqTestHelpers(RabbitMqFixture fixture, ITestOutputHelper output)
     {
         _fixture = fixture;
+        _output = output;
         _operations = new RabbitMqOperations(fixture);
     }
 
@@ -78,12 +81,15 @@ public class RabbitMqTestHelpers
 
             var result = await cliCommand.ExecuteAsync(timeoutCts.Token, gracefulCts.Token); // Graceful cancellation token will send Ctrl-C to rmq process
 
-            return new CommandResult
+            var commandResult = new CommandResult
             {
                 ExitCode = result.ExitCode,
                 StdoutOutput = stdOutBuffer.ToString().Trim(),
                 StderrOutput = stdErrBuffer.ToString().Trim()
             };
+
+            _output.WriteLine(commandResult.ToDebugString());
+            return commandResult;
         }
         catch (OperationCanceledException ex)
         {
@@ -95,12 +101,15 @@ public class RabbitMqTestHelpers
                 exitCode = 0;
             }
 
-            return new CommandResult
+            var commandResult = new CommandResult
             {
                 ExitCode = exitCode,
                 StdoutOutput = stdOutBuffer.ToString().Trim(),
                 StderrOutput = stdErrBuffer.ToString().Trim()
             };
+
+            _output.WriteLine(commandResult.ToDebugString());
+            return commandResult;
         }
     }
 

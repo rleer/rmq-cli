@@ -12,4 +12,10 @@ public record CommandResult
     public string StderrOutput { get; init; } = string.Empty;
 
     public bool IsSuccess => ExitCode == 0;
+    
+    public string ToDebugString()
+    {
+        return
+            $"ExitCode: {ExitCode}{Environment.NewLine}--- STDOUT ---{Environment.NewLine}{StdoutOutput}{Environment.NewLine}--- STDERR ---{Environment.NewLine}{StderrOutput}";
+    }
 }

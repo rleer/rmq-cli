@@ -1,5 +1,6 @@
 using RmqCli.E2E.Tests.Infrastructure;
 using RmqCli.Tests.Shared.Infrastructure;
+using Xunit.Abstractions;
 
 namespace RmqCli.E2E.Tests.Commands;
 
@@ -12,9 +13,9 @@ public class ConsumeCancellationTests : IAsyncLifetime
     private readonly RabbitMqTestHelpers _helpers;
     private const string TestQueue = "e2e-cancel-test";
 
-    public ConsumeCancellationTests(RabbitMqFixture fixture)
+    public ConsumeCancellationTests(RabbitMqFixture fixture, ITestOutputHelper output)
     {
-        _helpers = new RabbitMqTestHelpers(fixture);
+        _helpers = new RabbitMqTestHelpers(fixture, output);
     }
 
     public Task InitializeAsync() => Task.CompletedTask;

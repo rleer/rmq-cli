@@ -2,6 +2,7 @@ using System.Text.Json;
 using RmqCli.E2E.Tests.Infrastructure;
 using RmqCli.Shared.Json;
 using RmqCli.Tests.Shared.Infrastructure;
+using Xunit.Abstractions;
 
 namespace RmqCli.E2E.Tests.Commands;
 
@@ -15,9 +16,9 @@ public class ConsumeCommandTests : IAsyncLifetime
     private readonly RabbitMqTestHelpers _helpers;
     private const string TestQueue = "e2e-consume-test";
 
-    public ConsumeCommandTests(RabbitMqFixture fixture)
+    public ConsumeCommandTests(RabbitMqFixture fixture, ITestOutputHelper output)
     {
-        _helpers = new RabbitMqTestHelpers(fixture);
+        _helpers = new RabbitMqTestHelpers(fixture, output);
     }
 
     public Task InitializeAsync() => Task.CompletedTask;
