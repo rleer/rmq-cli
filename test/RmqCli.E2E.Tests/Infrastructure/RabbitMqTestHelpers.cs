@@ -49,6 +49,7 @@ public class RabbitMqTestHelpers
         {
             "--host", _fixture.Host,
             "--port", _fixture.AmqpPort.ToString(),
+            "--management-port", _fixture.ManagementPort.ToString(),
             "--user", username,
             "--password", password
         };
