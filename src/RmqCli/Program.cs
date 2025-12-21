@@ -10,6 +10,12 @@ try
 }
 catch (Exception e)
 {
-    AnsiConsole.MarkupLineInterpolated($"[red3]⚠ An error occurred: {e.Message}[/]");
+    if (args.Contains("--no-color"))
+    {
+        Console.Error.WriteLine($"⚠ An error occurred: {e.Message}");
+        return 1;
+    }
+
+    AnsiConsole.MarkupLineInterpolated($"[indianred_1]⚠ An error occurred: {e.Message}[/]");
     return 1;
 }
