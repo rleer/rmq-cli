@@ -1,17 +1,15 @@
 using RmqCli.E2E.Tests.Infrastructure;
-using RmqCli.Tests.Shared.Infrastructure;
 using Xunit.Abstractions;
 
 namespace RmqCli.E2E.Tests.Commands;
 
-[Collection("RabbitMQ")]
 public class HelpCommandTests
 {
-    private readonly RabbitMqTestHelpers _helpers;
+    private readonly CliTestHelpers _helpers;
 
-    public HelpCommandTests(RabbitMqFixture fixture, ITestOutputHelper output)
+    public HelpCommandTests(ITestOutputHelper output)
     {
-        _helpers = new RabbitMqTestHelpers(fixture, output);
+        _helpers = new CliTestHelpers(output);
     }
     
     [Fact]
