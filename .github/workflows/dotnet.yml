@@ -61,7 +61,7 @@ jobs:
           name: coverage-${{ matrix.os }}
           path: coverage
 
-  e2e-tests:
+  e2e-and-subcutaneous-tests:
     runs-on: ubuntu-latest
 
     steps:
@@ -90,15 +90,18 @@ jobs:
       - name: Publish rmq executable for E2E Tests
         run: dotnet publish src/RmqCli/RmqCli.csproj -c Release -r linux-x64 -o test/RmqCli.E2E.Tests/bin/rmq-published
 
+      - name: Run Subcutaneous Tests
+        run: dotnet test test/RmqCli.Subcutaneous.Tests/RmqCli.Subcutaneous.Tests.csproj --no-build -c Release -v normal --logger "trx;LogFileName=subcutaneous-tests.trx"
+      
       - name: Run E2E Tests
         run: dotnet test test/RmqCli.E2E.Tests/RmqCli.E2E.Tests.csproj --no-build -c Release -v normal --logger "trx;LogFileName=e2e-tests.trx"
 
-      - name: Upload E2E Test Results
+      - name: Upload E2E & Subcutaneous Test Results
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: e2e-test-results
-          path: "**/*e2e-tests.trx"
+          name: e2e-and-sub-test-results
+          path: "**/*-tests.trx"
 
   upload-coverage:
     needs: build-and-test
@@ -124,7 +127,6 @@ jobs:
 
   test-report:
     if: always()
-    needs: [build-and-test, e2e-tests]
     runs-on: ubuntu-latest
     permissions:
       checks: write
@@ -139,11 +141,11 @@ jobs:
           pattern: test-results-*
           path: test-results
 
-      - name: Download E2E Test Results
+      - name: Download E2E & Subcutaneous Test Results
         uses: actions/download-artifact@v4
         with:
           name: e2e-test-results
-          path: test-results/e2e
+          path: test-results/e2e-and-subcutaneous
 
       - name: Test Report
         uses: dorny/test-reporter@v1
