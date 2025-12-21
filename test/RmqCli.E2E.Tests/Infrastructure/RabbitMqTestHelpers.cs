@@ -23,8 +23,13 @@ public class RabbitMqTestHelpers
     /// <summary>
     /// Runs the rmq CLI command and returns the result
     /// </summary>
+    /// <param name="args">The arguments to pass to the command</param>
+    /// <param name="stdinInput">Optional stdin input to pipe to the command</param>
+    /// <param name="timeout">Optional timeout (default: 1 minute)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     public async Task<CommandResult> RunRmqCommand(
         string command,
+        string? stdinInput = null,
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
@@ -52,12 +57,20 @@ public class RabbitMqTestHelpers
 
         try
         {
-            var result = await Cli.Wrap(rmqPath)
+            var cliCommand = Cli.Wrap(rmqPath)
                 .WithArguments(fullArgs)
                 .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdOutBuffer))
                 .WithStandardErrorPipe(PipeTarget.ToStringBuilder(stdErrBuffer))
-                .WithValidation(CommandResultValidation.None) // Don't throw on non-zero exit codes
-                .ExecuteAsync(timeoutCts.Token, gracefulCts.Token); // Graceful cancellation token will send Ctrl-C to rmq process
+                .WithValidation(CommandResultValidation.None); // Don't throw on non-zero exit codes
+
+            // Configure stdin based on whether input is provided
+            if (stdinInput is not null)
+            {
+                // Pipe stdin content
+                cliCommand = cliCommand.WithStandardInputPipe(PipeSource.FromString(stdinInput));
+            }
+
+            var result = await cliCommand.ExecuteAsync(timeoutCts.Token, gracefulCts.Token); // Graceful cancellation token will send Ctrl-C to rmq process
 
             return new CommandResult
             {
