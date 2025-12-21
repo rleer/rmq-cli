@@ -38,12 +38,13 @@ uninstall:
 reinstall: uninstall install
 
 # Run rmq via dotnet run (usage: just run <args>)
+# Note that 'just' will flatten the arguments into a single string. This might cause unexpected escaping behaviour. Use the rmq-dev alias to avoid that.
 run *args:
     @dotnet run --project src/RmqCli/RmqCli.csproj --no-build --no-launch-profile -- {{args}}
 
 # Create alias for running rmq via dotnet run (use: eval $(just create-alias))
 create-alias:
-    @echo "alias rmq-dev='dotnet run --project {{justfile_directory()}}/src/RmqCli/RmqCli.csproj --no-build --'"
+    @echo "alias rmq-dev='dotnet run --project {{justfile_directory()}}/src/RmqCli/RmqCli.csproj --no-build --no-launch-profile --'"
 
 # Clean build artifacts
 clean:
