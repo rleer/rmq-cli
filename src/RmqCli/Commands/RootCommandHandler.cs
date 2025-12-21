@@ -130,9 +130,9 @@ public class RootCommandHandler
         }
     }
 
-    public async Task<int> RunAsync(string[] args)
+    public async Task<int> RunAsync(string[] args, CancellationToken cancellationToken = default)
     {
         var parseResult = _rootCommand.Parse(args);
-        return await parseResult.InvokeAsync(new InvocationConfiguration { EnableDefaultExceptionHandler = false });
+        return await parseResult.InvokeAsync(new InvocationConfiguration { EnableDefaultExceptionHandler = false }, cancellationToken);
     }
 }
