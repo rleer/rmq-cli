@@ -58,6 +58,22 @@ public class PublishCommandTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Publish_WithBurstMode_ShouldPublishMessages()
+    {
+        // Act
+        var result = await _helpers.RunRmqCommand(
+            ["publish", "--queue", TestQueue, "--body", "Test message from E2E test", "--burst", "10", "--no-color"]);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.StderrOutput.Should().Contain("Published 10 messages successfully");
+
+        // Verify message was published
+        var queueInfo = await _helpers.GetQueueInfo(TestQueue);
+        queueInfo.MessageCount.Should().Be(10);
+    }
+
+    [Fact]
     public async Task Publish_WithMessageFlag_ShouldPublishMessage()
     {
         // Arrange
@@ -86,15 +102,15 @@ public class PublishCommandTests : IAsyncLifetime
 
         // Act
         var result = await _helpers.RunRmqCommand(["publish", "--queue", TestQueue, "--message-file", tempFilePath, "--no-color"]);
-        
+
         // Assert
         result.IsSuccess.Should().BeTrue();
         result.StderrOutput.Should().Contain("Published 1 message successfully");
-       
+
         // Verify message was published
         var queueInfo = await _helpers.GetQueueInfo(TestQueue);
-        queueInfo.MessageCount.Should().Be(1); 
-        
+        queueInfo.MessageCount.Should().Be(1);
+
         // Clean up temp file
         File.Delete(tempFilePath);
     }
@@ -125,20 +141,22 @@ public class PublishCommandTests : IAsyncLifetime
         // Arrange
         await _helpers.DeclareExchange("e2e.test.exchange", "direct");
         await _helpers.DeclareBinding("e2e.test.exchange", TestQueue, "e2e.test.key");
-        
+
         // Act
-        var result = await _helpers.RunRmqCommand(["publish", "--exchange", "e2e.test.exchange", "--routing-key", "e2e.test.key", "--body", "test", "--no-color"]);
+        var result = await _helpers.RunRmqCommand([
+            "publish", "--exchange", "e2e.test.exchange", "--routing-key", "e2e.test.key", "--body", "test", "--no-color"
+        ]);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
         result.StderrOutput.Should().Contain("Published 1 message successfully");
         result.StderrOutput.Should().Contain("Exchange:    e2e.test.exchange");
         result.StderrOutput.Should().Contain("Routing Key: e2e.test.key");
-        
+
         // Verify message was published
         var queueInfo = await _helpers.GetQueueInfo(TestQueue);
         queueInfo.MessageCount.Should().Be(1);
-        
+
         // Clean up
         await _helpers.DeleteBinding("e2e.test.exchange", TestQueue, "e2e.test.key");
         await _helpers.DeleteExchange("e2e.test.exchange");
@@ -152,7 +170,7 @@ public class PublishCommandTests : IAsyncLifetime
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        
+
         // Validate JSON output
         var jsonOutput = result.StderrOutput.Trim();
         var publishResponse = System.Text.Json.JsonSerializer.Deserialize(jsonOutput, JsonSerializationContext.RelaxedEscaping.PublishResponse);
