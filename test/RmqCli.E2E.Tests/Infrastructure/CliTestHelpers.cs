@@ -1,5 +1,6 @@
 using System.Text;
 using CliWrap;
+using RmqCli.Tests.Shared.Infrastructure;
 using Xunit.Abstractions;
 using CommandResult = RmqCli.Tests.Shared.Infrastructure.CommandResult;
 
@@ -153,13 +154,3 @@ public class CliTestHelpers
         return rmqPath;
     }
 }
-
-/// <summary>
-/// RabbitMQ connection details for CLI commands
-/// </summary>
-public record RabbitMqConnectionDetails(
-    string Host,
-    int AmqpPort,
-    int ManagementPort,
-    string Username,
-    string Password);
