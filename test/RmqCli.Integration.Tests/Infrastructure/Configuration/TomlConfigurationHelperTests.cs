@@ -12,13 +12,11 @@ public class TomlConfigurationHelperTests
         {
             // Ensure no env var override is active from previous tests
             Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", null);
-            Environment.SetEnvironmentVariable("RMQCLI_SYSTEM_CONFIG_PATH", null);
         }
 
         public void Dispose()
         {
             Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", null);
-            Environment.SetEnvironmentVariable("RMQCLI_SYSTEM_CONFIG_PATH", null);
         }
 
         [Fact]
@@ -64,88 +62,17 @@ public class TomlConfigurationHelperTests
     }
 
     [Collection("Configuration Helpers Tests")]
-    public class GetSystemConfigFilePath : IDisposable
-    {
-        public GetSystemConfigFilePath()
-        {
-            // Ensure no env var override is active from previous tests
-            Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", null);
-            Environment.SetEnvironmentVariable("RMQCLI_SYSTEM_CONFIG_PATH", null);
-        }
-
-        public void Dispose()
-        {
-            Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", null);
-            Environment.SetEnvironmentVariable("RMQCLI_SYSTEM_CONFIG_PATH", null);
-        }
-
-        [Fact]
-        public void ReturnsPath_WithConfigTomlFileName()
-        {
-            // Act
-            var path = TomlConfigurationHelper.GetSystemConfigFilePath();
-
-            // Assert
-            path.Should().EndWith("config.toml");
-        }
-
-        [Fact]
-        public void ReturnsPath_ContainingAppName()
-        {
-            // Act
-            var path = TomlConfigurationHelper.GetSystemConfigFilePath();
-
-            // Assert
-            path.Should().Contain(Constants.AppName);
-        }
-
-        [Fact]
-        public void ReturnsConsistentPath_OnMultipleCalls()
-        {
-            // Act
-            var path1 = TomlConfigurationHelper.GetSystemConfigFilePath();
-            var path2 = TomlConfigurationHelper.GetSystemConfigFilePath();
-
-            // Assert
-            path1.Should().Be(path2);
-        }
-
-        [Fact]
-        public void ReturnsAbsolutePath()
-        {
-            // Act
-            var path = TomlConfigurationHelper.GetSystemConfigFilePath();
-
-            // Assert
-            Path.IsPathRooted(path).Should().BeTrue();
-        }
-
-        [Fact]
-        public void ReturnsDifferentPath_ThanUserConfigPath()
-        {
-            // Act
-            var systemPath = TomlConfigurationHelper.GetSystemConfigFilePath();
-            var userPath = TomlConfigurationHelper.GetUserConfigFilePath();
-
-            // Assert
-            systemPath.Should().NotBe(userPath);
-        }
-    }
-
-    [Collection("Configuration Helpers Tests")]
     public class EnvironmentVariableOverrides : IDisposable
     {
         public EnvironmentVariableOverrides()
         {
             // Ensure no env var override is active from previous tests
             Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", null);
-            Environment.SetEnvironmentVariable("RMQCLI_SYSTEM_CONFIG_PATH", null);
         }
 
         public void Dispose()
         {
             Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", null);
-            Environment.SetEnvironmentVariable("RMQCLI_SYSTEM_CONFIG_PATH", null);
         }
 
         [Fact]
@@ -157,20 +84,6 @@ public class TomlConfigurationHelperTests
 
             // Act
             var path = TomlConfigurationHelper.GetUserConfigFilePath();
-
-            // Assert
-            path.Should().Be(expectedPath);
-        }
-
-        [Fact]
-        public void GetSystemConfigFilePath_RespectsEnvVar()
-        {
-            // Arrange
-            var expectedPath = Path.Combine(Path.GetTempPath(), "custom", "system", "config.toml");
-            Environment.SetEnvironmentVariable("RMQCLI_SYSTEM_CONFIG_PATH", expectedPath);
-
-            // Act
-            var path = TomlConfigurationHelper.GetSystemConfigFilePath();
 
             // Assert
             path.Should().Be(expectedPath);
@@ -257,13 +170,11 @@ public class TomlConfigurationHelperTests
         {
             // Ensure no env var override is active from previous tests
             Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", null);
-            Environment.SetEnvironmentVariable("RMQCLI_SYSTEM_CONFIG_PATH", null);
         }
 
         public void Dispose()
         {
             Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", null);
-            Environment.SetEnvironmentVariable("RMQCLI_SYSTEM_CONFIG_PATH", null);
         }
 
         [Fact]
@@ -306,24 +217,6 @@ public class TomlConfigurationHelperTests
         }
 
         [Fact]
-        public void OnUnix_ReturnsPathInEtcDirectory()
-        {
-            if (!OperatingSystem.IsLinux() && !OperatingSystem.IsMacOS())
-            {
-                return; // Skip on Windows
-            }
-
-            // Ensure no env var override is active
-            Environment.SetEnvironmentVariable("RMQCLI_SYSTEM_CONFIG_PATH", null);
-
-            // Act
-            var path = TomlConfigurationHelper.GetSystemConfigFilePath();
-
-            // Assert
-            path.Should().StartWith("/etc/");
-        }
-
-        [Fact]
         public void OnUnix_UserConfigPath_UsesDotConfig()
         {
             if (!OperatingSystem.IsLinux() && !OperatingSystem.IsMacOS())
@@ -340,27 +233,6 @@ public class TomlConfigurationHelperTests
 
             // Act
             var path = TomlConfigurationHelper.GetUserConfigFilePath();
-
-            // Assert
-            path.Should().StartWith(expectedBasePath);
-        }
-
-        [Fact]
-        public void OnUnix_SystemConfigPath_UsesEtc()
-        {
-            if (!OperatingSystem.IsLinux() && !OperatingSystem.IsMacOS())
-            {
-                return; // Skip on Windows
-            }
-
-            // Ensure no env var override is active
-            Environment.SetEnvironmentVariable("RMQCLI_SYSTEM_CONFIG_PATH", null);
-
-            // Arrange
-            var expectedBasePath = $"/etc/{Constants.AppName}";
-
-            // Act
-            var path = TomlConfigurationHelper.GetSystemConfigFilePath();
 
             // Assert
             path.Should().StartWith(expectedBasePath);
@@ -389,36 +261,13 @@ public class TomlConfigurationHelperTests
         }
 
         [Fact]
-        public void OnWindows_ReturnsPathInProgramData()
-        {
-            if (!OperatingSystem.IsWindows())
-            {
-                return; // Skip on non-Windows
-            }
-
-            // Ensure no env var override is active
-            Environment.SetEnvironmentVariable("RMQCLI_SYSTEM_CONFIG_PATH", null);
-
-            // Arrange
-            var programData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-
-            // Act
-            var path = TomlConfigurationHelper.GetSystemConfigFilePath();
-
-            // Assert
-            path.Should().Contain(programData.Split(Path.DirectorySeparatorChar)[0]); // Drive letter or root
-        }
-
-        [Fact]
-        public void ConfigPaths_UseCorrectDirectorySeparator()
+        public void UserConfigPath_UsesCorrectDirectorySeparator()
         {
             // Act
             var userPath = TomlConfigurationHelper.GetUserConfigFilePath();
-            var systemPath = TomlConfigurationHelper.GetSystemConfigFilePath();
 
             // Assert
             userPath.Should().Contain(Path.DirectorySeparatorChar.ToString());
-            systemPath.Should().Contain(Path.DirectorySeparatorChar.ToString());
         }
     }
 }

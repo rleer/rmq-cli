@@ -35,7 +35,6 @@ public class ConfigurationExtensionsTests : IDisposable
         // Clean up RMQCLI env vars
         Environment.SetEnvironmentVariable("RMQCLI_RabbitMq__Host", null);
         Environment.SetEnvironmentVariable("RMQCLI_RabbitMq__Port", null);
-        Environment.SetEnvironmentVariable("RMQCLI_SYSTEM_CONFIG_PATH", null);
         Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", null);
     }
 
@@ -65,22 +64,10 @@ public class ConfigurationExtensionsTests : IDisposable
     [Fact]
     public void RespectsPriorityOrder()
     {
-        // Priority: Env Var > Custom Config > User Config > System Config > Default Config
+        // Priority: Env Var > Custom Config > User Config > Default Config
 
         // Arrange
-        // 1. System Config (Lowest priority of explicit sources)
-        var systemConfigPath = Path.Combine(_tempDir, "system.toml");
-        Environment.SetEnvironmentVariable("RMQCLI_SYSTEM_CONFIG_PATH", systemConfigPath);
-        File.WriteAllText(systemConfigPath, """
-                                            [RabbitMq]
-                                            Host = "system-host"
-                                            Port = 1111
-                                            User = "system-user"
-                                            VirtualHost = "system-vhost"
-                                            Password = "system-password"
-                                            """);
-
-        // 2. User Config (Overrides System)
+        // 1. User Config (Lowest priority of explicit sources)
         TomlConfigurationHelper.CreateDefaultUserConfigIfNotExists();
         var userConfigPath = TomlConfigurationHelper.GetUserConfigFilePath();
         File.WriteAllText(userConfigPath, """
@@ -89,9 +76,10 @@ public class ConfigurationExtensionsTests : IDisposable
                                           Port = 2222
                                           User = "user-user"
                                           VirtualHost = "user-vhost"
+                                          Password = "user-password"
                                           """);
 
-        // 3. Custom Config (Overrides User)
+        // 2. Custom Config (Overrides User)
         var customConfigPath = Path.Combine(_tempDir, "custom.toml");
         File.WriteAllText(customConfigPath, """
                                             [RabbitMq]
@@ -100,7 +88,7 @@ public class ConfigurationExtensionsTests : IDisposable
                                             User = "custom-user"
                                             """);
 
-        // 4. Env Var (Overrides Custom)
+        // 3. Env Var (Overrides Custom)
         Environment.SetEnvironmentVariable("RMQCLI_RabbitMq__Host", "env-host");
         Environment.SetEnvironmentVariable("RMQCLI_RabbitMq__Port", "4444");
 
@@ -116,7 +104,7 @@ public class ConfigurationExtensionsTests : IDisposable
         rabbitMqConfig.Port.Should().Be(4444); // From Env Var
         rabbitMqConfig.User.Should().Be("custom-user"); // From Custom Config
         rabbitMqConfig.VirtualHost.Should().Be("user-vhost"); // From User Config
-        rabbitMqConfig.Password.Should().Be("system-password"); // From System Config
+        rabbitMqConfig.Password.Should().Be("user-password"); // From User Config
         rabbitMqConfig.Exchange.Should().Be("amq.direct"); // From Default Config (Implicit fallback)
     }
 

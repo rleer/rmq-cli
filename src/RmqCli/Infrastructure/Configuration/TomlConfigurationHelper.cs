@@ -27,22 +27,6 @@ public class TomlConfigurationHelper
         return Path.Combine(GetUserConfigDirectory(), "config.toml");
     }
 
-    public static string GetSystemConfigFilePath()
-    {
-        // Allow overriding system config path via environment variable (useful for testing and containers)
-        var envPath = Environment.GetEnvironmentVariable("RMQCLI_SYSTEM_CONFIG_PATH");
-        if (!string.IsNullOrEmpty(envPath))
-        {
-            return envPath;
-        }
-
-        return Environment.OSVersion.Platform switch
-        {
-            PlatformID.Unix or PlatformID.MacOSX => $"/etc/{Constants.AppName}/config.toml",
-            _ => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), Constants.AppName, "config.toml")
-        };
-    }
-
     private static void EnsureUserConfigDirectoryExists()
     {
         var configPath = GetUserConfigFilePath();

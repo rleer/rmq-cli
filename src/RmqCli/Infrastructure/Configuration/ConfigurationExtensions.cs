@@ -9,20 +9,13 @@ public static class ConfigurationExtensions
     {
         // Build configuration in priority order (lowest to highest priority):
         // 1. Default TOML config (fallback)
-        // 2. System-wide TOML config
-        // 3. User TOML config
-        // 4. Custom TOML config (if specified via --config)
-        // 5. Environment variables
+        // 2. User TOML config
+        // 3. Custom TOML config (if specified via --config)
+        // 4. Environment variables
         // Create default user config if it does not exist
         TomlConfigurationHelper.CreateDefaultUserConfigIfNotExists();
 
         // Add TOML configuration sources in priority order
-        var systemConfigPath = TomlConfigurationHelper.GetSystemConfigFilePath();
-        if (File.Exists(systemConfigPath))
-        {
-            builder.AddTomlConfig(systemConfigPath);
-        }
-
         var userConfigPath = TomlConfigurationHelper.GetUserConfigFilePath();
         if (File.Exists(userConfigPath))
         {

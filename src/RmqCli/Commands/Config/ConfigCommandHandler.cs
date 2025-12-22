@@ -21,7 +21,6 @@ public class ConfigCommandHandler : ICommandHandler
                                    2. Environment variables (prefixed with `RMQCLI_`)
                                    3. Custom config file (via `--config` flag)
                                    4. User config file: `~/.config/rmq/config.toml`
-                                   5. System-wide config file: `/etc/rmq/config.toml`
                                    """;
 
         var configCommand = new Command("config", description);
@@ -58,8 +57,6 @@ public class ConfigCommandHandler : ICommandHandler
     {
         var quiet = parseResult.GetValue<bool>("--quiet");
         var userConfigPath = TomlConfigurationHelper.GetUserConfigFilePath();
-        var systemConfigPath = TomlConfigurationHelper.GetSystemConfigFilePath();
-        var configFound = false;
 
         if (File.Exists(userConfigPath))
         {
@@ -71,37 +68,12 @@ public class ConfigCommandHandler : ICommandHandler
 
             var userConfig = File.ReadAllText(userConfigPath);
             Console.Out.WriteLine(userConfig);
-            configFound = true;
+            return Task.FromResult(0);
         }
 
-        if (File.Exists(systemConfigPath))
-        {
-            if (configFound)
-            {
-                Console.Out.WriteLine();
-                Console.Out.WriteLine("-----");
-                Console.Out.WriteLine();
-            }
-
-            if (!quiet)
-            {
-                Console.Error.WriteLine($"Current system-wide configuration file: {systemConfigPath}");
-                Console.Error.WriteLine();
-            }
-
-            var systemConfig = File.ReadAllText(systemConfigPath);
-            Console.Out.WriteLine(systemConfig);
-            configFound = true;
-        }
-
-        if (!configFound)
-        {
-            Console.Error.WriteLine(
-                $"{Constants.ErrorSymbol} No configuration file found. Run the 'config init' command to create a default configuration file.");
-            return Task.FromResult(1);
-        }
-
-        return Task.FromResult(0);
+        Console.Error.WriteLine(
+            $"{Constants.ErrorSymbol} No configuration file found. Run the 'config init' command to create a default configuration file.");
+        return Task.FromResult(1);
     }
 
     private static Task<int> InitConfig(ParseResult parseResult, CancellationToken cancellationToken)
@@ -125,26 +97,18 @@ public class ConfigCommandHandler : ICommandHandler
 
     private static Task<int> ShowConfigPath(ParseResult parseResult, CancellationToken cancellationToken)
     {
-        var userConfigExists = File.Exists(TomlConfigurationHelper.GetUserConfigFilePath());
+        var userConfigPath = TomlConfigurationHelper.GetUserConfigFilePath();
+        var userConfigExists = File.Exists(userConfigPath);
+
         if (userConfigExists)
         {
-            Console.Out.WriteLine($"User configuration file path: {TomlConfigurationHelper.GetUserConfigFilePath()}");
+            Console.Out.WriteLine($"User configuration file path: {userConfigPath}");
+            return Task.FromResult(0);
         }
 
-        var systemConfigExists = File.Exists(TomlConfigurationHelper.GetSystemConfigFilePath());
-        if (systemConfigExists)
-        {
-            Console.Out.WriteLine($"System-wide configuration file path: {TomlConfigurationHelper.GetSystemConfigFilePath()}");
-        }
-
-        if (!userConfigExists && !systemConfigExists)
-        {
-            Console.Error.WriteLine(
-                $"{Constants.ErrorSymbol} No configuration file found. Run the 'config init' command to create a default configuration file.");
-            return Task.FromResult(1);
-        }
-
-        return Task.FromResult(0);
+        Console.Error.WriteLine(
+            $"{Constants.ErrorSymbol} No configuration file found. Run the 'config init' command to create a default configuration file.");
+        return Task.FromResult(1);
     }
 
     private static Task<int> EditConfig(ParseResult parseResult, CancellationToken cancellationToken)
