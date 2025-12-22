@@ -8,6 +8,5 @@ public record PublishOperationDto(
     long MessageLength,
     AmqpTimestamp AmqTime)
 {
-    public string MessageSize => OutputUtilities.ToSizeString(MessageLength);
     public DateTimeOffset Timestamp => DateTimeOffset.FromUnixTimeSeconds(AmqTime.UnixTime);
 }
