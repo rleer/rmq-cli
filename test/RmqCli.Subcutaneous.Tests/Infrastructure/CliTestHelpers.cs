@@ -107,8 +107,6 @@ public class CliTestHelpers
             var serviceFactory = new ServiceFactory();
             var rootCommandHandler = new RootCommandHandler(serviceFactory);
 
-            _output.WriteLine("Command: rmq " + string.Join(' ', finalArgs));
-            
             // Run command in-process
             var exitCode = await rootCommandHandler.RunAsync(finalArgs.ToArray(), cancellationToken);
 
