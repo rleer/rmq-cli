@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Configuration;
+using RmqCli.Shared;
 
 namespace RmqCli.Infrastructure.Configuration;
 
@@ -35,8 +36,7 @@ public static class ConfigurationExtensions
         }
         else if (!string.IsNullOrEmpty(customConfigPath))
         {
-            // TODO: User logger and add user-friendly error message
-            Console.Error.WriteLine("⚠ Configuration file not found. Using default configuration.");
+            Console.Error.WriteLine($"{Constants.WarningSymbol} Custom configuration file not found at '{customConfigPath}'. Falling back to other configuration sources.");
         }
 
         // Add environment variables as the highest priority configuration source

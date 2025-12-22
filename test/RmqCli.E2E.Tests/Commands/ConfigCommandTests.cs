@@ -73,11 +73,9 @@ public class ConfigCommandTests : IDisposable
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        result.StdoutOutput.Should().Contain(_tempConfigFilePath);
+        result.StderrOutput.Should().Contain(_tempConfigFilePath);
         result.StdoutOutput.Should().Contain("[RabbitMq]");
         result.StdoutOutput.Should().Contain("Host = \"localhost\"");
-
-        result.StderrOutput.Should().BeNullOrWhiteSpace();
     }
 
     [Fact]
@@ -109,12 +107,12 @@ public class ConfigCommandTests : IDisposable
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        result.StdoutOutput.Should().Contain("Configuration reset to defaults");
+        result.StderrOutput.Should().Contain("Configuration reset to defaults");
 
         var configContent = await File.ReadAllTextAsync(_tempConfigFilePath);
         configContent.Should().Contain("Host = \"localhost\"");
         configContent.Should().NotContain("custom-host");
         
-        result.StderrOutput.Should().BeNullOrWhiteSpace();
+        result.StdoutOutput.Should().BeNullOrWhiteSpace();
     }
 }
