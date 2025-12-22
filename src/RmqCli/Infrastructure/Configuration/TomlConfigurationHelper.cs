@@ -6,13 +6,6 @@ public class TomlConfigurationHelper
 {
     private static string GetUserConfigDirectory()
     {
-        // Allow overriding user config path via environment variable (useful for testing and containers)
-        var envPath = Environment.GetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH");
-        if (!string.IsNullOrEmpty(envPath))
-        {
-            return envPath;
-        }
-
         var homeDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
         return Environment.OSVersion.Platform switch
@@ -24,6 +17,13 @@ public class TomlConfigurationHelper
 
     public static string GetUserConfigFilePath()
     {
+        // Allow overriding user config file path via environment variable (useful for testing and containers)
+        var envPath = Environment.GetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH");
+        if (!string.IsNullOrEmpty(envPath))
+        {
+            return envPath;
+        }
+
         return Path.Combine(GetUserConfigDirectory(), "config.toml");
     }
 
@@ -45,8 +45,10 @@ public class TomlConfigurationHelper
 
     private static void EnsureUserConfigDirectoryExists()
     {
-        var configDir = GetUserConfigDirectory();
-        if (!Directory.Exists(configDir))
+        var configPath = GetUserConfigFilePath();
+        var configDir = Path.GetDirectoryName(configPath);
+
+        if (!string.IsNullOrEmpty(configDir) && !Directory.Exists(configDir))
         {
             Directory.CreateDirectory(configDir);
         }
