@@ -13,8 +13,8 @@ public class ConfigurationExtensionsTests : IDisposable
         _tempDir = Path.Combine(Path.GetTempPath(), $"rmq-ext-tests-{Guid.NewGuid()}");
         Directory.CreateDirectory(_tempDir);
 
-        // Override user config path to use temp directory
-        Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", _tempDir);
+        // Override user config file path to use temp directory
+        Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", Path.Combine(_tempDir, "config.toml"));
     }
 
     public void Dispose()

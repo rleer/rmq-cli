@@ -152,9 +152,8 @@ public class TomlConfigurationHelperTests
         public void GetUserConfigFilePath_RespectsEnvVar()
         {
             // Arrange
-            var envPath = Path.Combine(Path.GetTempPath(), "custom", "user");
-            var expectedPath = Path.Combine(envPath, "config.toml");
-            Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", envPath);
+            var expectedPath = Path.Combine(Path.GetTempPath(), "custom", "user", "config.toml");
+            Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", expectedPath);
 
             // Act
             var path = TomlConfigurationHelper.GetUserConfigFilePath();
@@ -187,7 +186,7 @@ public class TomlConfigurationHelperTests
         {
             _tempDir = Path.Combine(Path.GetTempPath(), $"rmq-helper-tests-{Guid.NewGuid()}");
             Directory.CreateDirectory(_tempDir);
-            Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", _tempDir);
+            Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", Path.Combine(_tempDir, "config.toml"));
         }
 
         public void Dispose()
@@ -234,7 +233,8 @@ public class TomlConfigurationHelperTests
         {
             // Arrange
             var nonExistingDir = Path.Combine(Path.GetTempPath(), $"rmq-helper-tests-{Guid.NewGuid()}");
-            Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", nonExistingDir);
+            var configFilePath = Path.Combine(nonExistingDir, "config.toml");
+            Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", configFilePath);
 
             // Act
             TomlConfigurationHelper.CreateDefaultUserConfigIfNotExists();
