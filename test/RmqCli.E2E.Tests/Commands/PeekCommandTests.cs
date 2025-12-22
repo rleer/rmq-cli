@@ -14,20 +14,11 @@ namespace RmqCli.E2E.Tests.Commands;
 public class PeekCommandTests : IAsyncLifetime
 {
     private readonly RabbitMqTestHelpers _helpers;
-    private readonly string _tempConfigDir;
     private const string TestQueue = "e2e-peek-test";
 
     public PeekCommandTests(RabbitMqFixture fixture, ITestOutputHelper output)
     {
         _helpers = new RabbitMqTestHelpers(fixture, output);
-
-        // Create a temporary directory for config files to prevent loading user/system config
-        _tempConfigDir = Path.Combine(Path.GetTempPath(), $"rmq-e2e-test-{Guid.NewGuid()}");
-        Directory.CreateDirectory(_tempConfigDir);
-
-        // Override config file paths to prevent loading local user/system config
-        Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", Path.Combine(_tempConfigDir, "user-config.toml"));
-        Environment.SetEnvironmentVariable("RMQCLI_SYSTEM_CONFIG_PATH", Path.Combine(_tempConfigDir, "system-config.toml"));
     }
 
     public Task InitializeAsync() => Task.CompletedTask;
@@ -36,23 +27,6 @@ public class PeekCommandTests : IAsyncLifetime
     {
         // Clean up test queue after each test
         await _helpers.DeleteQueue(TestQueue);
-
-        // Clean up temp directory
-        if (Directory.Exists(_tempConfigDir))
-        {
-            try
-            {
-                Directory.Delete(_tempConfigDir, recursive: true);
-            }
-            catch
-            {
-                // Ignore cleanup errors
-            }
-        }
-
-        // Clear environment variables
-        Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", null);
-        Environment.SetEnvironmentVariable("RMQCLI_SYSTEM_CONFIG_PATH", null);
     }
 
     [Fact]

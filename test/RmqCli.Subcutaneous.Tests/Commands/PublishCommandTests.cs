@@ -13,20 +13,11 @@ namespace RmqCli.Subcutaneous.Tests.Commands;
 public class PublishCommandTests : IAsyncLifetime
 {
     private readonly RabbitMqTestHelpers _helpers;
-    private readonly string _tempConfigDir;
     private const string TestQueue = "sub-publish-test";
 
     public PublishCommandTests(RabbitMqFixture fixture, ITestOutputHelper output)
     {
         _helpers = new RabbitMqTestHelpers(fixture, output);
-
-        // Create a temporary directory for config files to prevent loading user/system config
-        _tempConfigDir = Path.Combine(Path.GetTempPath(), $"rmq-subcut-test-{Guid.NewGuid()}");
-        Directory.CreateDirectory(_tempConfigDir);
-
-        // Override config file paths to prevent loading local user/system config
-        Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", Path.Combine(_tempConfigDir, "user-config.toml"));
-        Environment.SetEnvironmentVariable("RMQCLI_SYSTEM_CONFIG_PATH", Path.Combine(_tempConfigDir, "system-config.toml"));
     }
 
     public async Task InitializeAsync()
@@ -46,23 +37,6 @@ public class PublishCommandTests : IAsyncLifetime
         {
             // Ignore cleanup errors
         }
-
-        // Clean up temp directory
-        if (Directory.Exists(_tempConfigDir))
-        {
-            try
-            {
-                Directory.Delete(_tempConfigDir, recursive: true);
-            }
-            catch
-            {
-                // Ignore cleanup errors
-            }
-        }
-
-        // Clear environment variables
-        Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", null);
-        Environment.SetEnvironmentVariable("RMQCLI_SYSTEM_CONFIG_PATH", null);
     }
 
     #region Input Source Validation
@@ -1237,7 +1211,7 @@ public class PublishCommandTests : IAsyncLifetime
     public async Task Publish_WithValidCustomConfigFile_ShouldLoadSuccessfully()
     {
         // Arrange - Create a custom config file with different ClientName (a benign setting)
-        var customConfigPath = Path.Combine(_tempConfigDir, "custom-config.toml");
+        var customConfigPath = Path.Combine(Path.GetTempPath(), $"custom-config-{Guid.NewGuid()}.toml");
         var customConfig = """
             [RabbitMq]
             ClientName = "custom-test-client"
@@ -1262,7 +1236,7 @@ public class PublishCommandTests : IAsyncLifetime
     {
         // Arrange - Path to a config file that doesn't exist
         // The tool is resilient and will continue even if custom config doesn't exist
-        var nonExistentPath = Path.Combine(_tempConfigDir, "does-not-exist.toml");
+        var nonExistentPath = Path.Combine(Path.GetTempPath(), $"does-not-exist-{Guid.NewGuid()}.toml");
 
         // Act
         var result = await _helpers.RunRmqCommand(
@@ -1281,7 +1255,7 @@ public class PublishCommandTests : IAsyncLifetime
     public async Task Publish_WithInvalidTomlSyntax_ShouldWarnAndContinue()
     {
         // Arrange - Create a config file with invalid TOML syntax
-        var invalidConfigPath = Path.Combine(_tempConfigDir, "invalid-syntax.toml");
+        var invalidConfigPath = Path.Combine(Path.GetTempPath(), $"invalid-syntax-{Guid.NewGuid()}.toml");
         var invalidToml = """
             [RabbitMq
             Host = "missing-closing-bracket"
@@ -1308,7 +1282,7 @@ public class PublishCommandTests : IAsyncLifetime
     {
         // Arrange - Create a config file with type mismatch (Port as string instead of int)
         // This is valid TOML syntax but causes a configuration binding error
-        var invalidConfigPath = Path.Combine(_tempConfigDir, "invalid-values.toml");
+        var invalidConfigPath = Path.Combine(Path.GetTempPath(), $"invalid-values-{Guid.NewGuid()}.toml");
         var invalidToml = """
             [RabbitMq]
             Host = "valid-host"
@@ -1331,15 +1305,15 @@ public class PublishCommandTests : IAsyncLifetime
     {
         // Arrange - Create both user config and custom config
         // User config sets ClientName to one value
-        var userConfigPath = Environment.GetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH");
+        var userConfigPath = Path.Combine(Path.GetTempPath(), $"user-config-{Guid.NewGuid()}.toml");
         var userConfig = """
             [RabbitMq]
             ClientName = "user-config-client"
             """;
-        await File.WriteAllTextAsync(userConfigPath!, userConfig);
+        await File.WriteAllTextAsync(userConfigPath, userConfig);
 
         // Custom config sets ClientName to different value (should override user config)
-        var customConfigPath = Path.Combine(_tempConfigDir, "override-test.toml");
+        var customConfigPath = Path.Combine(Path.GetTempPath(), $"override-test-{Guid.NewGuid()}.toml");
         var customConfig = """
             [RabbitMq]
             ClientName = "custom-config-client"
@@ -1363,7 +1337,7 @@ public class PublishCommandTests : IAsyncLifetime
     public async Task Publish_WithEmptyConfigFile_ShouldSucceed()
     {
         // Arrange - Create an empty config file (should be valid, just no settings)
-        var emptyConfigPath = Path.Combine(_tempConfigDir, "empty-config.toml");
+        var emptyConfigPath = Path.Combine(Path.GetTempPath(), $"empty-config-{Guid.NewGuid()}.toml");
         await File.WriteAllTextAsync(emptyConfigPath, "");
 
         // Act - Empty config is valid, connection details from CLI args should work
@@ -1382,7 +1356,7 @@ public class PublishCommandTests : IAsyncLifetime
     public async Task Publish_WithConfigFileContainingOnlyComments_ShouldSucceed()
     {
         // Arrange - Create a config file with only comments
-        var commentOnlyConfigPath = Path.Combine(_tempConfigDir, "comments-only.toml");
+        var commentOnlyConfigPath = Path.Combine(Path.GetTempPath(), $"comments-only-{Guid.NewGuid()}.toml");
         var commentOnlyToml = """
             # This is a comment
             # [RabbitMq]
@@ -1411,7 +1385,7 @@ public class PublishCommandTests : IAsyncLifetime
         if (!OperatingSystem.IsWindows())
         {
             // Arrange - Create a config file and remove read permissions
-            var noPermissionConfigPath = Path.Combine(_tempConfigDir, "no-permission.toml");
+            var noPermissionConfigPath = Path.Combine(Path.GetTempPath(), $"no-permission-{Guid.NewGuid()}.toml");
             await File.WriteAllTextAsync(noPermissionConfigPath, "[RabbitMq]\nHost = \"test\"");
 
             // Remove read permissions (Unix only)
