@@ -23,8 +23,9 @@ public class ConfigCommandTests : IDisposable
         Directory.CreateDirectory(_tempConfigDir);
         _tempConfigFilePath = Path.Combine(_tempConfigDir, "config.toml");
 
-        // Set environment variable to use temp directory for user config
-        Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", _tempConfigDir);
+        // Override config file paths to prevent loading local user/system config
+        Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", _tempConfigFilePath);
+        Environment.SetEnvironmentVariable("RMQCLI_SYSTEM_CONFIG_PATH", Path.Combine(_tempConfigDir, "system-config.toml"));
     }
 
     public void Dispose()
@@ -42,8 +43,9 @@ public class ConfigCommandTests : IDisposable
             }
         }
 
-        // Clear environment variable
+        // Clear environment variables
         Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", null);
+        Environment.SetEnvironmentVariable("RMQCLI_SYSTEM_CONFIG_PATH", null);
     }
 
     #region config show tests
