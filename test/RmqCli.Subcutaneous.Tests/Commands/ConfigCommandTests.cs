@@ -8,6 +8,7 @@ namespace RmqCli.Subcutaneous.Tests.Commands;
 /// Subcutaneous tests for the config command covering detailed scenarios and edge cases.
 /// These tests use in-process command execution with a temporary directory for config files.
 /// </summary>
+[Collection("ConsoleOutputTests")]
 public class ConfigCommandTests : IDisposable
 {
     private readonly CliTestHelpers _helpers;
