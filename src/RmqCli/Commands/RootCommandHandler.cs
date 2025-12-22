@@ -65,6 +65,13 @@ public class RootCommandHandler
         };
         _rootCommand.Add(configFileOption);
 
+        var userConfigPathOption = new Option<string>("--user-config-path")
+        {
+            Description = "Override the user configuration file path (useful for testing and containers)",
+            Recursive = true
+        };
+        _rootCommand.Add(userConfigPathOption);
+
         var vHostOption = new Option<string>("--vhost")
         {
             Description = "The RabbitMQ virtual host to use for this command. Overrides the value specified in the configuration file.",

@@ -15,21 +15,29 @@ public class TomlConfigurationHelper
         };
     }
 
-    public static string GetUserConfigFilePath()
+    public static string GetUserConfigFilePath(string? overridePath = null)
     {
-        // Allow overriding user config file path via environment variable (useful for testing and containers)
+        // Priority order:
+        // 1. Explicit override path (from CLI flag)
+        if (!string.IsNullOrEmpty(overridePath))
+        {
+            return overridePath;
+        }
+
+        // 2. Environment variable (useful for testing and containers)
         var envPath = Environment.GetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH");
         if (!string.IsNullOrEmpty(envPath))
         {
             return envPath;
         }
 
+        // 3. Default location
         return Path.Combine(GetUserConfigDirectory(), "config.toml");
     }
 
-    private static void EnsureUserConfigDirectoryExists()
+    private static void EnsureUserConfigDirectoryExists(string? overridePath = null)
     {
-        var configPath = GetUserConfigFilePath();
+        var configPath = GetUserConfigFilePath(overridePath);
         var configDir = Path.GetDirectoryName(configPath);
 
         if (!string.IsNullOrEmpty(configDir) && !Directory.Exists(configDir))
@@ -41,13 +49,14 @@ public class TomlConfigurationHelper
     /// <summary>
     /// Creates the default user configuration file if it does not already exist.
     /// </summary>
+    /// <param name="overridePath">Optional override path for the user config file.</param>
     /// <returns>Indicates whether the default config was created.</returns>
-    public static bool CreateDefaultUserConfigIfNotExists()
+    public static bool CreateDefaultUserConfigIfNotExists(string? overridePath = null)
     {
-        var configPath = GetUserConfigFilePath();
+        var configPath = GetUserConfigFilePath(overridePath);
         if (!File.Exists(configPath))
         {
-            EnsureUserConfigDirectoryExists();
+            EnsureUserConfigDirectoryExists(overridePath);
 
             var defaultConfig = GenerateDefaultTomlConfig();
             File.WriteAllText(configPath, defaultConfig);

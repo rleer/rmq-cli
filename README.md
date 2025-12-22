@@ -58,19 +58,20 @@ The compiled binary will be in the `release/` directory.
 1. CLI flags
 2. Environment variables (prefixed with `RMQCLI_`)
 3. Custom config file (via `--config` flag)
-4. User config file: `~/.config/rmq/config.toml`
-5. System-wide config file: `/etc/rmq/config.toml`
+4. User config file: `~/.config/rmq/config.toml` (macOS/Linux) or `%APPDATA%/rmq/config.toml` (Windows)
 
 ### Default Configuration
 
-On first run, `rmq` automatically creates a default configuration file at `~/.config/rmq/config.toml`.
+On first run, `rmq` automatically creates a default configuration file at `~/.config/rmq/config.toml` (macOS/Linux) or `%APPDATA%/rmq/config.toml` (Windows).
 
 ### Configuration File Locations
 
 - **Linux/macOS**: `~/.config/rmq/config.toml`
 - **Windows**: `%APPDATA%/rmq/config.toml`
-- **System-wide (Linux/macOS)**: `/etc/rmq/config.toml`
-- **System-wide (Windows)**: `%PROGRAMDATA%/rmq/config.toml`
+
+The user configuration file location can be overridden using:
+- The `--user-config-path` flag (useful for testing and containerized environments)
+- The `RMQCLI_USER_CONFIG_PATH` environment variable
 
 
 ### Environment Variables
@@ -87,6 +88,9 @@ export RMQCLI_RabbitMq__Port=5673
 # Override user credentials
 export RMQCLI_RabbitMq__User=myuser
 export RMQCLI_RabbitMq__Password=mypassword
+
+# Override user config file path
+export RMQCLI_USER_CONFIG_PATH=/custom/path/config.toml
 ```
 
 Note: Use double underscores (`__`) to represent nested configuration sections.
@@ -102,6 +106,7 @@ rmq [command] [options]
 - `--host`, `--port`, `--vhost`, `--user`, `--password` - Override connection settings
 - `--management-port` - Override Management API port
 - `--config <path>` - Use custom configuration file
+- `--user-config-path <path>` - Override user configuration file path (useful for testing and containers)
 - `--verbose` / `--quiet` - Control output verbosity
 - `--no-color` - Disable colored output
 

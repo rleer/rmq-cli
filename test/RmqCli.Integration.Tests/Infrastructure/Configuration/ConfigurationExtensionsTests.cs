@@ -4,6 +4,7 @@ using RmqCli.Infrastructure.Configuration.Models;
 
 namespace RmqCli.Integration.Tests.Infrastructure.Configuration;
 
+[Collection("Configuration Helpers Tests")]
 public class ConfigurationExtensionsTests : IDisposable
 {
     private readonly string _tempDir;

@@ -22,10 +22,6 @@ public class ConfigCommandTests : IDisposable
         _tempConfigDir = Path.Combine(Path.GetTempPath(), $"rmq-e2e-config-{Guid.NewGuid()}");
         Directory.CreateDirectory(_tempConfigDir);
         _tempConfigFilePath = Path.Combine(_tempConfigDir, "config.toml");
-
-        // Override config file paths to prevent loading local user/system config
-        Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", _tempConfigFilePath);
-        Environment.SetEnvironmentVariable("RMQCLI_SYSTEM_CONFIG_PATH", Path.Combine(_tempConfigDir, "system-config.toml"));
     }
 
     public void Dispose()
@@ -42,17 +38,13 @@ public class ConfigCommandTests : IDisposable
                 // Ignore cleanup errors
             }
         }
-
-        // Clear environment variables
-        Environment.SetEnvironmentVariable("RMQCLI_USER_CONFIG_PATH", null);
-        Environment.SetEnvironmentVariable("RMQCLI_SYSTEM_CONFIG_PATH", null);
     }
 
     [Fact]
     public async Task ConfigInit_ShouldCreateDefaultConfigFile()
     {
         // Act
-        var result = await _helpers.RunRmqCommand(["config", "init"]);
+        var result = await _helpers.RunRmqCommand(["config", "init", "--user-config-path", _tempConfigFilePath]);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -68,10 +60,10 @@ public class ConfigCommandTests : IDisposable
     public async Task ConfigShow_ShouldDisplayConfigContent()
     {
         // Arrange
-        await _helpers.RunRmqCommand(["config", "init"]);
+        await _helpers.RunRmqCommand(["config", "init", "--user-config-path", _tempConfigFilePath]);
 
         // Act
-        var result = await _helpers.RunRmqCommand(["config", "show"]);
+        var result = await _helpers.RunRmqCommand(["config", "show", "--user-config-path", _tempConfigFilePath]);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -84,10 +76,10 @@ public class ConfigCommandTests : IDisposable
     public async Task ConfigPath_ShouldDisplayConfigPath()
     {
         // Arrange
-        await _helpers.RunRmqCommand(["config", "init"]);
+        await _helpers.RunRmqCommand(["config", "init", "--user-config-path", _tempConfigFilePath]);
 
         // Act
-        var result = await _helpers.RunRmqCommand(["config", "path"]);
+        var result = await _helpers.RunRmqCommand(["config", "path", "--user-config-path", _tempConfigFilePath]);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -105,7 +97,7 @@ public class ConfigCommandTests : IDisposable
         await File.WriteAllTextAsync(_tempConfigFilePath, customContent);
 
         // Act
-        var result = await _helpers.RunRmqCommand(["config", "reset"]);
+        var result = await _helpers.RunRmqCommand(["config", "reset", "--user-config-path", _tempConfigFilePath]);
 
         // Assert
         result.IsSuccess.Should().BeTrue();

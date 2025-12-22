@@ -31,10 +31,11 @@ public static class ServiceCollectionExtensions
     private static IServiceCollection AddRmqConfiguration(this IServiceCollection services, ParseResult parseResult)
     {
         var customConfigPath = parseResult.GetValue<string>("--config");
+        var userConfigPath = parseResult.GetValue<string>("--user-config-path");
 
         // Build configuration from TOML files
         var configuration = new ConfigurationBuilder()
-            .AddRmqConfig(customConfigPath)
+            .AddRmqConfig(customConfigPath, userConfigPath)
             .Build();
 
         services.AddSingleton<IConfiguration>(configuration);

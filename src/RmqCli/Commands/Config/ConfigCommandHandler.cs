@@ -56,7 +56,8 @@ public class ConfigCommandHandler : ICommandHandler
     private static Task<int> ShowConfig(ParseResult parseResult, CancellationToken cancellationToken)
     {
         var quiet = parseResult.GetValue<bool>("--quiet");
-        var userConfigPath = TomlConfigurationHelper.GetUserConfigFilePath();
+        var userConfigPathOverride = parseResult.GetValue<string>("--user-config-path");
+        var userConfigPath = TomlConfigurationHelper.GetUserConfigFilePath(userConfigPathOverride);
 
         if (File.Exists(userConfigPath))
         {
@@ -78,18 +79,21 @@ public class ConfigCommandHandler : ICommandHandler
 
     private static Task<int> InitConfig(ParseResult parseResult, CancellationToken cancellationToken)
     {
-        var configCreated = TomlConfigurationHelper.CreateDefaultUserConfigIfNotExists();
+        var userConfigPathOverride = parseResult.GetValue<string>("--user-config-path");
+        var configCreated = TomlConfigurationHelper.CreateDefaultUserConfigIfNotExists(userConfigPathOverride);
 
         if (!configCreated)
         {
-            Console.Error.WriteLine($"{Constants.WarningSymbol} Config already exists at: {TomlConfigurationHelper.GetUserConfigFilePath()}");
+            var configPath = TomlConfigurationHelper.GetUserConfigFilePath(userConfigPathOverride);
+            Console.Error.WriteLine($"{Constants.WarningSymbol} Config already exists at: {configPath}");
             return Task.FromResult(1);
         }
 
         var quiet = parseResult.GetValue<bool>("--quiet");
         if (!quiet)
         {
-            Console.Error.WriteLine($"{Constants.SuccessSymbol} Created default configuration file at: {TomlConfigurationHelper.GetUserConfigFilePath()}");
+            var configPath = TomlConfigurationHelper.GetUserConfigFilePath(userConfigPathOverride);
+            Console.Error.WriteLine($"{Constants.SuccessSymbol} Created default configuration file at: {configPath}");
         }
 
         return Task.FromResult(0);
@@ -97,7 +101,8 @@ public class ConfigCommandHandler : ICommandHandler
 
     private static Task<int> ShowConfigPath(ParseResult parseResult, CancellationToken cancellationToken)
     {
-        var userConfigPath = TomlConfigurationHelper.GetUserConfigFilePath();
+        var userConfigPathOverride = parseResult.GetValue<string>("--user-config-path");
+        var userConfigPath = TomlConfigurationHelper.GetUserConfigFilePath(userConfigPathOverride);
         var userConfigExists = File.Exists(userConfigPath);
 
         if (userConfigExists)
@@ -113,7 +118,8 @@ public class ConfigCommandHandler : ICommandHandler
 
     private static Task<int> EditConfig(ParseResult parseResult, CancellationToken cancellationToken)
     {
-        var configPath = TomlConfigurationHelper.GetUserConfigFilePath();
+        var userConfigPathOverride = parseResult.GetValue<string>("--user-config-path");
+        var configPath = TomlConfigurationHelper.GetUserConfigFilePath(userConfigPathOverride);
         if (!File.Exists(configPath))
         {
             Console.Error.WriteLine($"{Constants.ErrorSymbol} No configuration file found. Run 'config init' to create a default configuration file.");
@@ -142,7 +148,8 @@ public class ConfigCommandHandler : ICommandHandler
 
     private static Task<int> ResetConfig(ParseResult parseResult, CancellationToken cancellationToken)
     {
-        var configPath = TomlConfigurationHelper.GetUserConfigFilePath();
+        var userConfigPathOverride = parseResult.GetValue<string>("--user-config-path");
+        var configPath = TomlConfigurationHelper.GetUserConfigFilePath(userConfigPathOverride);
         if (File.Exists(configPath))
         {
             try
@@ -157,7 +164,7 @@ public class ConfigCommandHandler : ICommandHandler
         }
 
         var quiet = parseResult.GetValue<bool>("--quiet");
-        var created = TomlConfigurationHelper.CreateDefaultUserConfigIfNotExists();
+        var created = TomlConfigurationHelper.CreateDefaultUserConfigIfNotExists(userConfigPathOverride);
 
         if (!created)
         {

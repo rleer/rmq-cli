@@ -5,7 +5,10 @@ namespace RmqCli.Infrastructure.Configuration;
 
 public static class ConfigurationExtensions
 {
-    public static IConfigurationBuilder AddRmqConfig(this IConfigurationBuilder builder, string? customConfigPath)
+    public static IConfigurationBuilder AddRmqConfig(
+        this IConfigurationBuilder builder,
+        string? customConfigPath,
+        string? userConfigPath = null)
     {
         // Build configuration in priority order (lowest to highest priority):
         // 1. Default TOML config (fallback)
@@ -13,13 +16,13 @@ public static class ConfigurationExtensions
         // 3. Custom TOML config (if specified via --config)
         // 4. Environment variables
         // Create default user config if it does not exist
-        TomlConfigurationHelper.CreateDefaultUserConfigIfNotExists();
+        TomlConfigurationHelper.CreateDefaultUserConfigIfNotExists(userConfigPath);
 
         // Add TOML configuration sources in priority order
-        var userConfigPath = TomlConfigurationHelper.GetUserConfigFilePath();
-        if (File.Exists(userConfigPath))
+        var userPath = TomlConfigurationHelper.GetUserConfigFilePath(userConfigPath);
+        if (File.Exists(userPath))
         {
-            builder.AddTomlConfig(userConfigPath);
+            builder.AddTomlConfig(userPath);
         }
 
         // Add custom configuration file if specified
