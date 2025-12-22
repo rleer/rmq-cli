@@ -1,3 +1,4 @@
+using RmqCli.Shared;
 using RmqCli.Subcutaneous.Tests.Infrastructure;
 using Xunit.Abstractions;
 
@@ -55,8 +56,8 @@ public class ConfigCommandTests : IDisposable
 
         // Assert
         result.ExitCode.Should().Be(1);
-        result.StdoutOutput.Should().Contain("No configuration file found");
-        result.StdoutOutput.Should().Contain("config init");
+        result.StderrOutput.Should().Contain("No configuration file found");
+        result.StderrOutput.Should().Contain("config init");
     }
 
     [Fact]
@@ -70,7 +71,7 @@ public class ConfigCommandTests : IDisposable
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        result.StdoutOutput.Should().Contain(_tempConfigFilePath);
+        result.StderrOutput.Should().Contain($"Current user configuration file: {_tempConfigFilePath}");
         result.StdoutOutput.Should().Contain("# rmq Configuration File");
         result.StdoutOutput.Should().Contain("[RabbitMq]");
         result.StdoutOutput.Should().Contain("Host = \"localhost\"");
@@ -92,6 +93,21 @@ public class ConfigCommandTests : IDisposable
         result.StdoutOutput.Should().Contain("9999");
     }
 
+    [Fact]
+    public async Task ConfigShow_WithQuietFlag_ShouldHidePathMessage()
+    {
+        // Arrange
+        await _helpers.RunRmqCommand(["config", "init"]);
+
+        // Act
+        var result = await _helpers.RunRmqCommand(["config", "show", "--quiet"]);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.StderrOutput.Should().BeEmpty();
+        result.StdoutOutput.Should().Contain("Host = \"localhost\"");
+    }
+
     #endregion
 
     #region config path tests
@@ -104,8 +120,8 @@ public class ConfigCommandTests : IDisposable
 
         // Assert
         result.ExitCode.Should().Be(1);
-        result.StdoutOutput.Should().Contain("No configuration file found");
-        result.StdoutOutput.Should().Contain("config init");
+        result.StderrOutput.Should().Contain("No configuration file found");
+        result.StderrOutput.Should().Contain("config init");
     }
 
     [Fact]
@@ -135,6 +151,7 @@ public class ConfigCommandTests : IDisposable
 
         // Assert
         result.IsSuccess.Should().BeTrue();
+        result.StderrOutput.Should().Contain($"{Constants.SuccessSymbol} Created default configuration file at:");
         File.Exists(_tempConfigFilePath).Should().BeTrue();
 
         var configContent = await File.ReadAllTextAsync(_tempConfigFilePath);
@@ -144,6 +161,18 @@ public class ConfigCommandTests : IDisposable
         configContent.Should().Contain("Port = 5672");
         configContent.Should().Contain("ManagementPort = 15672");
         configContent.Should().Contain("[FileConfig]");
+    }
+
+    [Fact]
+    public async Task ConfigInit_WithQuietFlag_ShouldHideSuccessMessage()
+    {
+        // Act
+        var result = await _helpers.RunRmqCommand(["config", "init", "--quiet"]);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.StderrOutput.Should().BeEmpty();
+        File.Exists(_tempConfigFilePath).Should().BeTrue();
     }
 
     [Fact]
@@ -157,7 +186,8 @@ public class ConfigCommandTests : IDisposable
         var result = await _helpers.RunRmqCommand(["config", "init"]);
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
+        result.IsSuccess.Should().BeFalse();
+        result.StderrOutput.Should().Contain($"{Constants.WarningSymbol} Config already exists at");
         var configContent = await File.ReadAllTextAsync(_tempConfigFilePath);
         configContent.Should().Be(customContent, "init should not overwrite existing config");
     }
@@ -172,8 +202,9 @@ public class ConfigCommandTests : IDisposable
 
         // Assert
         result1.IsSuccess.Should().BeTrue();
-        result2.IsSuccess.Should().BeTrue();
-        result3.IsSuccess.Should().BeTrue();
+        // Since init returns error if config exists, result2 and 3 should fail
+        result2.IsSuccess.Should().BeFalse();
+        result3.IsSuccess.Should().BeFalse();
         File.Exists(_tempConfigFilePath).Should().BeTrue();
     }
 
@@ -189,8 +220,20 @@ public class ConfigCommandTests : IDisposable
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        result.StdoutOutput.Should().Contain("Configuration reset to defaults");
-        result.StdoutOutput.Should().Contain(_tempConfigFilePath);
+        result.StderrOutput.Should().Contain("Configuration reset to defaults");
+        result.StderrOutput.Should().Contain(_tempConfigFilePath);
+        File.Exists(_tempConfigFilePath).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ConfigReset_WithQuietFlag_ShouldHideSuccessMessage()
+    {
+        // Act
+        var result = await _helpers.RunRmqCommand(["config", "reset", "--quiet"]);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.StderrOutput.Should().BeEmpty();
         File.Exists(_tempConfigFilePath).Should().BeTrue();
     }
 
@@ -206,7 +249,7 @@ public class ConfigCommandTests : IDisposable
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        result.StdoutOutput.Should().Contain("Configuration reset to defaults");
+        result.StderrOutput.Should().Contain("Configuration reset to defaults");
 
         var configContent = await File.ReadAllTextAsync(_tempConfigFilePath);
         configContent.Should().NotContain("custom-host", "config should be reset to defaults");
@@ -250,8 +293,8 @@ public class ConfigCommandTests : IDisposable
 
         // Assert
         result.ExitCode.Should().Be(1);
-        result.StdoutOutput.Should().Contain("Configuration file does not exist");
-        result.StdoutOutput.Should().Contain("config init");
+        result.StderrOutput.Should().Contain("No configuration file found");
+        result.StderrOutput.Should().Contain("'config init'");
     }
 
     #endregion
@@ -303,12 +346,12 @@ public class ConfigCommandTests : IDisposable
         // 1. Check path when no config exists
         var pathResult1 = await _helpers.RunRmqCommand(["config", "path"]);
         pathResult1.ExitCode.Should().Be(1);
-        pathResult1.StdoutOutput.Should().Contain("config init");
+        pathResult1.StderrOutput.Should().Contain("Run the 'config init' command");
 
         // 2. Try to show config when none exists
         var showResult1 = await _helpers.RunRmqCommand(["config", "show"]);
         showResult1.ExitCode.Should().Be(1);
-        showResult1.StdoutOutput.Should().Contain("config init");
+        showResult1.StderrOutput.Should().Contain("Run the 'config init' command");
 
         // 3. Initialize config based on guidance
         var initResult = await _helpers.RunRmqCommand(["config", "init"]);
@@ -317,9 +360,12 @@ public class ConfigCommandTests : IDisposable
         // 4. Now path and show should work
         var pathResult2 = await _helpers.RunRmqCommand(["config", "path"]);
         pathResult2.IsSuccess.Should().BeTrue();
+        pathResult2.StdoutOutput.Should().Contain(_tempConfigFilePath);
 
         var showResult2 = await _helpers.RunRmqCommand(["config", "show"]);
         showResult2.IsSuccess.Should().BeTrue();
+        showResult2.StderrOutput.Should().Contain($"Current user configuration file: {_tempConfigFilePath}");
+        showResult2.StdoutOutput.Should().Contain("Host = \"localhost\"");
     }
 
     #endregion

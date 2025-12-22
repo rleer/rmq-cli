@@ -56,31 +56,48 @@ public class ConfigCommandHandler : ICommandHandler
 
     private static Task<int> ShowConfig(ParseResult parseResult, CancellationToken cancellationToken)
     {
+        var quiet = parseResult.GetValue<bool>("--quiet");
         var userConfigPath = TomlConfigurationHelper.GetUserConfigFilePath();
         var systemConfigPath = TomlConfigurationHelper.GetSystemConfigFilePath();
         var configFound = false;
 
         if (File.Exists(userConfigPath))
         {
-            Console.WriteLine($"Current user configuration file: {userConfigPath}");
-            Console.WriteLine();
+            if (!quiet)
+            {
+                Console.Error.WriteLine($"Current user configuration file: {userConfigPath}");
+                Console.Error.WriteLine();
+            }
+
             var userConfig = File.ReadAllText(userConfigPath);
-            Console.WriteLine(userConfig);
+            Console.Out.WriteLine(userConfig);
             configFound = true;
         }
 
         if (File.Exists(systemConfigPath))
         {
-            Console.WriteLine($"Current system-wide configuration file: {systemConfigPath}");
-            Console.WriteLine();
+            if (configFound)
+            {
+                Console.Out.WriteLine();
+                Console.Out.WriteLine("-----");
+                Console.Out.WriteLine();
+            }
+
+            if (!quiet)
+            {
+                Console.Error.WriteLine($"Current system-wide configuration file: {systemConfigPath}");
+                Console.Error.WriteLine();
+            }
+
             var systemConfig = File.ReadAllText(systemConfigPath);
-            Console.WriteLine(systemConfig);
+            Console.Out.WriteLine(systemConfig);
             configFound = true;
         }
 
         if (!configFound)
         {
-            Console.WriteLine($"{Constants.WarningSymbol} No configuration file found. Run the 'config init' command to create a default configuration file.");
+            Console.Error.WriteLine(
+                $"{Constants.ErrorSymbol} No configuration file found. Run the 'config init' command to create a default configuration file.");
             return Task.FromResult(1);
         }
 
@@ -89,7 +106,20 @@ public class ConfigCommandHandler : ICommandHandler
 
     private static Task<int> InitConfig(ParseResult parseResult, CancellationToken cancellationToken)
     {
-        TomlConfigurationHelper.CreateDefaultUserConfigIfNotExists();
+        var configCreated = TomlConfigurationHelper.CreateDefaultUserConfigIfNotExists();
+
+        if (!configCreated)
+        {
+            Console.Error.WriteLine($"{Constants.WarningSymbol} Config already exists at: {TomlConfigurationHelper.GetUserConfigFilePath()}");
+            return Task.FromResult(1);
+        }
+
+        var quiet = parseResult.GetValue<bool>("--quiet");
+        if (!quiet)
+        {
+            Console.Error.WriteLine($"{Constants.SuccessSymbol} Created default configuration file at: {TomlConfigurationHelper.GetUserConfigFilePath()}");
+        }
+
         return Task.FromResult(0);
     }
 
@@ -98,18 +128,19 @@ public class ConfigCommandHandler : ICommandHandler
         var userConfigExists = File.Exists(TomlConfigurationHelper.GetUserConfigFilePath());
         if (userConfigExists)
         {
-            Console.WriteLine($"User configuration file path: {TomlConfigurationHelper.GetUserConfigFilePath()}");
+            Console.Out.WriteLine($"User configuration file path: {TomlConfigurationHelper.GetUserConfigFilePath()}");
         }
 
         var systemConfigExists = File.Exists(TomlConfigurationHelper.GetSystemConfigFilePath());
         if (systemConfigExists)
         {
-            Console.WriteLine($"System-wide configuration file path: {TomlConfigurationHelper.GetSystemConfigFilePath()}");
+            Console.Out.WriteLine($"System-wide configuration file path: {TomlConfigurationHelper.GetSystemConfigFilePath()}");
         }
 
         if (!userConfigExists && !systemConfigExists)
         {
-            Console.WriteLine($"{Constants.WarningSymbol} No configuration file found. Run the 'config init' command to create a default configuration file.");
+            Console.Error.WriteLine(
+                $"{Constants.ErrorSymbol} No configuration file found. Run the 'config init' command to create a default configuration file.");
             return Task.FromResult(1);
         }
 
@@ -121,7 +152,7 @@ public class ConfigCommandHandler : ICommandHandler
         var configPath = TomlConfigurationHelper.GetUserConfigFilePath();
         if (!File.Exists(configPath))
         {
-            Console.WriteLine($"{Constants.WarningSymbol} Configuration file does not exist. Run 'config init' to create a default configuration file.");
+            Console.Error.WriteLine($"{Constants.ErrorSymbol} No configuration file found. Run 'config init' to create a default configuration file.");
             return Task.FromResult(1);
         }
 
@@ -133,12 +164,12 @@ public class ConfigCommandHandler : ICommandHandler
                 FileName = configPath,
                 UseShellExecute = true
             });
-            Console.WriteLine($"Opened configuration file in the default editor: {configPath}");
+            Console.Error.WriteLine($"{Constants.SuccessSymbol} Opened configuration file in the default editor: {configPath}");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to open configuration file: {ex.Message}");
-            Console.WriteLine($"Please manually edit the configuration file at: {configPath}");
+            Console.Error.WriteLine($"{Constants.ErrorSymbol} Failed to open configuration file: {ex.Message}");
+            Console.Error.WriteLine($"  Please manually edit the configuration file at: {configPath}");
             return Task.FromResult(1);
         }
 
@@ -156,13 +187,24 @@ public class ConfigCommandHandler : ICommandHandler
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"{Constants.ErrorSymbol} Failed to delete previous configuration file: {ex.Message}");
+                Console.Error.WriteLine($"{Constants.ErrorSymbol} Failed to delete previous configuration file: {ex.Message}");
                 return Task.FromResult(1);
             }
         }
 
-        TomlConfigurationHelper.CreateDefaultUserConfigIfNotExists();
-        Console.WriteLine($"Configuration reset to defaults: {configPath}");
+        var quiet = parseResult.GetValue<bool>("--quiet");
+        var created = TomlConfigurationHelper.CreateDefaultUserConfigIfNotExists();
+
+        if (!created)
+        {
+            Console.Error.WriteLine($"{Constants.ErrorSymbol} Failed to create default configuration file at: {configPath}");
+            return Task.FromResult(1);
+        }
+
+        if (!quiet && created)
+        {
+            Console.Error.WriteLine($"Configuration reset to defaults: {configPath}");
+        }
 
         return Task.FromResult(0);
     }

@@ -52,7 +52,11 @@ public class TomlConfigurationHelper
         }
     }
 
-    public static void CreateDefaultUserConfigIfNotExists()
+    /// <summary>
+    /// Creates the default user configuration file if it does not already exist.
+    /// </summary>
+    /// <returns>Indicates whether the default config was created.</returns>
+    public static bool CreateDefaultUserConfigIfNotExists()
     {
         var configPath = GetUserConfigFilePath();
         if (!File.Exists(configPath))
@@ -61,7 +65,10 @@ public class TomlConfigurationHelper
 
             var defaultConfig = GenerateDefaultTomlConfig();
             File.WriteAllText(configPath, defaultConfig);
+            return true;
         }
+
+        return false;
     }
 
     private static string GenerateDefaultTomlConfig()
