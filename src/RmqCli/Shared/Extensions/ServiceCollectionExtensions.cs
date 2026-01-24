@@ -11,10 +11,9 @@ using RmqCli.Commands.Purge;
 using RmqCli.Infrastructure.Configuration;
 using RmqCli.Infrastructure.Configuration.Models;
 using RmqCli.Infrastructure.RabbitMq;
-using RmqCli.Shared;
 using RmqCli.Shared.Output;
 
-namespace RmqCli.DependencyInjection;
+namespace RmqCli.Shared.Extensions;
 
 /// <summary>
 /// Extension methods for configuring RmqCli services in an <see cref="IServiceCollection"/>.

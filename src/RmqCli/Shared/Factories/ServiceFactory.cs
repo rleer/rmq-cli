@@ -7,7 +7,7 @@ using RmqCli.Commands.Peek;
 using RmqCli.Commands.Publish;
 using RmqCli.Commands.Purge;
 using RmqCli.Core.Models;
-using RmqCli.DependencyInjection;
+using RmqCli.Shared.Extensions;
 using RmqCli.Shared.Output;
 
 namespace RmqCli.Shared.Factories;
