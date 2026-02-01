@@ -28,12 +28,26 @@ public class TomlConfigurationProvider : ConfigurationProvider
 
             Data = FlattenTomlTable(tomlTable);
         }
+        catch (UnauthorizedAccessException e)
+        {
+            // If TOML parsing fails, just skip this configuration source
+            Data = new Dictionary<string, string?>();
+            Console.Error.WriteLine(
+                $"{Constants.WarningSymbol} Access denied to toml file '{_filePath}'. Please check the file permissions. Config will be skipped.");
+        }
+        catch (TomlException e)
+        {
+            Data = new Dictionary<string, string?>();
+            Console.Error.WriteLine($"{Constants.WarningSymbol} Failed to read toml file '{_filePath}'"); 
+            Console.Error.WriteLine(e.Message);
+            Console.Error.WriteLine("  Config will be skipped");
+        } 
         catch (Exception)
         {
             // If TOML parsing fails, just skip this configuration source
             Data = new Dictionary<string, string?>();
-            // TODO: User logger and add user-friendly error message
             Console.Error.WriteLine($"{Constants.WarningSymbol} Failed to read toml file '{_filePath}'. Please check the file format and ensure it is valid TOML.");
+            Console.Error.WriteLine("  Config will be skipped");
         }
     }
 
