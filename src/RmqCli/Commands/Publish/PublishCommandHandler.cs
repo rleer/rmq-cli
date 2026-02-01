@@ -211,6 +211,9 @@ public class PublishCommandHandler : ICommandHandler
         publishCommand.Options.Add(jsonMessageOption);
         publishCommand.Options.Add(messageFileOption);
 
+        // Inherit global validators
+        publishCommand.Validators.AddRange(rootCommand.Validators);
+
         publishCommand.Validators.Add(result =>
         {
             // Destination validation

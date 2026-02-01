@@ -101,6 +101,9 @@ public class PeekCommandHandler : ICommandHandler
         peekCommand.Options.Add(compactOption);
         peekCommand.Options.Add(outputFormatOption);
 
+        // Inherit global validators
+        peekCommand.Validators.AddRange(rootCommand.Validators);
+
         peekCommand.Validators.Add(result =>
         {
             if (result.GetValue(queueOption) is null)

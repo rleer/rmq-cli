@@ -94,6 +94,9 @@ public class ConsumeCommandHandler : ICommandHandler
         consumeCommand.Options.Add(compactOption);
         consumeCommand.Options.Add(outputFormatOption);
 
+        // Inherit global validators
+        consumeCommand.Validators.AddRange(rootCommand.Validators);
+
         consumeCommand.Validators.Add(result =>
         {
             if (result.GetValue(queueOption) is null)

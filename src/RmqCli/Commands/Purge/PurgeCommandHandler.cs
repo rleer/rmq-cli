@@ -71,6 +71,9 @@ public class PurgeCommandHandler : ICommandHandler
         purgeCommand.Options.Add(outputFormatOption);
         purgeCommand.Options.Add(useApiOption);
 
+        // Inherit global validators
+        purgeCommand.Validators.AddRange(rootCommand.Validators);
+ 
         purgeCommand.SetAction(Handle);
 
         rootCommand.Subcommands.Add(purgeCommand);

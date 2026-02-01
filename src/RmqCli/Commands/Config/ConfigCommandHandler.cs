@@ -50,6 +50,12 @@ public class ConfigCommandHandler : ICommandHandler
         resetCommand.SetAction(ResetConfig);
         configCommand.Subcommands.Add(resetCommand);
 
+        // Add global validators to subcommands
+        foreach (var command in configCommand.Subcommands)
+        {
+            command.Validators.AddRange(rootCommand.Validators);
+        }
+        
         rootCommand.Subcommands.Add(configCommand);
     }
 

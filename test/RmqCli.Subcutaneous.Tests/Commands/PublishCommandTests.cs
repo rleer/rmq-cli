@@ -1086,7 +1086,8 @@ public class PublishCommandTests : IAsyncLifetime
         // The exact behavior depends on implementation
     }
 
-    [Fact(Skip = "Validation for --verbose and --quiet conflict not working in in-process tests - see RootCommandHandler.cs line 112")]
+    // [Fact(Skip = "Validation for --verbose and --quiet conflict not working in in-process tests - see RootCommandHandler.cs line 112")]
+    [Fact]
     public async Task Publish_WithBothVerboseAndQuiet_ShouldFail()
     {
         // Act
@@ -1399,7 +1400,7 @@ public class PublishCommandTests : IAsyncLifetime
 
                 // Assert - Should warn but succeed with CLI args
                 result.IsSuccess.Should().BeTrue();
-                result.StderrOutput.Should().Contain("Failed to read toml file");
+                result.StderrOutput.Should().Contain("Access denied to toml file");
                 result.StderrOutput.Should().Contain("Published 1 message successfully");
             }
             finally
