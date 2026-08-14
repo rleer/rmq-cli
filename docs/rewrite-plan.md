@@ -5,6 +5,13 @@ once the rewrite lands — the durable constraints live in `CLAUDE.md`, and this
 file holds only the transition: what exists today, what it becomes, in what
 order, and which questions are still open.
 
+> **All seven phases are complete as of 2026-08-14.** What remains is merging
+> `rebuild` and, at that point, dropping the "a rewrite is in progress" note from
+> `CLAUDE.md` and archiving this file. Final numbers are in the Phase 5 table;
+> against the baseline below: 6,249 → 2,181 LOC of source, 18,216 → 1,082 LOC of
+> tests across two projects instead of five, 10 → 2 package references, 16.4 →
+> 11.5 MB, and 2 → 0 trim warnings.
+
 **Rule of thumb for what goes where:** `CLAUDE.md` states the prohibition; this
 file records the archaeology. "Do not reintroduce batched acks" is a constraint.
 "The old `AckHandler` was 75 lines and did this" is history.
@@ -462,11 +469,42 @@ at `basic.consume` time, so a wrong key or value type fails at runtime rather th
 at compile time. If that trade is wrong, the fix is a two-consumer test, not a
 different assertion on this one.
 
-### Phase 7 — Docs and packaging
+### Phase 7 — Docs and packaging ✅ done
 
-README rewrite (it still documents TOML, `config`, `peek`, and `RMQCLI_*`),
-codecov badge/gate decision, `.csproj` metadata, release notes calling out the
-`RMQCLI_*` → `$RMQ_URL` breaking change.
+The plan listed four items. A fifth turned out to matter more than any of them:
+
+- **CI was broken, not merely stale.** `.github/workflows/dotnet.yml` referenced
+  four test projects that no longer exist — `RmqCli.Unit.Tests`,
+  `RmqCli.Integration.Tests`, `RmqCli.Subcutaneous.Tests`, `RmqCli.E2E.Tests` —
+  and published `src/RmqCli/RmqCli.csproj`. Every push to `main` would have
+  failed at the first `dotnet test`. Rewritten to the two projects that exist:
+  a unit-test matrix across Linux/Windows/macOS, and a Linux-only E2E job,
+  because Testcontainers needs Docker and only the Linux runner has it reliably.
+  The E2E job also now **fails the build on any `IL2xxx`/`IL3xxx`**, which makes
+  the AOT non-negotiable a gate rather than a habit.
+- **Codecov dropped entirely** (user's call, 2026-08-14). The badge, the
+  `upload-coverage` job, and the four `--collect:"XPlat Code Coverage"` flags are
+  gone. A prominently displayed coverage percentage contradicts this repository's
+  own testing rule — "Coverage percentage is not a goal" — and keeping both was
+  not sustainable. Test results are still reported, via the trx test-reporter.
+- **README rewritten.** Everything below the title described the deleted tool:
+  TOML config files, `RMQCLI_*` variables, `--config`, `--user-config-path`,
+  `--ack-mode`, `--output`, `--prefetch-count`, `--compact`, `peek`,
+  `purge --force`, the `config` subtree, and `src/RmqCli/RmqCli.csproj`. It also
+  claimed `purge` went through the Management API, which is now false by default.
+  Every flag the new README names was checked against `--help` rather than
+  trusted.
+- **`CHANGELOG.md` added**, one `0.1.0` entry. Nothing was ever tagged or
+  published and the user confirmed the old implementation is not in use, so this
+  is a first release rather than a breaking change to one — the removals are
+  recorded as a table for anyone who built from the pre-rewrite tree, not as a
+  migration guide for users who do not exist. `Version` stays `0.1.0`.
+- **`.csproj` metadata** filled in: tags, license expression, repository and
+  project URLs, a real description, and the README packed into the nupkg.
+  Verified end to end — `dotnet pack` then `dotnet tool install -g --source
+  ./nupkg rmq` installs and runs.
+- **`dev/*.sh`** — path substitution only. Every flag those scripts use survived
+  the rewrite.
 
 ## Open questions
 

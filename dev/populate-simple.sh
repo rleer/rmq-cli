@@ -16,13 +16,13 @@ echo "Populating '$QUEUE' with messages demonstrating various features..."
 echo ""
 echo "1. Publishing a plain text message..."
 
-dotnet run --project "$PROJECT_ROOT/src/RmqCli/RmqCli.csproj" --no-build --no-launch-profile -- \
+dotnet run --project "$PROJECT_ROOT/src/rmq/rmq.csproj" --no-build --no-launch-profile -- \
   publish --queue "$QUEUE" --body "Hello, RabbitMQ!"
 
 # 2. Message with properties
 echo ""
 echo "2. Publishing message with properties..."
-dotnet run --project "$PROJECT_ROOT/src/RmqCli/RmqCli.csproj" --no-build --no-launch-profile -- \
+dotnet run --project "$PROJECT_ROOT/src/rmq/rmq.csproj" --no-build --no-launch-profile -- \
   publish --queue "$QUEUE" \
   --body "High priority order" \
   --priority 9 \
@@ -32,7 +32,7 @@ dotnet run --project "$PROJECT_ROOT/src/RmqCli/RmqCli.csproj" --no-build --no-la
 # 3. Message with custom headers
 echo ""
 echo "3. Publishing message with custom headers..."
-dotnet run --project "$PROJECT_ROOT/src/RmqCli/RmqCli.csproj" --no-build --no-launch-profile -- \
+dotnet run --project "$PROJECT_ROOT/src/rmq/rmq.csproj" --no-build --no-launch-profile -- \
   publish --queue "$QUEUE" \
   --body "Order with metadata" \
   -H "x-tenant:acme-corp" \
@@ -42,7 +42,7 @@ dotnet run --project "$PROJECT_ROOT/src/RmqCli/RmqCli.csproj" --no-build --no-la
 # 4. Message with both properties and headers
 echo ""
 echo "4. Publishing message with properties and headers..."
-dotnet run --project "$PROJECT_ROOT/src/RmqCli/RmqCli.csproj" --no-build --no-launch-profile -- \
+dotnet run --project "$PROJECT_ROOT/src/rmq/rmq.csproj" --no-build --no-launch-profile -- \
   publish --queue "$QUEUE" \
   --body "Full-featured message" \
   --priority 5 \
