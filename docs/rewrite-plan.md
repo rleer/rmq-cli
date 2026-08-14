@@ -276,34 +276,74 @@ slice is pure functions with nothing to mock.
 43 unit tests and 3 E2E smoke tests green. The remaining 842 LOC is Phase 1's
 seven files plus a 25-line `Program.cs` stub.
 
-### Phase 3 — `publish` + `consume`, and the round trip that proves them
+### Phase 3 — `publish` + `consume`, and the round trip that proves them ✅
 
-The bulk of the new code. These ship together because the first real signal is
-the round-trip test, which needs both ends.
+Done 2026-08-14, with Phase 4 folded in. Five new files — `Amqp.cs`,
+`GlobalOptions.cs`, `PublishCommand.cs`, `ConsumeCommand.cs`, `PurgeCommand.cs` —
+plus a real `Program.cs`. Twelve files under `src/rmq/`, still flat.
 
-- `Program.cs`: `System.CommandLine` root, global options, objects constructed
-  by hand, exit codes 0 / 1 / 2 / 3 / 130
-- connection + channel setup, with the broker-error mapping salvaged from
-  `RabbitChannelFactory.HandleConnectionException` as the basis for exit code 1
-- `publish` against AMQP: `--body` / `--message` / `--message-file` / STDIN,
-  `--header`, the property flags, `-q` vs `-e --routing-key`
-- `consume`: sequential receive → write → flush → ack loop; push (default) and
-  `--pull`; `--count`, `--follow`, `--to-file`, `--consumer-priority`
-- `--requeue` via hold-unacked-then-close, **not** per-message nack
-- AMQP header `byte[]` → string decoding at the boundary (see the schema doc)
+Everything the phase listed shipped: the `System.CommandLine` root with recursive
+global options, all five exit codes, the salvaged broker-error mapping (530
+vhost-not-found vs access-denied, with the exception-chain walk that finds an auth
+failure wrapped inside `BrokerUnreachableException`), both consume paths feeding
+one sequential receive → write → flush → ack loop, and `--requeue` as
+hold-unacked-then-close.
 
-**Write the publish → consume round-trip E2E test as soon as consume returns a
-single message**, not at the end. Then the `--requeue`
-terminates-and-preserves-depth test, which is the regression guard for the nack
-loop, and the exit-code-3 test.
+Four things the plan did not anticipate:
 
-**Checkpoint:** round-trip, `--requeue`, and exit-code-3 E2E tests green; AOT and
-startup checks.
+- **Publisher confirmations had to be abandoned.** Confirmation *tracking* is the
+  only way to await a confirm per publish, and RabbitMQ.Client implements it by
+  stamping `x-dotnet-pub-seq-no` onto every published message. That silently
+  breaks the properties round-trip, which `CLAUDE.md` names as the property worth
+  testing hardest. The replacement is one `QueueDeclarePassiveAsync` before the
+  loop when `-q` is given — it catches the failure that actually happens, a
+  mistyped queue name, for one round trip instead of one per message — plus
+  `mandatory: true` for `-q` only, with a `BasicReturnAsync` handler that fails
+  the run if anything bounced. `--exchange` stays non-mandatory: unroutable is
+  ordinary there, and a fanout with no bindings is not a mistake.
+- **Header normalization is a tree, not a lookup.** `byte[]` → string was the
+  known trap; `x-death` on any dead-lettered message is a *list of nested field
+  tables*, which would have thrown `NotSupportedException` at serialize time.
+  `Amqp.ToHeaderValue` now normalizes recursively into the closed set the schema
+  names, `List<object>` is registered in `MessageJsonContext`, and the read side
+  rebuilds nested tables so a consumed `x-death` republishes as a table rather
+  than a JSON string. Verified end to end against a real dead-letter exchange.
+- **RabbitMQ 4 rejects transient non-exclusive queues.** `Broker.DeclareQueue`
+  declared `durable: false`, which the `rabbitmq:4-management` fixture image
+  refuses outright (`transient_nonexcl_queues` deprecated). Every broker-backed
+  test would have failed at arrange.
+- **Ctrl-C acks on `CancellationToken.None`.** The write, flush, and ack of the
+  delivery already in hand must not take the cancelled token, or a message
+  already on stdout goes unacked and reappears as a silent duplicate.
 
-### Phase 4 — `purge`
+**Checkpoint met**, all measured 2026-08-14:
 
-`IChannel.QueuePurgeAsync(queue, ct)` — confirmed present in RabbitMQ.Client
-7.2.0. Small; one E2E test. Can be folded into Phase 3 if it is in the way.
+| | Phase 2 | Phase 3 |
+|---|---|---|
+| Source | 842 LOC | **1,795 LOC** |
+| Tests | 601 LOC | **806 LOC** |
+| `PackageReference` | 2 | **2** |
+| Binary | 4.06 MB | **9.13 MB** |
+| Startup, `--help` | 3.8 ms | **4.3 ms** (50-run avg) |
+| `IL2xxx`/`IL3xxx` | 0 | **0** |
+| Build warnings | 0 | **0** |
+
+43 unit and 14 E2E tests green. The binary more than doubled because this is the
+first build where `RabbitMQ.Client` is reachable from `Main` — before Phase 3 the
+trimmer dropped it entirely, which is also why the Phase 1 AOT check needed a
+probe branch to prove anything. Startup cost 0.5 ms for three commands and about
+thirty options, against a 20 ms budget.
+
+E2E coverage landed ahead of plan, so most of Phase 6 is already done: round trip
+(push and `--pull`), the full-property `consume | publish` pipe with source ≠
+destination, binary body fidelity, `--requeue` depth-preserving and terminating,
+exit code 3 and its satisfied counterpart, `--to-file`, publish to a nonexistent
+queue, `--follow` interrupted by a real Ctrl-C exiting 130 with everything acked,
+and `purge`.
+
+### Phase 4 — `purge` ✅
+
+Folded into Phase 3. `IChannel.QueuePurgeAsync(queue, ct)`, one E2E test.
 
 ### Phase 5 — HTTP transport
 
@@ -341,9 +381,15 @@ test asserting it terminates and leaves queue depth unchanged. Not a parallel su
 
 ### Phase 6 — Test suite completion
 
-Fill in the remaining E2E cases from `CLAUDE.md` — property round-trip fidelity
-via the `consume | publish` pipe, `--pull`, `--follow` under Ctrl-C — and the
-unit slice. Confirm the final two-project shape.
+Mostly absorbed into Phase 3 — property round-trip fidelity via the
+`consume | publish` pipe, `--pull`, and `--follow` under Ctrl-C all landed there.
+What remains:
+
+- the HTTP-transport round trip and the `--requeue --transport http` bound, which
+  belong to Phase 5 and cannot be written before it
+- `--consumer-priority`, which has no test yet. Asserting it meaningfully needs a
+  second competing consumer, so it may not be worth an E2E case at all
+- a look over the unit slice for gaps, and confirming the final two-project shape
 
 ### Phase 7 — Docs and packaging
 

@@ -105,6 +105,31 @@ silently arrive as `"d2Vi"`. Consume decodes those to strings before building th
 `MessageJsonContext`: a `byte[]` reaching the serializer is a bug at the boundary,
 and leaving it unregistered makes that fail loudly rather than quietly.
 
+Header values are not always scalars. A dead-lettered message carries `x-death`,
+which is a **list of nested field tables**, and RabbitMQ also uses
+`AmqpTimestamp` and `BinaryTableValue` inside tables. The boundary therefore
+normalizes the whole tree — recursively, not just the top level — into the closed
+set this schema names:
+
+| AMQP field-table type | Emitted as |
+|---|---|
+| `longstr` (`byte[]`) | JSON string, or base64 if the bytes are not valid UTF-8 |
+| `bool` | JSON boolean |
+| any integer width | JSON number (long) |
+| `float` / `double` / `decimal` | JSON number (double) |
+| `AmqpTimestamp` | JSON number, Unix seconds |
+| `BinaryTableValue` | base64 JSON string |
+| nested table | JSON object |
+| array | JSON array |
+
+Reading is the exact inverse: nested objects and arrays become field tables
+again, so a consumed `x-death` republishes as the table it was rather than as a
+JSON string. Note that unlike the top-level `body`, header binary has no
+`bodyEncoding`-style marker — a `longstr` that is not valid UTF-8 becomes base64
+and reads back as that base64 text. Headers are metadata; this has never mattered
+in practice, and adding a per-value discriminator would complicate every header
+for a case nobody has.
+
 ## Fields not in the schema
 
 Deliberately absent, because `publish` would have to accept anything `consume`

@@ -103,4 +103,14 @@ public sealed record MessageProperties
     /// which consume decodes at the boundary — see docs/message-schema.md.
     /// </summary>
     public Dictionary<string, object>? Headers { get; init; }
+
+    /// <summary>
+    /// False when the message carried no properties at all, so consume can emit nothing
+    /// rather than an empty "properties":{} on every line.
+    /// </summary>
+    public bool HasAny() =>
+        ContentType != null || ContentEncoding != null || DeliveryMode != null || Priority != null ||
+        CorrelationId != null || ReplyTo != null || Expiration != null || MessageId != null ||
+        Timestamp != null || Type != null || UserId != null || AppId != null ||
+        Headers is { Count: > 0 };
 }

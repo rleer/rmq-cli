@@ -98,15 +98,43 @@ public static class MessageJson
         return normalized;
     }
 
-    private static object ConvertJsonElement(JsonElement element) => element.ValueKind switch
+    /// <summary>
+    /// Back to the same closed set Amqp.ToHeaderValue produces, nested shapes included —
+    /// otherwise a consumed x-death header would republish as a JSON string rather than
+    /// the field table it was, and the properties round-trip would not hold.
+    /// </summary>
+    private static object ConvertJsonElement(JsonElement element)
     {
-        JsonValueKind.String => element.GetString() ?? string.Empty,
-        JsonValueKind.Number => element.TryGetInt64(out var l) ? l : element.GetDouble(),
-        JsonValueKind.True => true,
-        JsonValueKind.False => false,
-        JsonValueKind.Null => string.Empty,
-        _ => element.GetRawText()
-    };
+        switch (element.ValueKind)
+        {
+            case JsonValueKind.String:
+                return element.GetString() ?? string.Empty;
+            case JsonValueKind.Number:
+                return element.TryGetInt64(out var integer) ? integer : element.GetDouble();
+            case JsonValueKind.True:
+                return true;
+            case JsonValueKind.False:
+                return false;
+            case JsonValueKind.Object:
+                var table = new Dictionary<string, object>();
+                foreach (var property in element.EnumerateObject())
+                {
+                    table[property.Name] = ConvertJsonElement(property.Value);
+                }
+
+                return table;
+            case JsonValueKind.Array:
+                var list = new List<object>();
+                foreach (var item in element.EnumerateArray())
+                {
+                    list.Add(ConvertJsonElement(item));
+                }
+
+                return list;
+            default:
+                return string.Empty;
+        }
+    }
 }
 
 /// <summary>
@@ -166,6 +194,9 @@ public sealed class BodyConverter : JsonConverter<string>
 [JsonSerializable(typeof(Message))]
 [JsonSerializable(typeof(MessageProperties))]
 [JsonSerializable(typeof(Dictionary<string, object>))]
+// A dead-lettered message's x-death header is a list of nested field tables, so both
+// shapes have to be writable. byte[] stays unregistered on purpose — see Amqp.ToHeaderValue.
+[JsonSerializable(typeof(List<object>))]
 [JsonSerializable(typeof(RabbitMQ.Client.DeliveryModes))]
 [JsonSerializable(typeof(string))]
 [JsonSerializable(typeof(long))]

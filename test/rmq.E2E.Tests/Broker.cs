@@ -25,7 +25,10 @@ public sealed class Broker(RabbitMqFixture fixture)
         await using var channel = await connection.CreateChannelAsync();
 
         await channel.QueueDeleteAsync(name, ifUnused: false, ifEmpty: false);
-        await channel.QueueDeclareAsync(name, durable: false, exclusive: false, autoDelete: false);
+
+        // Durable on purpose: RabbitMQ 4 deprecated transient non-exclusive queues and
+        // rejects the declare outright.
+        await channel.QueueDeclareAsync(name, durable: true, exclusive: false, autoDelete: false);
         return name;
     }
 
