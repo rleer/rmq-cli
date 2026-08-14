@@ -133,10 +133,20 @@ public static class ConsumeCommand
         MessageWriter writer,
         CancellationToken ct)
     {
-        // AMQP only. Over HTTP nothing is held unacked — the broker requeues each batch
-        // before it answers — so this warning would be false, and it would sit next to the
-        // could-not-drain warning contradicting it.
-        if (requeue && settings.Transport == Transport.Amqp)
+        // Both transports warn about a large --requeue, for different reasons — so the text
+        // differs too rather than being made vague enough to cover both.
+        if (requeue && settings.Transport == Transport.Http)
+        {
+            // Nothing is held unacked here: the broker requeues each batch before it
+            // answers, so the growth warning below would be false, and it would sit next to
+            // the could-not-drain warning contradicting it. A large --count is still worth
+            // a word, because it arrives as one buffered response rather than a stream.
+            if (limit >= LargeRequeueCount)
+            {
+                Log.Warn($"--requeue reads all {limit} messages in a single response and holds them in memory at once");
+            }
+        }
+        else if (requeue)
         {
             // The broker holds everything unacked until the channel closes, and AMQP has no
             // cursor that would avoid it.

@@ -377,8 +377,13 @@ Everything below was planned correctly. What the plan did **not** anticipate:
 - **`routed` maps exactly onto `mandatory`.** The publish response reports
   routability synchronously, which is the same information `basic.return` gives
   asynchronously over AMQP, so it is counted the same way: an error for
-  `--queue`, ordinary for `--exchange`. Publish behaviour is identical across
-  transports, exit code included.
+  `--queue`, ordinary for `--exchange`. The exit code and the queue-vs-exchange
+  distinction therefore match across transports. What does **not** match is the
+  pre-flight: over AMQP a passive declare fails before the first send, so a
+  typo'd `-q` reports `NOT_FOUND` and publishes nothing, while over HTTP each
+  message is sent, discarded, and reported as `NO_ROUTE`. Both exit 1. Adding a
+  `GET /api/queues/…` pre-flight to close that gap is exactly the parity work
+  `CLAUDE.md` says not to do.
 
 Two deliberate degradations, both documented in `--help` rather than engineered
 around:
