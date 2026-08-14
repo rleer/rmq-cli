@@ -220,7 +220,7 @@ temporary probe making the `Rmq` namespace reachable — the first run had prove
 nothing, since `TrimMode full` had dropped the whole namespace as dead code and
 produced a binary byte-identical to the baseline.
 
-### Phase 2 — Clear the ground (delete only, no new features)
+### Phase 2 — Clear the ground (delete only, no new features) ✅ done
 
 One commit, ~5,900 LOC out, nothing added. Deliberately contains no new
 behaviour, so that anything broken afterwards is unambiguously new code.
@@ -244,13 +244,37 @@ behaviour, so that anything broken afterwards is unambiguously new code.
   other ~20 files test deleted types
 - drop `EnableConfigurationBindingGenerator` from the `.csproj`
 
-**Rename, while everything is being touched anyway** — the assembly is already
-called `rmq` and the namespace is now `Rmq`, so `RmqCli` survives only in paths:
-`src/RmqCli` → `src/Rmq`, `RmqCli.sln` → `Rmq.sln`, `RmqCli.Unit.Tests` →
-`Rmq.Unit.Tests`, `RmqCli.E2E.Tests` → `Rmq.E2E.Tests`. Free now, churn later.
+**Renamed to lowercase `rmq`** (user's call, 2026-08-14): `src/rmq/rmq.csproj`,
+`rmq.sln`, `test/rmq.Unit.Tests`, `test/rmq.E2E.Tests`. `RmqCli` no longer appears
+anywhere. Note `dotnet new sln` now emits `.slnx` by default under the .NET 10
+SDK; the classic format was kept via `--format sln`.
 
-**Checkpoint:** build green, **zero `IL2xxx`/`IL3xxx`** (Tomlyn was the only
-source), `--help` under 20 ms, `ConnectionTests` + `MessageJsonTests` pass.
+**E2E harness rebuilt rather than ported.** The CliWrap runner and the
+Testcontainers fixture were worth keeping; the rest was not. `RabbitMqTestHelpers`
+was a pure forwarding wrapper over `RabbitMqOperations` — the exact pattern
+`CLAUDE.md` says to delete on sight — and `RabbitMqOperations` returned the
+product's own `QueueInfo`, which no longer exists. Three files now: `Cli.cs`
+(runs the *published binary*, with real Ctrl-C for the exit-130 path),
+`Broker.cs` (arrange/assert over AMQP directly, so tests never verify the CLI
+with the CLI), `RabbitMqFixture.cs`. Also dropped `coverlet.collector` —
+coverage percentage is explicitly not a goal — and `NSubstitute`, since the unit
+slice is pure functions with nothing to mock.
+
+**Checkpoint met**, all measured 2026-08-14:
+
+| | Before | After |
+|---|---|---|
+| Source | 6,249 LOC | **842 LOC** |
+| Tests | 18,216 LOC | **601 LOC** |
+| `PackageReference` | 10 | **2** |
+| Test projects | 5 | **2** |
+| Binary | 16.4 MB | **4.06 MB** |
+| Startup, `--help` | 6.7 ms | **3.8 ms** |
+| `IL2xxx`/`IL3xxx` | 2 | **0** |
+| Build warnings | 1 | **0** |
+
+43 unit tests and 3 E2E smoke tests green. The remaining 842 LOC is Phase 1's
+seven files plus a 25-line `Program.cs` stub.
 
 ### Phase 3 — `publish` + `consume`, and the round trip that proves them
 
