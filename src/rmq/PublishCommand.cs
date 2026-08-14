@@ -68,7 +68,7 @@ public static class PublishCommand
             always comes from --queue or --exchange, never from the message.
 
             Publishing to a --queue that does not exist is an error. Publishing to an
-            --exchange that routes nowhere is not.
+            --exchange that routes nowhere is not. That holds on both transports.
             """);
 
         command.Add(queue);
@@ -166,6 +166,11 @@ public static class PublishCommand
         Dictionary<string, object> cliHeaders,
         CancellationToken ct)
     {
+        if (settings.Transport == Transport.Http)
+        {
+            return await RunOverHttp(settings, queue, exchange, routingKey, body, messageJson, messageFile, cliProperties, cliHeaders, ct);
+        }
+
         await using var connection = await Amqp.ConnectAsync(settings, ct);
         await using var channel = await connection.CreateChannelAsync(cancellationToken: ct);
 
@@ -217,6 +222,53 @@ public static class PublishCommand
         // Returns arrive asynchronously, so this catches a batch that bounced rather than
         // the last message of one. A partly-bounced run must not report success.
         return returned > 0 ? ExitCode.Connection : ExitCode.Success;
+    }
+
+    /// <summary>
+    /// The same publish, over the Management API. Written out rather than folded into the
+    /// AMQP path: there is no channel, no passive declare, and routability comes back in
+    /// the response instead of asynchronously on basic.return.
+    /// </summary>
+    private static async Task<int> RunOverHttp(
+        ConnectionSettings settings,
+        string? queue,
+        string? exchange,
+        string? routingKey,
+        string? body,
+        string? messageJson,
+        string? messageFile,
+        MessageProperties cliProperties,
+        Dictionary<string, object> cliHeaders,
+        CancellationToken ct)
+    {
+        using var client = Http.CreateClient(settings);
+
+        var targetExchange = queue != null ? string.Empty : exchange!;
+        var published = 0;
+        var unroutable = 0;
+
+        await foreach (var line in Read(body, messageJson, messageFile, ct))
+        {
+            var merged = PropertyMerger.Merge(line, cliProperties, cliHeaders);
+            var targetKey = queue ?? routingKey ?? merged.RoutingKey ?? string.Empty;
+
+            var routed = await Http.PublishAsync(client, settings, targetExchange, targetKey, merged, ct);
+
+            // "routed" is exactly what mandatory reports over AMQP, so it counts the same
+            // way: an error for --queue, ordinary for --exchange.
+            if (!routed && queue != null)
+            {
+                unroutable++;
+                Log.Error($"undeliverable: NO_ROUTE (exchange '{targetExchange}', routing key '{targetKey}')");
+            }
+
+            published++;
+            Log.Debug($"published to exchange='{targetExchange}' routingKey='{targetKey}'");
+        }
+
+        Console.Error.WriteLine($"published {published} message{(published == 1 ? "" : "s")}");
+
+        return unroutable > 0 ? ExitCode.Connection : ExitCode.Success;
     }
 
     /// <summary>

@@ -30,14 +30,6 @@ public static class Amqp
 
     public static async Task<IConnection> ConnectAsync(ConnectionSettings settings, CancellationToken ct)
     {
-        // TODO(phase 5): the HTTP transport routes around this entirely. Until then, say so
-        // rather than silently connecting over AMQP and ignoring the flag. ArgumentException
-        // on purpose — this exits 2, because nothing is wrong with the broker.
-        if (settings.Transport == Transport.Http)
-        {
-            throw new ArgumentException("--transport http is not implemented yet");
-        }
-
         var factory = new ConnectionFactory
         {
             HostName = settings.Host,

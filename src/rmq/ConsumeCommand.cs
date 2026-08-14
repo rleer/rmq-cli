@@ -68,7 +68,19 @@ public static class ConsumeCommand
             distribution alongside any existing consumers and the broker pushes messages at
             it continuously. Use --pull to inspect a queue that production depends on — it
             registers nothing and takes only what is asked for. Use --requeue to give
-            everything back.
+            everything back; those messages come back flagged redelivered, which AMQP
+            offers no way to avoid.
+
+            With --transport http (the Management API, for networks where only 80/443 reach
+            the broker) this is a degraded path:
+
+              * No push support. --pull and --consumer-priority are ignored, and --follow
+                becomes a poll loop.
+              * No delivery tags. Messages are acknowledged by a request parameter decided
+                before the response is sent, so the ack-after-write guarantee does not
+                hold — a crash mid-write loses the batch in hand.
+              * --requeue reads one batch and stops. It cannot drain, because requeued
+                messages are handed straight back and the next read returns the same ones.
             """);
 
         command.Add(queue);
@@ -121,7 +133,10 @@ public static class ConsumeCommand
         MessageWriter writer,
         CancellationToken ct)
     {
-        if (requeue)
+        // AMQP only. Over HTTP nothing is held unacked — the broker requeues each batch
+        // before it answers — so this warning would be false, and it would sit next to the
+        // could-not-drain warning contradicting it.
+        if (requeue && settings.Transport == Transport.Amqp)
         {
             // The broker holds everything unacked until the channel closes, and AMQP has no
             // cursor that would avoid it.
@@ -136,12 +151,13 @@ public static class ConsumeCommand
         }
 
         await using var _ = writer;
-        await using var connection = await Amqp.ConnectAsync(settings, ct);
-        await using var channel = await connection.CreateChannelAsync(cancellationToken: ct);
 
-        var consumed = pull
-            ? await Pull(channel, queue, limit, requeue, follow, writer, ct)
-            : await Push(channel, queue, limit, requeue, follow, consumerPriority, writer, ct);
+        // --pull and --consumer-priority are both no-ops here rather than errors: there is
+        // no consumer to register and nothing to prioritize, and CLAUDE.md is explicit that
+        // flags which do not apply to a path are ignored, not rejected.
+        var consumed = settings.Transport == Transport.Http
+            ? await Fetch(settings, queue, limit, requeue, follow, writer, ct)
+            : await OverAmqp(settings, queue, limit, requeue, follow, pull, consumerPriority, writer, ct);
 
         if (toFile != null)
         {
@@ -151,6 +167,97 @@ public static class ConsumeCommand
         // Code 3 is the one that matters for pipelines: fewer messages than asked for is
         // not the same as a failure.
         return limit != null && consumed < limit ? ExitCode.Incomplete : ExitCode.Success;
+    }
+
+    private static async Task<int> OverAmqp(
+        ConnectionSettings settings,
+        string queue,
+        int? limit,
+        bool requeue,
+        bool follow,
+        bool pull,
+        int consumerPriority,
+        MessageWriter writer,
+        CancellationToken ct)
+    {
+        await using var connection = await Amqp.ConnectAsync(settings, ct);
+        await using var channel = await connection.CreateChannelAsync(cancellationToken: ct);
+
+        return pull
+            ? await Pull(channel, queue, limit, requeue, follow, writer, ct)
+            : await Push(channel, queue, limit, requeue, follow, consumerPriority, writer, ct);
+    }
+
+    /// <summary>
+    /// The Management API path. Polling only, and the two ackmodes are written out
+    /// separately because they permit sharply different things — one drains, the other
+    /// cannot and must not try.
+    /// </summary>
+    private static async Task<int> Fetch(
+        ConnectionSettings settings,
+        string queue,
+        int? limit,
+        bool requeue,
+        bool follow,
+        MessageWriter writer,
+        CancellationToken ct)
+    {
+        using var client = Http.CreateClient(settings);
+
+        if (requeue)
+        {
+            // ackmode=ack_requeue_true puts messages straight back, so a second call returns
+            // the same ones — looping would re-read them forever, the same trap as
+            // per-message nack over AMQP. One batch, then stop, and say so on stderr.
+            var batch = await Http.GetAsync(client, settings, queue, limit ?? Http.BatchSize, requeue: true, ct);
+            foreach (var message in batch)
+            {
+                await Write(writer, message);
+            }
+
+            Log.Warn($"--transport http cannot drain with --requeue: read {batch.Count} message{(batch.Count == 1 ? "" : "s")}, the queue is unchanged");
+            return batch.Count;
+        }
+
+        var consumed = 0;
+
+        try
+        {
+            while (limit == null || consumed < limit)
+            {
+                var size = limit == null ? Http.BatchSize : Math.Min(Http.BatchSize, limit.Value - consumed);
+                var batch = await Http.GetAsync(client, settings, queue, size, requeue: false, ct);
+
+                // Stop on empty, not on short: a response smaller than asked for could as
+                // easily be a server-side cap as a drained queue, and one extra round trip
+                // is cheaper than guessing wrong.
+                if (batch.Count == 0)
+                {
+                    if (!follow)
+                    {
+                        break;
+                    }
+
+                    await Task.Delay(PollInterval, ct);
+                    continue;
+                }
+
+                // The whole batch was deleted server-side before the response was sent, so
+                // it is written out even under Ctrl-C. That is the only loss reduction
+                // available on a path with no delivery tags.
+                foreach (var message in batch)
+                {
+                    await Write(writer, message);
+                    consumed++;
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            Log.Debug($"interrupted after {consumed} messages");
+        }
+
+        return consumed;
     }
 
     /// <summary>
@@ -311,13 +418,22 @@ public static class ConsumeCommand
     /// </summary>
     private static async Task Emit(MessageWriter writer, IChannel channel, Message message, ulong deliveryTag, bool requeue)
     {
-        await writer.WriteAsync(message, CancellationToken.None);
-        await writer.FlushAsync(CancellationToken.None);
+        await Write(writer, message);
 
         if (!requeue)
         {
             await channel.BasicAckAsync(deliveryTag, multiple: false, CancellationToken.None);
         }
+    }
+
+    /// <summary>
+    /// Durably out before anything acknowledges it. On CancellationToken.None because a
+    /// message the loop already holds must reach stdout whichever transport is in use.
+    /// </summary>
+    private static async Task Write(MessageWriter writer, Message message)
+    {
+        await writer.WriteAsync(message, CancellationToken.None);
+        await writer.FlushAsync(CancellationToken.None);
     }
 
     private sealed record Delivery(Message Message, ulong DeliveryTag);

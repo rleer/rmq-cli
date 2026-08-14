@@ -345,9 +345,71 @@ and `purge`.
 
 Folded into Phase 3. `IChannel.QueuePurgeAsync(queue, ct)`, one E2E test.
 
-### Phase 5 — HTTP transport
+### Phase 5 — HTTP transport ✅ done
 
-`--transport http` for publish, get, and purge.
+`--transport http` for publish, get, and purge. One new file, `Http.cs` (~330
+LOC): client construction, error explanation, the three operations, and the
+snake_case DTOs with their own source-generation context. The commands each
+branch to it at the top of `Run` and are otherwise untouched.
+
+Everything below was planned correctly. What the plan did **not** anticipate:
+
+- **An empty property set arrives as `[]`, not `{}`.** An empty Erlang proplist
+  encodes as a JSON array, so `"properties":[]` comes back on every message
+  published without properties — which is most of them. Deserializing straight
+  into a record throws there, with no compile-time signal. The `/get` response
+  DTO therefore holds `properties` as a `JsonElement` and converts only when
+  `ValueKind == Object`. Found by probing a real broker before writing the DTO,
+  not by reading the API reference, which does not mention it.
+- **`Uri` preserves `%2F`.** The default vhost is a path segment, and a
+  canonicalization that turned `%2F` back into `/` would have addressed a vhost
+  named `""` on every call. .NET 8 keeps it; pinned in a unit test so a future
+  runtime change fails loudly rather than silently retargeting.
+- **The management API's message counts are sampled and lag badly.** A queue
+  holding three requeued messages reported `messages: 0` and stayed there. This
+  independently confirms the "do not derive a count from `messages_ready`"
+  prohibition below — that number is not merely racy, it is often simply wrong.
+  The HTTP E2E tests assert depth over AMQP for the same reason.
+- **The AMQP unbounded-growth warning had to be suppressed here.** `--requeue`
+  over HTTP holds nothing unacked — the broker requeues each batch before it
+  answers — so the warning was both false and directly contradicted by the
+  could-not-drain warning printed immediately after it.
+- **`routed` maps exactly onto `mandatory`.** The publish response reports
+  routability synchronously, which is the same information `basic.return` gives
+  asynchronously over AMQP, so it is counted the same way: an error for
+  `--queue`, ordinary for `--exchange`. Publish behaviour is identical across
+  transports, exit code included.
+
+Two deliberate degradations, both documented in `--help` rather than engineered
+around:
+
+- **`purge` reports no count.** `DELETE /contents` answers 204 with an empty
+  body; AMQP's `QueuePurgeAsync` returns the number purged and HTTP has nothing
+  to return.
+- **Bodies are always published as base64.** The API would take a plain string
+  for a UTF-8 body, but then publish would need its own copy of the
+  is-this-valid-UTF-8 rule. Base64 is correct for every body and costs a third
+  more bytes on a path that exists for troubleshooting.
+
+Measured after this phase:
+
+| | Phase 3 | Phase 5 |
+|---|---|---|
+| Source | 1,795 LOC | **2,181 LOC** |
+| Tests | 990 LOC | **1,082 LOC** |
+| `PackageReference` | 2 | **2** |
+| Binary | 9,128,016 B | **11,534,512 B** |
+| Startup `--help` | 4.3 ms | **4.5 ms** (50-run avg, warm) |
+| `IL2xxx`/`IL3xxx` | 0 | **0** |
+| Build warnings | 0 | **0** |
+| Tests | 52 unit / 15 E2E | **53 unit / 17 E2E** |
+
+The binary grew 2.4 MB because this is the first build where `System.Net.Http`
+and the TLS stack are reachable from `Main` — the same effect Phase 3 had on
+`RabbitMQ.Client`. Startup is unchanged; the 13 ms an early measurement reported
+was a cold page cache immediately after `dotnet publish`, not a regression.
+
+The original plan for this phase follows.
 
 **The drain question splits by ackmode** — verified against the HTTP API
 reference, which documents `count`, `ackmode`, `encoding`, and `truncate`:
@@ -379,15 +441,13 @@ Two implementation details that are easy to get wrong:
 **Checkpoint:** one E2E round trip over HTTP, plus a `--requeue --transport http`
 test asserting it terminates and leaves queue depth unchanged. Not a parallel suite.
 
-### Phase 6 — Test suite completion
+### Phase 6 — Test suite completion ✅ done
 
-Mostly absorbed into Phase 3 — property round-trip fidelity via the
-`consume | publish` pipe, `--pull`, and `--follow` under Ctrl-C all landed there.
-What remains:
-
-- the HTTP-transport round trip and the `--requeue --transport http` bound, which
-  belong to Phase 5 and cannot be written before it
-- confirming the final two-project shape
+Absorbed entirely into Phases 3 and 5. Property round-trip fidelity via the
+`consume | publish` pipe, `--pull`, and `--follow` under Ctrl-C landed in Phase
+3; the HTTP round trip and the `--requeue --transport http` bound landed in
+Phase 5. The two-project shape is confirmed: `rmq.Unit.Tests` and
+`rmq.E2E.Tests`, nothing else.
 
 `--consumer-priority` is covered, but deliberately not on the axis its name
 suggests: asserting that a low-priority consumer *yields* would need a second

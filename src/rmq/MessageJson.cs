@@ -87,7 +87,13 @@ public static class MessageJson
     private static bool IsBase64(string value) =>
         Convert.TryFromBase64String(value, new byte[((value.Length * 3) >> 2) + 4], out _);
 
-    private static Dictionary<string, object> NormalizeHeaders(Dictionary<string, object> headers)
+    /// <summary>
+    /// JsonElement values to the closed set the schema names. Shared with the HTTP
+    /// transport, which deserializes the same header shapes out of the management API —
+    /// a second copy would be the type mapping drifting from the schema, not duplication
+    /// worth having.
+    /// </summary>
+    public static Dictionary<string, object> NormalizeHeaders(Dictionary<string, object> headers)
     {
         var normalized = new Dictionary<string, object>(headers.Count);
         foreach (var (key, value) in headers)

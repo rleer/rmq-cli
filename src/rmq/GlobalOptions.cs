@@ -34,7 +34,7 @@ public static class GlobalOptions
 
     public static readonly Option<Transport?> Transport = new("--transport")
     {
-        Description = "amqp (default) or http. The HTTP Management API is a degraded fallback for networks where only 80/443 reach the broker.",
+        Description = "amqp (default) or http. The HTTP Management API is a degraded fallback for networks where only 80/443 reach the broker: polling only, no delivery tags, and --requeue cannot drain. See 'rmq consume --help'.",
         Recursive = true
     };
 

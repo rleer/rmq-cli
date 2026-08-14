@@ -130,6 +130,31 @@ and reads back as that base64 text. Headers are metadata; this has never mattere
 in practice, and adding a per-value discriminator would complicate every header
 for a case nobody has.
 
+## The schema is the same on both transports
+
+`--transport http` reads and writes these same lines. The Management API spells
+properties differently on the wire — snake_case keys, `delivery_mode` as a
+number, the body as `payload` with a `payload_encoding` of `string` or `base64` —
+but that is a translation inside `Http.cs`, not a second schema. Consuming a
+message over one transport and republishing it over the other produces a
+byte-identical line, and the E2E suite pins that.
+
+Two quirks of that translation are worth knowing, because they look like schema
+differences and are not:
+
+- **A message with no properties reports `"properties":[]`**, not `{}` — an empty
+  Erlang proplist encodes as a JSON array. It reads as "no properties", so the
+  emitted line omits `properties` entirely, exactly as the AMQP path does.
+- **`payload_encoding` is not `bodyEncoding`.** It describes how the *API*
+  framed the body in transit; `bodyEncoding` describes the message itself. A
+  UTF-8 body arrives as `payload_encoding: "string"` and is emitted with no
+  `bodyEncoding`, while `publish` always sends base64 because it is correct for
+  every body and saves duplicating the UTF-8 validity rule.
+
+Header values need no decoding on this path — the API hands back real JSON types
+rather than `longstr` bytes — but they go through the same normalization, so the
+closed set above is what comes out either way.
+
 ## Fields not in the schema
 
 Deliberately absent, because `publish` would have to accept anything `consume`

@@ -156,4 +156,17 @@ public class ConnectionTests
     {
         Resolve("amqp://alice:s3cret@h/").Describe().Should().NotContain("s3cret").And.Contain("alice");
     }
+
+    /// <summary>
+    /// The vhost is a path segment, so the default vhost has to stay %2F all the way to the
+    /// wire. Uri has historically canonicalized encoded separators back into real ones, and
+    /// if it did here every management call would address a vhost named "" instead of "/".
+    /// </summary>
+    [Fact]
+    public void The_default_vhost_stays_escaped_in_a_management_url()
+    {
+        var url = Http.Url(Resolve("http://h:15672/"), $"queues/{Uri.EscapeDataString("/")}/orders/get");
+
+        url.AbsoluteUri.Should().Be("http://h:15672/api/queues/%2F/orders/get");
+    }
 }

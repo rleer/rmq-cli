@@ -19,6 +19,16 @@ public static class PurgeCommand
             var settings = GlobalOptions.Settings(parse);
             var name = parse.GetRequiredValue(queue);
 
+            if (settings.Transport == Transport.Http)
+            {
+                using var client = Http.CreateClient(settings);
+                await Http.PurgeAsync(client, settings, name, ct);
+
+                // DELETE /contents answers 204 with no body, so there is no count to report.
+                Console.Error.WriteLine($"purged {name}");
+                return ExitCode.Success;
+            }
+
             await using var connection = await Amqp.ConnectAsync(settings, ct);
             await using var channel = await connection.CreateChannelAsync(cancellationToken: ct);
 
