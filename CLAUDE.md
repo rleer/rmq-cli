@@ -258,9 +258,14 @@ separate `--tls` flag:
 | `https://` | Management HTTP | yes | 443 |
 
 `http(s)://` implies `--transport http` and points at the Management API
-directly — the case where only 80/443 are open. With an `amqp(s)://` URL, the
-HTTP transport derives its base URL from the same host using
-`--management-port` (default 15672).
+directly — the case where only 80/443 are open, which is why `https://` defaults
+to 443 rather than a broker port.
+
+With an `amqp(s)://` URL, the HTTP transport instead derives its base URL from
+the same host using `--management-port`, whose default follows the scheme:
+**15672 for `amqp://`, 15671 for `amqps://`** — RabbitMQ's own plain and TLS
+management listener ports. The scheme already said whether TLS is in play, so the
+port should not have to be repeated.
 
 `--insecure` disables certificate validation (accepts self-signed certificates
 and hostname mismatches) for dev brokers. It is the only TLS knob; SNI is
@@ -280,6 +285,12 @@ Output shape depends on whether STDOUT is a terminal, and this must be honored:
 `--json` forces NDJSON even on a TTY. `--raw` writes **only the message body
 bytes**, no envelope and no properties, for piping payloads into other tools.
 Both override TTY detection.
+
+**`--raw` writes no separator at all** — not even a newline between messages.
+Adding one would corrupt the single case `--raw` exists to serve, extracting a
+body byte-for-byte, and a delimiter that is safe for binary does not exist.
+Draining many messages is what NDJSON is for; `--raw` is for one payload, or for
+a stream whose framing the receiving tool already knows.
 
 `--to-file <path>` writes **one file**, NDJSON, newline-delimited. No rotation,
 no configurable delimiter, no `MessagesPerFile`. Splitting large drains is

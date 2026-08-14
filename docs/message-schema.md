@@ -10,13 +10,15 @@ rmq consume -q source --url amqp://a/ | rmq publish -q dest --url amqp://b/
 
 ## Shape
 
+A line with everything set (`bodyEncoding` is absent here because the body is
+text — see Body encoding below):
+
 ```json
 {
   "body": {"orderId": 42},
-  "bodyEncoding": "base64",
   "routingKey": "orders.created",
   "exchange": "events",
-  "redelivered": false,
+  "redelivered": true,
   "properties": {
     "contentType": "application/json",
     "contentEncoding": "gzip",
@@ -35,9 +37,15 @@ rmq consume -q source --url amqp://a/ | rmq publish -q dest --url amqp://b/
 }
 ```
 
+A binary body instead looks like this, and the two forms never co-occur:
+
+```json
+{"body":"//4AAYA=","bodyEncoding":"base64","routingKey":"uploads"}
+```
+
 Every field is optional except `body`. Null and default values are **omitted on
 write** and **accepted on read**, so a message with no properties is just
-`{"body":"hello"}`.
+`{"body":"hello"}` and `redelivered` appears only when it is true.
 
 `properties` carries the full AMQP 0-9-1 property set minus `clusterId`, which is
 deprecated and deliberately dropped. Headers are nested **inside** `properties`,
@@ -81,6 +89,21 @@ This is a deliberate trade — inline `jq`-native bodies were chosen over byte
 exactness for JSON specifically. Text and binary bodies are unaffected and are
 byte-exact, which is where corruption actually bites. If you need a JSON body
 preserved to the byte, `--raw` writes the original bytes untouched.
+
+## Header values
+
+AMQP field tables are typed, so header values are typed here too: JSON strings,
+numbers, and booleans map to AMQP `longstr`, `long`/`double`, and `bool`. On the
+way in, `--header k:v` infers the type from the text — `3` is a number, `true` is
+a boolean, everything else is a string.
+
+**Header conversion happens at the AMQP boundary, not in the serializer.**
+RabbitMQ.Client hands back `byte[]` for every `longstr` header, and `byte[]`
+serialized as JSON becomes base64 — so a header reading `x-source: web` would
+silently arrive as `"d2Vi"`. Consume decodes those to strings before building the
+`Message`, which is also why `byte[]` is deliberately *not* registered in
+`MessageJsonContext`: a `byte[]` reaching the serializer is a bug at the boundary,
+and leaving it unregistered makes that fail loudly rather than quietly.
 
 ## Fields not in the schema
 

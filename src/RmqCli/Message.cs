@@ -98,11 +98,9 @@ public sealed record MessageProperties
     public string? Type { get; init; }
     public string? UserId { get; init; }
     public string? AppId { get; init; }
+    /// <summary>
+    /// Values are strings, longs, doubles, or bools. AMQP hands back byte[] for longstr,
+    /// which consume decodes at the boundary — see docs/message-schema.md.
+    /// </summary>
     public Dictionary<string, object>? Headers { get; init; }
-
-    public bool HasAny() =>
-        ContentType != null || ContentEncoding != null || DeliveryMode != null || Priority != null ||
-        CorrelationId != null || ReplyTo != null || Expiration != null || MessageId != null ||
-        Timestamp != null || Type != null || UserId != null || AppId != null ||
-        (Headers != null && Headers.Count > 0);
 }

@@ -49,6 +49,7 @@ public static class Connection
     private const string DefaultUser = "guest";
     private const string DefaultPassword = "guest";
     private const int DefaultManagementPort = 15672;
+    private const int DefaultTlsManagementPort = 15671;
 
     public static ConnectionSettings Resolve(
         string? url = null,
@@ -88,10 +89,11 @@ public static class Connection
         }
         else
         {
-            // With an amqp(s):// URL the management API is on the same host at 15672,
-            // over https only because the amqps scheme said so.
+            // With an amqp(s):// URL the management API is on the same host, on RabbitMQ's
+            // own management listener — 15671 under TLS, 15672 without. The scheme already
+            // said whether TLS is in play, so the port need not repeat it.
             amqpPort = urlPort ?? DefaultPortFor(scheme);
-            resolvedManagementPort = managementPort ?? DefaultManagementPort;
+            resolvedManagementPort = managementPort ?? (useTls ? DefaultTlsManagementPort : DefaultManagementPort);
         }
 
         return new ConnectionSettings

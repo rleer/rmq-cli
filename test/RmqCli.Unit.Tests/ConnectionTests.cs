@@ -113,6 +113,12 @@ public class ConnectionTests
     }
 
     [Fact]
+    public void Amqps_url_with_http_transport_uses_the_tls_management_port()
+    {
+        Resolve("amqps://broker/", transport: Transport.Http).ManagementBaseUrl.Should().Be("https://broker:15671");
+    }
+
+    [Fact]
     public void Management_port_flag_wins_over_the_default()
     {
         Resolve("amqps://broker/", managementPort: 8443).ManagementBaseUrl.Should().Be("https://broker:8443");
