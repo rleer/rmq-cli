@@ -199,24 +199,32 @@ for the nack loop.
 
 `--transport http` for publish, get, and purge.
 
-**`--requeue` over HTTP hits the nack-loop trap that the AMQP path avoids.**
-There are no delivery tags, so requeueing is `ackmode=reject_requeue_true` on the
-`/get` request — the message returns to the queue *immediately*, and the next
-`/get` hands back the same one. The hold-unacked-then-close mechanism has no HTTP
-equivalent, so it cannot simply be ported.
+**The drain question splits by ackmode** — verified against the HTTP API
+reference, which documents `count`, `ackmode`, `encoding`, and `truncate`:
 
-What does work: `/get` accepts a `count` parameter and returns up to N messages
-in a single request, requeueing them together. So the HTTP requeue path is
-"one request for N messages," not a loop:
+- `ack_requeue_false` "positively acknowledges the messages and marks them for
+  deletion" — so repeated `/get` calls **do** drain a queue.
+- `ack_requeue_true` / `reject_requeue_true` "requeue the fetched messages" — so
+  repeated calls return the same messages forever. **Cannot drain**, and must
+  not loop.
 
-- with `--count N` — one request, `count: N`.
-- without `--count` — read `messages_ready` from `GET /api/queues/{vhost}/{name}`
-  first and use it as the count. This is inherently racy against a live producer
-  and is a best-effort drain, unlike the AMQP path. Say so in `--help`.
+So destructive consume over HTTP behaves like AMQP (loop until empty, honoring
+`--count`), while `--requeue` is capped at a single `/get` and warns that the
+queue was not drained. Two separate implementations; see the table in `CLAUDE.md`.
 
-These are two genuinely different implementations. Write them as such rather than
-unifying them behind an interface — this is exactly the case the duplication rule
-is for.
+An earlier draft of this plan proposed deriving a count from `messages_ready` to
+fake a requeue drain. **Do not** — it races any live producer, and the "degraded
+fallback, do not engineer around it" rule applies squarely.
+
+Two implementation details that are easy to get wrong:
+
+- **`payload_encoding`** — `/get` returns the body as a plain string only when it
+  is valid UTF-8, and base64 otherwise. Handle both or binary bodies silently
+  corrupt, breaking the round-trip guarantee the E2E suite exists to protect.
+- **Never send `truncate`** — it would silently shorten bodies.
+- **Batch size is the loss window.** `ackmode` is applied server-side before the
+  response is sent, so a crash mid-write loses the entire batch. Pick a small
+  constant; this path is for troubleshooting, not throughput.
 
 **Checkpoint:** one E2E round trip over HTTP, plus a `--requeue --transport http`
 test asserting it terminates and leaves queue depth unchanged. Not a parallel suite.

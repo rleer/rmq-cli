@@ -191,12 +191,39 @@ do not try to engineer around them:
 - **No delivery tags.** Acknowledgment is an `ackmode` request parameter decided
   *before* the message is written, so the ack-after-write guarantee below does
   **not** hold. A crash mid-write can lose messages on this path. Say so in help text.
-- **`--requeue` is best-effort.** With no delivery tags there is no
-  hold-unacked-then-close; a requeued message returns immediately and the next
-  get re-reads it. The HTTP path therefore requests N messages in one `/get`
-  call rather than looping, deriving N from `messages_ready` when `--count` is
-  omitted — which races a live producer. This is a different implementation from
-  the AMQP one, not a shared abstraction.
+- **`--requeue` cannot drain, and must not try.** `ackmode=ack_requeue_true`
+  puts messages straight back, so a loop re-reads the same ones forever — the
+  same trap as per-message nack over AMQP. See the behavior table below.
+- **Never pass `truncate`**, and handle `payload_encoding: base64` on the way
+  in. `/get` returns the body as a plain string only when it is valid UTF-8 and
+  base64-encodes it otherwise; ignoring that silently corrupts binary bodies and
+  breaks the round-trip guarantee.
+
+### HTTP consume behavior
+
+`/get` takes `count` and `ackmode` and returns up to `count` messages in one
+response. What that permits differs sharply by ackmode, so the two cases are
+written as two separate implementations — do not unify them:
+
+| Invocation | Mechanism | Drains? |
+|---|---|---|
+| `consume` | loop `/get` with `ackmode=ack_requeue_false` until a short/empty response | **yes** — messages are deleted, so the queue empties |
+| `consume --count N` | same loop, stopping at N | yes, or exit 3 if it empties early |
+| `consume --follow` | same loop, 1 s poll interval, never exits | n/a |
+| `consume --requeue` | **one** `/get` with `ackmode=ack_requeue_true` | **no** — bounded to a single batch |
+
+`--requeue` over HTTP reads `--count` messages, or a default batch if `--count`
+is omitted, and then stops. It must print a stderr warning saying the queue was
+not drained and how many were read. Do not attempt to derive a count from
+`messages_ready` to fake a drain — that races any live producer and is exactly
+the "engineering around a limitation" this section forbids.
+
+**Batch size is the data-loss window.** `ackmode` is applied server-side before
+the response is sent, so every message in a batch is already gone from the broker
+by the time rmq starts writing it out. A crash mid-write loses the whole batch.
+Keep the batch small — this path is for troubleshooting, not throughput, and
+RabbitMQ's own docs say `/get` is "intended for development and troubleshooting
+only, not for production."
 - RabbitMQ's own docs mark `/get` as unsuitable for production or high-volume use.
 
 ## Configuration
