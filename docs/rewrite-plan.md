@@ -159,9 +159,30 @@ the one in `CLAUDE.md` — nothing more.
 
 ## Phases
 
-Each phase ends **green**: `dotnet build` succeeds, and from Phase 2 onward the
-two non-negotiable checks pass. A package may only be dropped once its last
-consumer is gone, which is what sets the phase boundaries.
+**Revised 2026-08-14, after the user confirmed the old implementation is not in
+use and breaking changes are free.** That removes the constraint the original
+sequencing was built around — "the old CLI must keep working" — and with it most
+of the reason the phases were ordered the way they were.
+
+Three things change:
+
+- **Delete before building, not while building.** The old tree comes out in one
+  commit, before a single new command is written. Everything that made the sweep
+  awkward — Tomlyn's IL warnings, the `RmqCli` name shadowing, the duplicated
+  salvage copies — is a consequence of the old code being present, and all of it
+  disappears the moment it is gone.
+- **The coverage gap stops being a hazard.** It was a hazard because a working
+  tool was briefly unguarded. Nothing ships from `rebuild` until it is finished,
+  so the window is a scheduling preference, not a risk. Phases can be as long or
+  short as is convenient.
+- **`publish` and `consume` land together.** They were split so that the sweep
+  could end with something demonstrable. The real checkpoint is the round-trip
+  E2E test, which needs both, so splitting them only postpones the first
+  meaningful signal.
+
+Each phase still ends with `dotnet build` green and — from Phase 2 onward, where
+the last warning-producing package is gone — **zero `IL2xxx`/`IL3xxx`** and
+`--help` under 20 ms.
 
 ### Phase 1 — Foundation (nothing deleted, tree still builds and runs) ✅ done
 
@@ -180,71 +201,85 @@ flat under `src/RmqCli/` in namespace **`Rmq`**:
 
 Two corrections to what this phase was planned to be:
 
-- **The six salvaged files were copied, not moved.** Moving them breaks the old
-  build — `PropertyMerger` takes `PublishOptions`, `JsonMessageParser` returns the
-  old `Message`, and `JsonSerializationContext` is referenced across the old tree.
-  Phase 2 deletes the originals. `JsonMessageParser` was folded into
-  `MessageJson`; `PropertyMerger` now takes `MessageProperties` instead of
-  `PublishOptions`, which is what makes it testable without a command in scope.
+- **The six salvaged files were copied, not moved**, because moving them broke
+  the old build. Phase 2 deletes the originals, resolving the duplication.
+  `JsonMessageParser` was folded into `MessageJson`; `PropertyMerger` now takes
+  `MessageProperties` instead of `PublishOptions`, which is what makes it
+  testable without a command in scope.
 - **The namespace is `Rmq`, not `RmqCli`.** New types under `namespace RmqCli`
   shadow the old ones throughout the old tree: with file-scoped namespaces the
   `using` directives sit in compilation-unit scope, which is searched *after*
   enclosing namespace members, so `RmqCli.Message` beat the imported
-  `RmqCli.Core.Models.Message` in 35 places. `Rmq` also matches the binary name
-  and is the permanent choice — Phase 2 does not rename it back.
+  `RmqCli.Core.Models.Message` in 35 places. `Rmq` is confirmed as the permanent
+  namespace and is not renamed back.
 
 **Checkpoint met:** `dotnet build` green, old CLI untouched; 42 new unit tests
 pass; AOT publish adds no warnings beyond the two pre-existing Tomlyn ones;
-`--help` measured at 5.4 ms (20-run average).
+`--help` measured at 5.4 ms (20-run average). The AOT check was re-run with a
+temporary probe making the `Rmq` namespace reachable — the first run had proved
+nothing, since `TrimMode full` had dropped the whole namespace as dead code and
+produced a binary byte-identical to the baseline.
 
-> **Only the .NET 10 runtime is installed on this machine**, and the projects
-> target `net8.0`, so `dotnet test` fails to launch its test host without
-> `DOTNET_ROLL_FORWARD=LatestMajor`. Worth deciding in Phase 7 whether the rewrite
-> retargets `net10.0` outright.
+### Phase 2 — Clear the ground (delete only, no new features)
 
-### Phase 2 — The sweep: new `Program.cs` + `publish`, old tree deleted
+One commit, ~5,900 LOC out, nothing added. Deliberately contains no new
+behaviour, so that anything broken afterwards is unambiguously new code.
 
-The moment the old world dies; unavoidably the largest phase.
-
-- new `Program.cs`: `System.CommandLine` root, objects constructed by hand
-- `publish` against AMQP, reading `--body` / `--message` / `--message-file` / STDIN
-- delete every group in the deletion table above
+- delete every group in the deletion table above, plus the six salvage
+  originals now superseded by their `Rmq` copies
+- `Program.cs` becomes a stub: `System.CommandLine` root with `--version` and
+  `--help` and no subcommands
 - drop Spectre.Console, Tomlyn, and all six `Microsoft.Extensions.*` packages
   (`Configuration`, `.Binder`, `.EnvironmentVariables`, `DependencyInjection`,
   `Logging`, `.Console`) — 10 `PackageReference` entries become 2
   (`RabbitMQ.Client`, `System.CommandLine`); the other two allowlisted
   dependencies are in-box and carry no `PackageReference`
-- delete `RmqCli.Integration.Tests`, `RmqCli.Subcutaneous.Tests`, and the old
-  E2E tests targeting `peek` / `config` / `--ack-mode`
+- delete `RmqCli.Integration.Tests` and `RmqCli.Subcutaneous.Tests` whole; fold
+  `RmqCli.Tests.Shared`'s `RabbitMqFixture` / `RabbitMqOperations` container
+  plumbing into E2E and delete the project
+- delete the old E2E tests (`peek`, `config`, `publish`, `consume`, `purge`,
+  cancellation, help) — every one targets a command surface that no longer
+  exists; keep `CliTestHelpers` / `RabbitMqCollection` as the harness
+- gut `RmqCli.Unit.Tests` down to `ConnectionTests` and `MessageJsonTests`; the
+  other ~20 files test deleted types
+- drop `EnableConfigurationBindingGenerator` from the `.csproj`
 
-**Checkpoint:** build green, **zero `IL2xxx`/`IL3xxx`**, `--help` under 20 ms,
-`rmq publish` verified by hand against a local broker.
+**Rename, while everything is being touched anyway** — the assembly is already
+called `rmq` and the namespace is now `Rmq`, so `RmqCli` survives only in paths:
+`src/RmqCli` → `src/Rmq`, `RmqCli.sln` → `Rmq.sln`, `RmqCli.Unit.Tests` →
+`Rmq.Unit.Tests`, `RmqCli.E2E.Tests` → `Rmq.E2E.Tests`. Free now, churn later.
 
-> **Coverage gap opens here.** From the moment the old E2E tests are deleted
-> until the new round-trip test lands in Phase 3, there is no automated safety
-> net. Keep this window to a single sitting — do not start Phase 2 without
-> going straight into Phase 3.
+**Checkpoint:** build green, **zero `IL2xxx`/`IL3xxx`** (Tomlyn was the only
+source), `--help` under 20 ms, `ConnectionTests` + `MessageJsonTests` pass.
 
-### Phase 3 — `consume` + the first new test
+### Phase 3 — `publish` + `consume`, and the round trip that proves them
 
-- sequential receive → write → flush → ack loop
-- push (default) and `--pull`
-- `--count`, `--follow`, `--to-file`, `--consumer-priority` (no prefetch flag —
-  internal constants)
+The bulk of the new code. These ship together because the first real signal is
+the round-trip test, which needs both ends.
+
+- `Program.cs`: `System.CommandLine` root, global options, objects constructed
+  by hand, exit codes 0 / 1 / 2 / 3 / 130
+- connection + channel setup, with the broker-error mapping salvaged from
+  `RabbitChannelFactory.HandleConnectionException` as the basis for exit code 1
+- `publish` against AMQP: `--body` / `--message` / `--message-file` / STDIN,
+  `--header`, the property flags, `-q` vs `-e --routing-key`
+- `consume`: sequential receive → write → flush → ack loop; push (default) and
+  `--pull`; `--count`, `--follow`, `--to-file`, `--consumer-priority`
 - `--requeue` via hold-unacked-then-close, **not** per-message nack
-- exit codes 0 / 1 / 2 / 3 / 130
+- AMQP header `byte[]` → string decoding at the boundary (see the schema doc)
 
-**Write the publish → consume round-trip E2E test first**, as soon as consume
-returns a single message — not at the end of the phase. Then add the
-`--requeue` terminates-and-preserves-depth test, which is the regression guard
-for the nack loop.
+**Write the publish → consume round-trip E2E test as soon as consume returns a
+single message**, not at the end. Then the `--requeue`
+terminates-and-preserves-depth test, which is the regression guard for the nack
+loop, and the exit-code-3 test.
 
-**Checkpoint:** round-trip and `--requeue` E2E tests green; AOT + startup checks.
+**Checkpoint:** round-trip, `--requeue`, and exit-code-3 E2E tests green; AOT and
+startup checks.
 
 ### Phase 4 — `purge`
 
 `IChannel.QueuePurgeAsync(queue, ct)` — confirmed present in RabbitMQ.Client
-7.2.0. Small phase; one E2E test.
+7.2.0. Small; one E2E test. Can be folded into Phase 3 if it is in the way.
 
 ### Phase 5 — HTTP transport
 
@@ -282,9 +317,9 @@ test asserting it terminates and leaves queue depth unchanged. Not a parallel su
 
 ### Phase 6 — Test suite completion
 
-Fill in the remaining E2E cases from `CLAUDE.md` (property round-trip fidelity
-via the `consume | publish` pipe, exit code 3) and the unit slice. Confirm the
-final two-project shape.
+Fill in the remaining E2E cases from `CLAUDE.md` — property round-trip fidelity
+via the `consume | publish` pipe, `--pull`, `--follow` under Ctrl-C — and the
+unit slice. Confirm the final two-project shape.
 
 ### Phase 7 — Docs and packaging
 
@@ -294,8 +329,13 @@ codecov badge/gate decision, `.csproj` metadata, release notes calling out the
 
 ## Open questions
 
-All resolved as of 2026-08-14 — Phase 1 is unblocked. One informational item
-remains, and it no longer affects correctness:
+All resolved as of 2026-08-14. Two informational items remain; neither affects
+correctness or blocks any phase:
+
+- **Target framework stays `net8.0`.** The .NET 8 runtime was installed on this
+  machine on 2026-08-14 specifically so the suite runs without
+  `DOTNET_ROLL_FORWARD`, which settles the retarget question by implication. A
+  move to `net10.0` remains available and is not needed by anything here.
 
 - **Does `basic.qos` prefetch apply to `basic.get`?** Not documented on
   RabbitMQ's consumer-prefetch page, and the AMQP 0-9-1 reference has moved to
@@ -307,6 +347,19 @@ remains, and it no longer affects correctness:
 
 ### Resolved
 
+- **The old implementation is not in use; breaking changes are free**
+  (2026-08-14). This is what allows Phase 2 to delete before building rather
+  than alongside it, and removes the coverage gap as a hazard. It also settles
+  the `RMQCLI_*` → `$RMQ_URL` environment rename and the loss of the TOML config
+  file: both are breaking, and neither now needs a migration path — only a
+  release note.
+- **`--raw` writes no separator between messages** (2026-08-14) — not even a
+  newline. A delimiter safe for arbitrary binary does not exist, and adding one
+  defeats the single case the flag serves. Recorded in `CLAUDE.md`.
+- **Management port default follows the scheme** (2026-08-14) — 15672 for
+  `amqp://`, **15671** for `amqps://`, matching RabbitMQ's own plain and TLS
+  management listeners. `CLAUDE.md` originally said a flat 15672, written before
+  the TLS case was in view.
 - **`--consumer-priority` added** (2026-08-14) — sets `x-priority` on
   `BasicConsumeAsync`, default **0**. The current code passes no consumer
   arguments at all (`SubscriberStrategy.cs:33` uses the minimal overload), so
