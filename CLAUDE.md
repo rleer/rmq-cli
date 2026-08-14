@@ -62,6 +62,13 @@ implementations, or when it isolates a genuine external boundary. Not before.
 Prefer static methods over injected services. Prefer passing values as
 parameters over holding them as fields.
 
+### Layout
+
+One namespace, `Rmq`, and flat files directly under `src/RmqCli/`. At the target
+size — roughly fifteen files — a folder hierarchy is filing for its own sake, and
+the old tree's `Commands/…/Strategies/` depth is a symptom of the abstraction
+this rewrite exists to remove. Do not add subfolders.
+
 ## Command surface
 
 ```
@@ -371,20 +378,38 @@ Messages support the full set of RabbitMQ properties — content type, content
 encoding, delivery mode, priority, correlation ID, reply-to, expiration, message
 ID, timestamp, type, user ID, app ID — plus arbitrary headers.
 
-Both directions round-trip losslessly: a message consumed as JSON and republished
-must arrive with identical properties and body bytes. This is the property worth
-testing hardest.
+**The wire schema is [`docs/message-schema.md`](docs/message-schema.md)** — one
+definition, from which both the serializer and the parser are derived. Change it
+there first, never in one direction only.
 
-Concretely, **`publish` reads on STDIN exactly the NDJSON that `consume` writes
-on STDOUT**, so this is a supported, tested composition:
+**`publish` reads on STDIN exactly the NDJSON that `consume` writes on STDOUT**,
+so this is a supported, tested composition:
 
 ```bash
 rmq consume -q source --url amqp://a/ | rmq publish -q dest --url amqp://b/
 ```
 
-One JSON object per line, each with `body`, `properties`, and `routingKey`.
-`--message` takes the same single-object shape. Keep the two schemas identical —
-if a property can be emitted, it must be accepted.
+One JSON object per line, each with `body`, `properties`, and `routingKey`;
+headers nest inside `properties`. `--message` takes the same single-object shape.
+Keep the two schemas identical — if a property can be emitted, it must be
+accepted.
+
+The round-trip guarantee, stated precisely, because one half of it is a trade
+rather than an absolute:
+
+- **Properties round-trip byte-identically.** No exceptions.
+- **Text and binary bodies round-trip byte-identically.** Binary rides as base64
+  under an explicit `bodyEncoding` marker; a body that merely *looks* like base64
+  is not decoded without it.
+- **JSON bodies round-trip semantically, not byte-for-byte.** They are emitted
+  inline so `jq '.body.orderId'` works, which means re-serialization drops
+  insignificant whitespace. `--raw` is the escape hatch when the original bytes
+  matter.
+
+This is the property worth testing hardest, and the current tool fails it
+outright: `consume` emits `"body":{…}` while `publish` parses `body` as a string,
+so the pipe above throws on every JSON-bodied message. One converter serves both
+directions now, and it must read back exactly what it writes.
 
 ## Testing
 

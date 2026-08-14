@@ -15,7 +15,7 @@ file records the archaeology. "Do not reintroduce batched acks" is a constraint.
 |---|---|---|
 | Startup, `--help` | **6.7 ms** | 20-run average, AOT binary, warm cache |
 | Binary size | **16.4 MB** | AOT, trimmed, self-contained |
-| Trim/AOT warnings | **0** | no `IL2xxx`/`IL3xxx` at publish |
+| Trim/AOT warnings | **2** | `IL2104` + `IL3053`, both from Tomlyn |
 | Source | **6,249 LOC** | `src/RmqCli`, 79 files (excl. `obj/`) |
 | Tests | **18,216 LOC** | 4 test projects + 1 shared library, ~2.9× source |
 | `PackageReference` | **10** | drops to **2** — the other two allowlisted packages are in-box |
@@ -25,11 +25,15 @@ Two findings that correct assumptions behind the rewrite:
 - **Startup was never the problem.** 6.7 ms already sits far under any
   reasonable budget. The 20 ms figure in `CLAUDE.md` is a *regression guard*, not
   a target to work toward. Nobody should optimize for speed during this rewrite.
-- **Tomlyn is not an AOT blocker.** Verified empirically: a TOML value bound
-  correctly through the AOT binary (`--host` resolved to `toml-host-marker:5673`
-  from a config file). Dropping TOML is justified by "too many configuration
-  mechanisms," *not* by AOT incompatibility. If a config file is ever wanted
-  again, Tomlyn is not disqualified on those grounds.
+- **Tomlyn works at runtime but does violate the AOT non-negotiable.** A TOML
+  value did bind correctly through the AOT binary (`--host` resolved to
+  `toml-host-marker:5673` from a config file), so the tool is not broken today.
+  But a clean `dotnet publish` emits `IL2104` and `IL3053` against `Tomlyn.dll`,
+  and `CLAUDE.md` non-negotiable 1 is "zero `IL2xxx`/`IL3xxx`" — so Tomlyn *is*
+  disqualified, on exactly the grounds originally stated. **This corrects an
+  earlier entry here** claiming 0 warnings and "not an AOT blocker"; that came
+  from a grep that missed the assembly-level warnings. Every remaining warning
+  disappears with Tomlyn in Phase 2, and none originate in first-party code.
 
 ## Target
 
@@ -46,14 +50,17 @@ mode, file rotation, `--prefetch-count`, and the `config` command subtree.
 These are pure functions with no DI or Spectre coupling, and they are exactly
 the set the thin unit-test slice covers.
 
-| File | LOC | Change |
+Labels below are as revised in Phase 1 — three of them turned out to be more than
+a namespace move once headers nested inside `properties` and the body became bytes.
+
+| File | LOC | What actually happened |
 |---|---|---|
-| `Commands/Publish/JsonMessageParser.cs` | 107 | namespace only |
-| `Commands/Publish/PropertyMerger.cs` | 74 | namespace only |
-| `Commands/Publish/HeaderParser.cs` | 62 | namespace only |
-| `Shared/Json/JsonSerializationContext.cs` | 55 | retarget at the new DTOs |
-| `Shared/Json/BodyJsonConverter.cs` | 45 | namespace only |
-| `Core/Models/MessageProperties.cs` | 34 | drop `ClusterId` + its `HasAnyProperty()` clause |
+| `Commands/Publish/JsonMessageParser.cs` | 107 | folded into `MessageJson`; `ParseNdjson` replaced by line-at-a-time `ReadLinesAsync`, since `consume \| publish` must stream rather than slurp |
+| `Commands/Publish/PropertyMerger.cs` | 74 | rewritten against nested headers; takes `MessageProperties`, not `PublishOptions` |
+| `Commands/Publish/HeaderParser.cs` | 62 | near-verbatim |
+| `Shared/Json/JsonSerializationContext.cs` | 55 | became `MessageJsonContext`, retargeted at the new DTOs |
+| `Shared/Json/BodyJsonConverter.cs` | 45 | became `BodyConverter`; `Read` rewritten — the old one could not read what it wrote |
+| `Core/Models/MessageProperties.cs` | 34 | dropped `ClusterId`, gained `Headers` |
 
 ### Salvage the knowledge, rewrite the code
 
@@ -125,9 +132,27 @@ These are where effort actually goes; nothing in the current tree does them.
 
 ## NDJSON schema — a deliverable, not an afterthought
 
-`CLAUDE.md` requires that `publish` accept exactly what `consume` emits. That is
-only testable once the field list is written down, so **write the schema first**,
-before either side is implemented, and derive both serializer and parser from it.
+Written first, before either side was implemented: **[`docs/message-schema.md`](message-schema.md)**.
+Unlike this file it is durable — it outlives the rewrite and stays the one
+definition both directions derive from.
+
+Three findings from writing it:
+
+- **The current tool fails the round trip it was built for.** Verified: `consume`
+  emits `"body":{"orderId":42}` (`BodyJsonConverter.Write` emits raw JSON) while
+  `publish` parses `body` with `reader.GetString()`, which throws on an object
+  token — and `Message.Body`, the publish input, has no converter attached at all.
+  `rmq consume | rmq publish` therefore throws on every JSON-bodied message,
+  i.e. the common case. One converter now serves both directions.
+- **A `string` body cannot hold arbitrary bytes.** The schema needed a
+  `bodyEncoding` discriminator before Phase 5 could handle `/get`'s
+  `payload_encoding: base64` at all. It is a sibling field, so the byte↔wire
+  conversion lives in `Message` rather than in a property converter, which only
+  ever sees its own value.
+- **JSON bodies are emitted inline, at the cost of byte-exact whitespace**
+  (user's call, 2026-08-14). `jq '.body.orderId'` with no `fromjson` step was
+  judged worth more than preserving insignificant whitespace. Text and binary
+  bodies remain byte-exact, and `--raw` is the escape hatch.
 
 `ClusterId` is **out** (resolved below), so the schema's property list is exactly
 the one in `CLAUDE.md` — nothing more.
@@ -138,18 +163,44 @@ Each phase ends **green**: `dotnet build` succeeds, and from Phase 2 onward the
 two non-negotiable checks pass. A package may only be dropped once its last
 consumer is gone, which is what sets the phase boundaries.
 
-### Phase 1 — Foundation (nothing deleted, tree still builds and runs)
+### Phase 1 — Foundation (nothing deleted, tree still builds and runs) ✅ done
 
-Add alongside the existing code, wired to nothing yet:
+Added alongside the existing code, wired to nothing yet. Seven files, ~640 LOC,
+flat under `src/RmqCli/` in namespace **`Rmq`**:
 
-- connection resolution + URL parsing
-- static `Log` (stderr, `--verbose`)
-- JSON source-gen context and the message DTOs, per the schema above
-- NDJSON writer + TTY detection
-- move the six salvaged parser files into the new namespace
+| File | Contents |
+|---|---|
+| `Message.cs` | `Message`, `MessageProperties`, body byte↔wire encoding |
+| `MessageJson.cs` | `MessageJsonContext`, `BodyConverter`, parse / serialize / `ReadLinesAsync` |
+| `Connection.cs` | `ConnectionSettings`, per-component precedence, URL + scheme parsing |
+| `Log.cs` | static stderr writer gated on `--verbose` |
+| `MessageWriter.cs` | NDJSON / human / raw, TTY detection, `--to-file` |
+| `HeaderParser.cs` | `k:v` with type detection |
+| `PropertyMerger.cs` | CLI-over-JSON property merge |
 
-**Checkpoint:** build green; new unit tests for URL-precedence pass. The old CLI
-still works unchanged — this phase is purely additive.
+Two corrections to what this phase was planned to be:
+
+- **The six salvaged files were copied, not moved.** Moving them breaks the old
+  build — `PropertyMerger` takes `PublishOptions`, `JsonMessageParser` returns the
+  old `Message`, and `JsonSerializationContext` is referenced across the old tree.
+  Phase 2 deletes the originals. `JsonMessageParser` was folded into
+  `MessageJson`; `PropertyMerger` now takes `MessageProperties` instead of
+  `PublishOptions`, which is what makes it testable without a command in scope.
+- **The namespace is `Rmq`, not `RmqCli`.** New types under `namespace RmqCli`
+  shadow the old ones throughout the old tree: with file-scoped namespaces the
+  `using` directives sit in compilation-unit scope, which is searched *after*
+  enclosing namespace members, so `RmqCli.Message` beat the imported
+  `RmqCli.Core.Models.Message` in 35 places. `Rmq` also matches the binary name
+  and is the permanent choice — Phase 2 does not rename it back.
+
+**Checkpoint met:** `dotnet build` green, old CLI untouched; 42 new unit tests
+pass; AOT publish adds no warnings beyond the two pre-existing Tomlyn ones;
+`--help` measured at 5.4 ms (20-run average).
+
+> **Only the .NET 10 runtime is installed on this machine**, and the projects
+> target `net8.0`, so `dotnet test` fails to launch its test host without
+> `DOTNET_ROLL_FORWARD=LatestMajor`. Worth deciding in Phase 7 whether the rewrite
+> retargets `net10.0` outright.
 
 ### Phase 2 — The sweep: new `Program.cs` + `publish`, old tree deleted
 
