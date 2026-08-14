@@ -203,6 +203,25 @@ public class PublishConsumeTests(RabbitMqFixture fixture, ITestOutputHelper outp
         await _broker.DeleteQueue(queue);
     }
 
+    /// <summary>
+    /// Not an assertion about priority — that would need a second competing consumer. This
+    /// pins the thing that can actually break: x-priority is a consumer argument the broker
+    /// validates at basic.consume time, so a wrong key or value type fails at runtime.
+    /// </summary>
+    [Fact]
+    public async Task Consumer_priority_is_accepted_by_the_broker()
+    {
+        var queue = await _broker.DeclareQueue(QueueName());
+        await _broker.Publish(queue, "polite");
+
+        var consumed = await _rmq.Run([.. Url, "consume", "-q", queue, "--consumer-priority", "-5", "--json"]);
+
+        consumed.ExitCode.Should().Be(0);
+        consumed.StdoutLines.Should().ContainSingle();
+
+        await _broker.DeleteQueue(queue);
+    }
+
     [Fact]
     public async Task Purge_empties_the_queue()
     {

@@ -321,14 +321,14 @@ Four things the plan did not anticipate:
 | | Phase 2 | Phase 3 |
 |---|---|---|
 | Source | 842 LOC | **1,795 LOC** |
-| Tests | 601 LOC | **806 LOC** |
+| Tests | 601 LOC | **971 LOC** |
 | `PackageReference` | 2 | **2** |
 | Binary | 4.06 MB | **9.13 MB** |
 | Startup, `--help` | 3.8 ms | **4.3 ms** (50-run avg) |
 | `IL2xxx`/`IL3xxx` | 0 | **0** |
 | Build warnings | 0 | **0** |
 
-43 unit and 14 E2E tests green. The binary more than doubled because this is the
+52 unit and 15 E2E tests green. The binary more than doubled because this is the
 first build where `RabbitMQ.Client` is reachable from `Main` — before Phase 3 the
 trimmer dropped it entirely, which is also why the Phase 1 AOT check needed a
 probe branch to prove anything. Startup cost 0.5 ms for three commands and about
@@ -387,9 +387,15 @@ What remains:
 
 - the HTTP-transport round trip and the `--requeue --transport http` bound, which
   belong to Phase 5 and cannot be written before it
-- `--consumer-priority`, which has no test yet. Asserting it meaningfully needs a
-  second competing consumer, so it may not be worth an E2E case at all
-- a look over the unit slice for gaps, and confirming the final two-project shape
+- confirming the final two-project shape
+
+`--consumer-priority` is covered, but deliberately not on the axis its name
+suggests: asserting that a low-priority consumer *yields* would need a second
+competing consumer and a race to observe. The E2E case pins the thing that can
+actually break instead — `x-priority` is a consumer argument the broker validates
+at `basic.consume` time, so a wrong key or value type fails at runtime rather than
+at compile time. If that trade is wrong, the fix is a two-consumer test, not a
+different assertion on this one.
 
 ### Phase 7 — Docs and packaging
 
