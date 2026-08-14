@@ -17,6 +17,8 @@ three commands.
 
 ## Install
 
+Not published to nuget.org yet — both routes below build from a clone.
+
 ### Native binary
 
 Self-contained and AOT-compiled — no .NET runtime needed to run it, and it starts

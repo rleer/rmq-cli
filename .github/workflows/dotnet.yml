@@ -113,6 +113,11 @@ jobs:
       checks: write
       pull-requests: write
     steps:
+      # test-reporter resolves source paths against the repo, so it needs a checkout
+      # even though this job builds nothing.
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Download Test Results
         uses: actions/download-artifact@v4
         with:
