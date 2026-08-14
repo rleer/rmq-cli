@@ -4,6 +4,11 @@ Operating instructions for this repository. These are durable constraints, not
 suggestions. When a change would violate one, stop and raise it rather than
 working around it.
 
+> A rewrite is in progress on branch `rebuild`. Sequencing, deletion inventory,
+> measured baselines, and open questions live in
+> [`docs/rewrite-plan.md`](docs/rewrite-plan.md). This file describes the tool as
+> it should end up, and applies to every change regardless of the rewrite.
+
 ## What this tool is
 
 A developer-facing CLI for publishing and consuming RabbitMQ messages. It should
@@ -19,11 +24,9 @@ It is not a monitoring tool, not an admin console, and not a library.
    runtime code generation, no `MakeGenericType`. JSON goes through
    `System.Text.Json` source generation only.
 2. **Startup budget: < 20 ms** for `--help` and `--version` on a warm cache.
-   This is a **regression guard, not a goal to reach** — the pre-rewrite code
-   was measured at **6.7 ms** (osx-arm64, 20-run average, AOT) with zero trim
-   warnings, so startup performance was already satisfied. The rewrite is
-   motivated by maintainability, not speed. Keep it that way: if a change
-   pushes past 20 ms, the change is wrong, not the budget.
+   This is a **regression guard, not a goal to reach** — startup is already far
+   under it. Do not optimize for speed; just don't regress. If a change pushes
+   past 20 ms, the change is wrong, not the budget.
 3. **Dependency allowlist.** Exactly these, and adding to the list is a
    deliberate decision requiring justification:
    - `RabbitMQ.Client` — AMQP protocol
@@ -41,11 +44,9 @@ It is not a monitoring tool, not an admin console, and not a library.
 ## Code style
 
 **Duplication is preferred over abstraction.** This is the single most important
-rule and the main thing the previous version got wrong. If the push and pull
-paths need similar retrieval code, write it twice. Two readable 40-line methods
-beat one strategy interface with two implementations and a base class — that is
-precisely what `IMessageRetrievalStrategy` + `BaseMessageRetrievalService` were,
-and they are being deleted.
+rule in this repository. If the push and pull paths need similar retrieval code,
+write it twice. Two readable 40-line methods beat one strategy interface with two
+implementations and a base class.
 
 Refuse to introduce, and delete on sight:
 
@@ -66,11 +67,13 @@ parameters over holding them as fields.
 ```
 rmq publish -q <queue> [--body <s> | --message <json> | --message-file <p> | STDIN]
 rmq publish -e <exchange> --routing-key <k> ...
-rmq consume -q <queue> [--count N] [--requeue] [--follow] [--to-file <p>]
-                       [--prefetch-count N] [--pull]
+rmq consume -q <queue> [--count N] [--requeue] [--follow] [--to-file <p>] [--pull]
+                       [--consumer-priority N]
 rmq purge <queue>
 
-Global: --transport amqp|http (default: amqp)
+Global: --url <u> | --host/--port/--vhost/--user/--password
+        --transport amqp|http (default: amqp)  --insecure
+        --json  --raw  --verbose
 ```
 
 Three commands. Notably:
@@ -82,18 +85,67 @@ Three commands. Notably:
 ### Consume: push vs pull
 
 `consume` uses the **push API by default** (`BasicConsumeAsync`); `--pull`
-selects the polling `BasicGetAsync` API. This axis is independent of
-`--requeue` — all four combinations are valid, where previously "polling" was
-welded to `peek`.
+selects the polling `BasicGetAsync` API. This axis is independent of `--requeue`
+and `--follow` — all combinations are valid except `--requeue --follow`.
+
+**The important difference is consumer registration, not speed.** `BasicConsumeAsync`
+registers rmq as a consumer on the queue: it appears in the broker's consumer
+list, joins round-robin distribution alongside any existing consumers, and the
+broker then pushes messages at it continuously — immediately pulling up to
+prefetch-many into the unacked set. `BasicGetAsync` registers nothing and takes
+exactly what is asked for, once.
+
+Both remove messages. The difference is that push *keeps* taking them, which is
+the footgun when attaching to a live queue. **`--pull` is the documented answer
+for inspecting a queue that has real consumers on it**; `--requeue` is the answer
+for giving everything back. Say so in `--help`.
+
+The remaining differences are latency only:
+
+1. Empty-queue exit is immediate (first null get) rather than after the idle window.
+2. `--follow` becomes a poll loop with a 1 s interval between empty gets.
+3. Exit code 3 comes free from the null get rather than from a timeout.
+
+### Consumer priority
+
+`--consumer-priority <int>` sets the `x-priority` consumer argument on the push
+path. Lower-priority consumers receive messages only once every higher-priority
+consumer is **blocked** (at its prefetch limit or flow-controlled), so a negative
+value is the polite way to attach to a queue that production depends on.
+
+**Default is 0** — RabbitMQ's own default, meaning rmq competes on equal footing
+like any other consumer. A negative default was considered and rejected: on a
+healthy busy queue every higher-priority consumer keeps up, so a low-priority rmq
+would receive nothing and exit reporting the queue empty. Silently reporting
+"empty" for a queue with thousands of messages flowing through it is a worse
+failure than competing for messages, especially since `--pull` and `--requeue`
+already cover the do-no-harm case.
+
+**Ignored, not rejected, where it does not apply** — with `--pull` and with
+`--transport http` there is no consumer to prioritize, so the flag is silently
+a no-op. Do not add a validation rule for it. This is deliberate: an error here
+would reintroduce exactly the conditional flag validation that dropping
+`--prefetch-count` removed.
 
 ### Consume exit conditions
 
-Default is **drain and exit**: stop when `--count` is reached, or when the queue
-is empty. The pull path exits on the first empty get; the push path exits after
-a short idle window with no deliveries.
+There is no prefetch flag and no mode parameter; these four cases are the whole
+behavior, and `--requeue` does not alter any of them:
 
-`--follow` keeps the subscriber open indefinitely for tailing. Ctrl-C always
-exits cleanly, acking everything already written.
+| Invocation | Exits when |
+|---|---|
+| `consume` | queue is empty |
+| `consume --count N` | N messages consumed, **or** queue empties first (exit code 3) |
+| `consume --follow` | Ctrl-C only |
+| `consume --requeue` | queue is empty — same as bare `consume` |
+
+Omitting `--count` means "all messages." On the push path, "queue is empty" means
+an **idle window of 1 second** with no deliveries; that window is also the only
+thing that can signal exit code 3, since with `--count 10` against a 3-message
+queue nothing else distinguishes "drained early" from "still waiting." Accept the
+consequence: every empty-queue `consume` on the push path pays ~1 s before exiting.
+
+Ctrl-C always exits cleanly, acking everything already written.
 
 This matters because `rmq consume -q orders | jq` must terminate on its own.
 
@@ -139,6 +191,12 @@ do not try to engineer around them:
 - **No delivery tags.** Acknowledgment is an `ackmode` request parameter decided
   *before* the message is written, so the ack-after-write guarantee below does
   **not** hold. A crash mid-write can lose messages on this path. Say so in help text.
+- **`--requeue` is best-effort.** With no delivery tags there is no
+  hold-unacked-then-close; a requeued message returns immediately and the next
+  get re-reads it. The HTTP path therefore requests N messages in one `/get`
+  call rather than looping, deriving N from `messages_ready` when `--count` is
+  omitted — which races a live producer. This is a different implementation from
+  the AMQP one, not a shared abstraction.
 - RabbitMQ's own docs mark `/get` as unsuitable for production or high-volume use.
 
 ## Configuration
@@ -153,10 +211,26 @@ One connection knob, resolved in this precedence order (highest wins):
 Individual flags override the corresponding component of a URL, so
 `--url amqp://prod/ --vhost /test` is meaningful and well-defined.
 
-`--url` also accepts an `http://` or `https://` URL, which implies
-`--transport http` and points at the Management API directly — the case where
-only 80/443 are open. With an `amqp://` URL, the HTTP transport derives its base
-URL from the same host using `--management-port` (default 15672).
+### URL schemes
+
+The scheme is what selects transport, TLS, and the default port — there is no
+separate `--tls` flag:
+
+| Scheme | Transport | TLS | Default port |
+|---|---|---|---|
+| `amqp://` | AMQP | no | 5672 |
+| `amqps://` | AMQP | yes | 5671 |
+| `http://` | Management HTTP | no | 15672 |
+| `https://` | Management HTTP | yes | 443 |
+
+`http(s)://` implies `--transport http` and points at the Management API
+directly — the case where only 80/443 are open. With an `amqp(s)://` URL, the
+HTTP transport derives its base URL from the same host using
+`--management-port` (default 15672).
+
+`--insecure` disables certificate validation (accepts self-signed certificates
+and hostname mismatches) for dev brokers. It is the only TLS knob; SNI is
+derived from the URL host. Negotiate TLS 1.2/1.3 only.
 
 No config file. No TOML. No `Microsoft.Extensions.Configuration`. Users who need
 a persistent broker set `$RMQ_URL` in their shell profile.
@@ -206,19 +280,21 @@ flag — two behaviors do not need a mode parameter.
 
 Do not reintroduce: background writer tasks, a separate ack-dispatcher task,
 batched `multiple: true` acknowledgment, or a dedicated message-counter type.
-The previous version spent roughly 400 lines on that machinery and bought
-nothing the loop above does not already provide.
+None of it buys anything the loop above does not already provide.
 
 Both APIs feed the same loop:
 
 - **Pull** (`BasicGetAsync`) — the `Receive` call is literal.
 - **Push** (`BasicConsumeAsync` / `IAsyncBasicConsumer`) — delivery arrives on a
-  callback that must not block. A **single bounded `Channel<T>`, sized to
-  `--prefetch-count`, is the sanctioned adapter** between that callback and the
-  loop. This one channel is explicitly allowed and is not what the paragraph
-  above bans — what is banned is the multi-task pipeline built on top of it.
+  callback that must not block. A **single bounded `Channel<T>` is the sanctioned
+  adapter** between that callback and the loop. This one channel is explicitly
+  allowed and is not what the paragraph above bans — what is banned is the
+  multi-task pipeline built on top of it.
 
-`--prefetch-count` survives as the bound on that buffer for the push path.
+**There is no `--prefetch-count` flag.** Broker QoS and the internal channel
+bound are both internal constants — exposing them bought nothing but flag
+validation. Do not reintroduce the flag; if a value needs tuning, change the
+constant. See `--requeue` below for the one case where the two diverge.
 
 ### `--requeue` (the former `peek`)
 
@@ -229,17 +305,36 @@ is simply not executed.
 
 Do not implement this as `BasicNackAsync(requeue: true)` inside the loop. A
 requeued message returns to the head of the queue and is immediately re-read, so
-the loop re-emits the same message forever and never drains. The previous
-version got this right (`AckHandler` returned early in requeue mode rather than
-nacking); preserve that.
+the loop re-emits the same message forever and never drains.
+
+**`--requeue` drains by default, exactly like a normal consume.** Omitting
+`--count` reads the queue to empty and exits. The message-count semantics do not
+change based on `--requeue`.
+
+Making that work requires two internal numbers that must not be conflated:
+
+| Number | Normal consume | Under `--requeue` |
+|---|---|---|
+| Broker prefetch (`basic.qos`) | fixed constant (~100) | **0 / unlimited** |
+| Internal `Channel<T>` bound | fixed constant | **unchanged — same constant** |
+
+Broker prefetch must be 0 under `--requeue`, or the broker sends prefetch-many
+deliveries, receives no acks, and delivery stalls mid-queue. The internal buffer
+must *not* follow it to 0, or it becomes unbounded and client memory grows with
+queue depth. Both are compile-time constants with no flag behind them.
 
 Consequences to honor:
 
-- Messages are held unacked, so the run is bounded by `--prefetch-count`.
-  `--requeue` therefore requires `--count` (≤ prefetch), defaulting to prefetch
-  if omitted. It cannot drain a queue.
-- **`--requeue` and `--follow` are mutually exclusive** — holding deliveries
-  unacked indefinitely is not a thing. Reject the combination at parse time.
+- The broker holds the whole queue as unacked for the duration of the run. This
+  is unavoidable — AMQP 0-9-1 has no cursor or offset, so any non-destructive
+  full read must hold everything unacked until the channel closes.
+- **Warn on stderr about unbounded growth.** Without `--count`, always — it is
+  unbounded by definition. With `--count N`, only when N is large (**≥ 1000**,
+  matching the threshold the old `peek` used).
+- **`--requeue` and `--follow` are mutually exclusive** — holding an entire queue
+  unacked indefinitely is worse than holding prefetch-many. Reject at parse time.
+  This remains the *only* flag-combination validation `consume` needs; flags that
+  do not apply to a given path are ignored, not rejected.
 - Requeued messages come back flagged `redelivered`. This is unavoidable over
   AMQP; state it in `--help`.
 
@@ -266,10 +361,7 @@ if a property can be emitted, it must be accepted.
 
 ## Testing
 
-The previous version had 18.4k lines of test against 6.3k lines of source,
-across four projects, largely chasing coverage. Do not rebuild that.
-
-Target shape — two projects:
+Two projects, and no more:
 
 - **E2E** against real RabbitMQ via Testcontainers. This is where confidence
   actually comes from. Must cover:
@@ -279,53 +371,15 @@ Target shape — two projects:
     regression test for the nack-loop trap described in Delivery semantics
   - exit code 3 when `--count` exceeds queue depth
   - `purge`
+  - a single HTTP-transport round trip — not a parallel suite
 - **Unit**, thin, for the pure functions only — message JSON parsing, header
   parsing (`k:v`), property merging, AMQP URL parsing.
 
-Delete the `Subcutaneous` and `Integration` projects; their value is covered by
-the two above. Fold the useful parts of `RmqCli.Tests.Shared` (the
-`RabbitMqFixture` / `RabbitMqOperations` container plumbing) directly into the
-E2E project and delete it as a separate project — with only one consumer left,
-a shared project is exactly the abstraction this repo rejects.
-
-Cover the HTTP transport with a single E2E round trip, not a parallel suite.
-
 Do not write tests for: DTO constructors, property getters, enum round-tripping,
 factory methods, or anything whose failure would be caught immediately by the
-E2E round trip. **Coverage percentage is not a goal** — the README carries a
-codecov badge that will drop when the test suite shrinks, and that is expected.
-Decide whether to remove the badge/gate rather than writing tests to satisfy it.
+E2E round trip.
 
-## Decisions taken without explicit sign-off
-
-These follow from the stated goals but were inferred, not requested. They are
-recorded here so they can be overruled deliberately rather than discovered later:
-
-- **Logging**: `Microsoft.Extensions.Logging` removed in favor of a static stderr
-  writer gated on `--verbose`. Follows from "minimal dependencies," but it is an
-  architectural call.
-- **No DI container**: `Microsoft.Extensions.DependencyInjection` removed; objects
-  are constructed by hand in `Program.cs`.
-- **Environment variable renamed** `RMQCLI_RabbitMq__Host` etc. → a single
-  `$RMQ_URL`. **This is a breaking change** for anyone with the old variables in
-  a shell profile. Worth a note in the README and release notes.
-- **File rotation dropped** (`MessagesPerFile`, `MessageDelimiter`) — see Output.
-- **The entire ack-mode parameter is dropped.** No `--ack-mode`, no `AckModes`
-  enum. Acking is the default behavior; `--requeue` is the only opt-out.
-  `Reject` is gone — discarding messages in bulk is what `purge` is for.
-- **Push is the default for `consume`**, with `--pull` opting into polling. The
-  old tool welded polling to `peek`; separating the axes means a default had to
-  be chosen, and push is the better one for draining.
-- **Exit code table** — invented, not specified. Code 3 (`--count` unmet) in
-  particular is a judgment call.
-
-## Known follow-ups
-
-- The README carries a **codecov badge**; deliberately shrinking the test suite
-  will drop coverage and fail any configured threshold. Remove the badge/gate or
-  lower it consciously — do not write tests to satisfy it.
-- The README documents the TOML config, `config` subcommands, `peek`, and
-  `RMQCLI_*` variables. All become wrong on rewrite and need updating together.
+**Coverage percentage is not a goal.** Do not add tests to satisfy a threshold.
 
 ## Build and verify
 
@@ -345,5 +399,3 @@ dotnet publish src/RmqCli/RmqCli.csproj -c Release -r osx-arm64 2>&1 | grep -E "
 # 2. Startup still under budget
 time ./release/rmq --help
 ```
-
-Baseline binary size for reference: 16.4 MB (osx-arm64, AOT, trimmed).
