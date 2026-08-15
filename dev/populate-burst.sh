@@ -14,5 +14,5 @@ BURST_SIZE=${1:-100}
 
 echo "Populating '$QUEUE' with burst of $BURST_SIZE messages..."
 
-dotnet run --project "$PROJECT_ROOT/src/RmqCli/RmqCli.csproj" --no-build --no-launch-profile -- \
+dotnet run --project "$PROJECT_ROOT/src/rmq/rmq.csproj" --no-build --no-launch-profile -- \
   publish --queue "$QUEUE" --body "Burst test message" --burst $BURST_SIZE

@@ -1,5 +1,6 @@
-# This workflow will build a .NET project
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-net
+# Two test projects, and no more — see CLAUDE.md. Unit tests are pure functions and run
+# everywhere; E2E tests drive the published native binary against a real broker in
+# Testcontainers, which needs Docker and so runs on Linux only.
 
 name: .NET
 
@@ -10,7 +11,7 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build-and-test:
+  unit-tests:
     strategy:
       matrix:
         os: [ ubuntu-latest, windows-latest, macos-latest ]
@@ -42,10 +43,7 @@ jobs:
         run: dotnet build --no-restore --configuration Release
 
       - name: Run Unit Tests
-        run: dotnet test test/RmqCli.Unit.Tests/RmqCli.Unit.Tests.csproj --no-build --configuration Release -v normal --logger "trx;LogFileName=unit-tests.trx" --collect:"XPlat Code Coverage" --results-directory ./coverage/unit
-
-      - name: Run Integration Tests
-        run: dotnet test test/RmqCli.Integration.Tests/RmqCli.Integration.Tests.csproj --no-build --configuration Release -v normal --logger "trx;LogFileName=integration-tests.trx" --collect:"XPlat Code Coverage" --results-directory ./coverage/integration
+        run: dotnet test test/rmq.Unit.Tests/rmq.Unit.Tests.csproj --no-build --configuration Release --logger "trx;LogFileName=unit-tests.trx"
 
       - name: Upload Test Results
         uses: actions/upload-artifact@v4
@@ -54,14 +52,7 @@ jobs:
           name: test-results-${{ matrix.os }}
           path: "**/*.trx"
 
-      - name: Upload Coverage Artifacts
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: coverage-${{ matrix.os }}
-          path: coverage
-
-  e2e-and-subcutaneous-tests:
+  e2e-tests:
     runs-on: ubuntu-latest
 
     steps:
@@ -87,59 +78,43 @@ jobs:
       - name: Build
         run: dotnet build --no-restore -c Release
 
-      - name: Publish rmq executable for E2E Tests
-        run: dotnet publish src/RmqCli/RmqCli.csproj -c Release -r linux-x64 -o test/RmqCli.E2E.Tests/bin/rmq-published
+      # The output path has to match Cli.ExecutablePath, which resolves
+      # test/rmq.E2E.Tests/bin/rmq-published/rmq relative to the test assembly.
+      #
+      # Zero IL2xxx/IL3xxx is a non-negotiable and is only observable at publish
+      # time, so it is gated here rather than compiled a second time to check.
+      - name: Publish rmq native binary, failing on trim or AOT warnings
+        run: |
+          # pipefail is not on by default in a run block, and without it tee would
+          # swallow a failed publish.
+          set -eo pipefail
+          dotnet publish src/rmq/rmq.csproj -c Release -r linux-x64 \
+            -o test/rmq.E2E.Tests/bin/rmq-published 2>&1 | tee publish.log
+          if grep -E "IL[0-9]{4}" publish.log; then
+            echo "::error::publish produced IL2xxx/IL3xxx trim or AOT warnings"
+            exit 1
+          fi
 
-      - name: Run Subcutaneous Tests
-        run: dotnet test test/RmqCli.Subcutaneous.Tests/RmqCli.Subcutaneous.Tests.csproj --no-build -c Release -v normal --logger "trx;LogFileName=subcutaneous-tests.trx" --collect:"XPlat Code Coverage" --results-directory ./coverage/subcutaneous
-      
       - name: Run E2E Tests
-        run: dotnet test test/RmqCli.E2E.Tests/RmqCli.E2E.Tests.csproj --no-build -c Release -v normal --logger "trx;LogFileName=e2e-tests.trx" --collect:"XPlat Code Coverage" --results-directory ./coverage/e2e
+        run: dotnet test test/rmq.E2E.Tests/rmq.E2E.Tests.csproj --no-build -c Release --logger "trx;LogFileName=e2e-tests.trx"
 
-      - name: Upload Coverage Artifacts
+      - name: Upload E2E Test Results
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: coverage-e2e-subcutaneous
-          path: coverage
-
-      - name: Upload E2E & Subcutaneous Test Results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: e2e-and-sub-test-results
-          path: "**/*-tests.trx"
-
-  upload-coverage:
-    needs: [build-and-test, e2e-and-subcutaneous-tests]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Download Coverage Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: coverage-*
-          path: coverage
-
-      - name: Upload Coverage to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          files: ./coverage/**/coverage.cobertura.xml
-          flags: unittests
-          name: codecov-umbrella
-          fail_ci_if_error: false
-          token: ${{ secrets.CODECOV_TOKEN }}
+          name: test-results-e2e
+          path: "**/*.trx"
 
   test-report:
     if: always()
-    needs: [build-and-test, e2e-and-subcutaneous-tests]
+    needs: [ unit-tests, e2e-tests ]
     runs-on: ubuntu-latest
     permissions:
       checks: write
       pull-requests: write
     steps:
+      # test-reporter resolves source paths against the repo, so it needs a checkout
+      # even though this job builds nothing.
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -148,12 +123,6 @@ jobs:
         with:
           pattern: test-results-*
           path: test-results
-
-      - name: Download E2E & Subcutaneous Test Results
-        uses: actions/download-artifact@v4
-        with:
-          name: e2e-and-sub-test-results
-          path: test-results/e2e-and-subcutaneous
 
       - name: Test Report
         uses: dorny/test-reporter@v1

@@ -55,6 +55,6 @@ Log Entry #4: API server listening on :8080
 Log Entry #5: Ready to accept requests
 EOF
 
-dotnet run --project "$PROJECT_ROOT/src/RmqCli/RmqCli.csproj" --no-build --no-launch-profile -- \
+dotnet run --project "$PROJECT_ROOT/src/rmq/rmq.csproj" --no-build --no-launch-profile -- \
   publish --queue "$QUEUE" --message-file "$TEMP_FILE"
 

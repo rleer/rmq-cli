@@ -25,5 +25,5 @@ user_id:12345|action:purchase|item_id:prod_789|price:29.99
 SUCCESS,2025-01-15T14:30:00Z,operation_completed,duration_ms:1250
 EOF
 
-dotnet run --project "$PROJECT_ROOT/src/RmqCli/RmqCli.csproj" --no-build --no-launch-profile -- \
+dotnet run --project "$PROJECT_ROOT/src/rmq/rmq.csproj" --no-build --no-launch-profile -- \
   publish --queue "$QUEUE" --message-file "$TEMP_FILE"

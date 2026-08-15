@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>rmq</AssemblyName>
+    <RootNamespace>Rmq</RootNamespace>
+    <Authors>Richard Leer</Authors>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <OptimizationPreference>Speed</OptimizationPreference>
+
+    <!-- NuGet Package Properties for dotnet tool -->
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>rmq</ToolCommandName>
+    <PackageId>rmq</PackageId>
+    <Version>0.1.0</Version>
+    <PackageOutputPath>../../nupkg</PackageOutputPath>
+    <Description>A developer-facing CLI for publishing and consuming RabbitMQ messages. Reads STDIN, writes NDJSON on STDOUT, composes with pipes, and exits with meaningful codes.</Description>
+    <PackageTags>rabbitmq;amqp;cli;messaging;queue</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/rleer/rmq-cli</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/rleer/rmq-cli</PackageProjectUrl>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <!-- AOT/Self-contained settings for 'dotnet publish' only -->
+  <PropertyGroup Condition="'$(PublishDir)' != ''">
+    <SelfContained>true</SelfContained>
+    <PublishAot>true</PublishAot>
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>full</TrimMode>
+  </PropertyGroup>
+
+  <!-- The allowlist. Adding to it is a deliberate decision; see CLAUDE.md. -->
+  <ItemGroup>
+    <PackageReference Include="RabbitMQ.Client" Version="7.2.0" />
+    <PackageReference Include="System.CommandLine" Version="2.0.2" />
+  </ItemGroup>
+
+</Project>

@@ -24,5 +24,5 @@ cat > "$TEMP_FILE" << 'EOF'
 EOF
 
 # Publish using --message-file (auto-detects NDJSON format)
-dotnet run --project "$PROJECT_ROOT/src/RmqCli/RmqCli.csproj" --no-build --no-launch-profile -- \
+dotnet run --project "$PROJECT_ROOT/src/rmq/rmq.csproj" --no-build --no-launch-profile -- \
   publish --queue "$QUEUE" --message-file "$TEMP_FILE"

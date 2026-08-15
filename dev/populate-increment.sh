@@ -21,7 +21,7 @@ for i in $(seq 1 $COUNT); do
   echo "Incremental message #$i" >> "$TEMP_FILE"
 done
 
-dotnet run --project "$PROJECT_ROOT/src/RmqCli/RmqCli.csproj" --no-build --no-launch-profile -- \
+dotnet run --project "$PROJECT_ROOT/src/rmq/rmq.csproj" --no-build --no-launch-profile -- \
   publish --queue "$QUEUE" --message-file "$TEMP_FILE"
   --content-type "text/plain" \
   --app-id "counter-service" \
